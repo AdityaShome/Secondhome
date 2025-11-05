@@ -111,10 +111,10 @@ export async function POST(req: Request) {
                 <p><strong>Action Required:</strong> This property listing requires your manual approval before it can go live on Second Home.</p>
 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="http://localhost:3000/admin/properties" class="button">
+                  <a href="https://secondhome-eight.vercel.app/admin/properties" class="button">
                     📋 Go to Admin Panel
                   </a>
-                  <a href="http://localhost:3000/listings/${propertyId}" class="button">
+                  <a href="https://secondhome-eight.vercel.app/listings/${propertyId}" class="button">
                     👁️ Preview Property
                   </a>
                 </div>
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
               </div>
               <div class="footer">
                 <p><strong>Second Home</strong> - Student Accommodation Platform</p>
-                <p>📧 srijitd248@gmail.com | 🌐 localhost:3000</p>
+                <p>📧 srijitd248@gmail.com | 🌐 secondhome-eight.vercel.app</p>
                 <p style="font-size: 11px;">This is an automated notification for property listings requiring manual verification.</p>
               </div>
             </div>

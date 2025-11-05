@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/newsletter/send-welcome`, {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "https://secondhome-eight.vercel.app"}/api/newsletter/send-welcome`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: newsletter.email, unsubscribeToken }),

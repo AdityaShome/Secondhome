@@ -2,6 +2,9 @@
 
 A comprehensive web platform connecting students with PG (Paying Guest) accommodations, flats, and mess services. Built with Next.js 15, MongoDB, and AI-powered verification.
 
+## 🌐 Live Demo
+**Visit the live site:** [https://secondhome-eight.vercel.app](https://secondhome-eight.vercel.app)
+
 ## ✨ Features
 
 ### 🏘️ Property Listings (PG & Flat)
@@ -92,7 +95,7 @@ MONGODB_URI=your_mongodb_connection_string
 
 # NextAuth
 NEXTAUTH_SECRET=your_secret_key
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=https://secondhome-eight.vercel.app
 
 # Google AI (Gemini)
 GOOGLE_AI_API_KEY=your_google_ai_api_key
@@ -116,7 +119,7 @@ openssl rand -base64 32
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) for local development or visit [https://secondhome-eight.vercel.app](https://secondhome-eight.vercel.app) for the live site.
 
 ## 🏗️ Build for Production
 

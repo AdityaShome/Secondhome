@@ -112,7 +112,7 @@ export async function POST(req: Request) {
 
     try {
       console.log("🤖 Starting AI verification for property...")
-      const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://secondhome-eight.vercel.app'
       const verifyResponse = await fetch(`${baseUrl}/api/ai/verify-property`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,7 +167,7 @@ export async function POST(req: Request) {
     // Send notification to admin only if needs manual review
     if (!autoApproved) {
       try {
-        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://secondhome-eight.vercel.app'
         await fetch(`${baseUrl}/api/properties/notify-admin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
