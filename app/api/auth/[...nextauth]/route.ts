@@ -6,10 +6,8 @@ import { compare } from "bcryptjs"
 import { getUserModel } from "@/models/user"
 import { connectToDatabase } from "@/lib/mongodb"
 
-// Ensure NEXTAUTH_SECRET is set
-if (!process.env.NEXTAUTH_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("Please define NEXTAUTH_SECRET in your environment variables")
-}
+// NEXTAUTH_SECRET will be checked at runtime, not build time
+// This allows the build to succeed without environment variables
 
 // Build providers array conditionally
 const providers = [
