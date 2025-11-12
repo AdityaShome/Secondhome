@@ -26,7 +26,11 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider
+      basePath="/api/auth"
+      refetchInterval={0}
+      refetchOnWindowFocus={true}
+    >
       <AuthProviderContent>{children}</AuthProviderContent>
     </SessionProvider>
   )
@@ -64,45 +68,53 @@ function AuthProviderContent({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       
-      // Prevent Next.js error overlay by catching all errors
+      console.log("🔐 Attempting login for:", email)
+      
       const result = await signIn("credentials", {
         redirect: false,
-        email,
+        email: email.toLowerCase().trim(),
         password,
-      }).catch((error) => {
-        // Silently catch and handle all errors
-        console.error("Login error caught:", error)
-        return { error: "Invalid login credentials", ok: false }
       })
 
-      // Always show user-friendly message, never show technical errors
-      if (result?.error || !result?.ok) {
+      console.log("🔐 Login result:", { ok: result?.ok, error: result?.error })
+
+      if (result?.error) {
+        const errorMessage = result.error === "CredentialsSignin" 
+          ? "Invalid email or password. Please check your credentials and try again."
+          : result.error === "Configuration"
+          ? "Authentication service error. Please try again later."
+          : result.error.includes("Database")
+          ? "Database connection error. Please try again."
+          : "Login failed. Please check your email and password."
+        
         toast({
           title: "Login failed",
-          description: "Invalid login credentials. Please check your email and password.",
+          description: errorMessage,
           variant: "destructive",
         })
         return
       }
 
       if (result?.ok) {
+        // Wait a bit for session to be established
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
         toast({
           title: "Login successful",
           description: "Welcome back to Second Home!",
         })
         
-        // Small delay to ensure session is updated
+        // Refresh router to get updated session
+        router.refresh()
         setTimeout(() => {
           router.push("/")
-          router.refresh()
-        }, 100)
+        }, 200)
       }
-    } catch (error) {
-      // Catch any unexpected errors and show user-friendly message
+    } catch (error: any) {
       console.error("Login error:", error)
       toast({
         title: "Login failed",
-        description: "Invalid login credentials. Please check your email and password.",
+        description: error?.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       })
     } finally {

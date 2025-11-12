@@ -19,19 +19,24 @@ const providers = [
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          console.error("❌ Missing credentials")
+          throw new Error("Email and password are required")
+        }
+
+        // Normalize email to lowercase for consistent lookup
+        const normalizedEmail = credentials.email.toLowerCase().trim()
+
         try {
-          if (!credentials?.email || !credentials?.password) {
-            console.error("❌ Missing credentials")
-            return null
-          }
-
-          // Normalize email to lowercase for consistent lookup
-          const normalizedEmail = credentials.email.toLowerCase().trim()
-
           console.log("🔌 Connecting to MongoDB...")
           
-          // Explicitly connect to MongoDB first
-          await connectToDatabase()
+          // Explicitly connect to MongoDB first with timeout
+          await Promise.race([
+            connectToDatabase(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error("Database connection timeout")), 10000)
+            )
+          ])
           console.log("✅ MongoDB connected")
 
           // Get User model
@@ -46,21 +51,28 @@ const providers = [
 
           if (!user) {
             console.error(`❌ No user found with email: ${normalizedEmail}`)
-            return null
+            throw new Error("Invalid email or password")
           }
 
           // Check if user has a password (OAuth users might not have one)
           if (!user.password) {
             console.error("❌ User account has no password (likely OAuth account)")
-            return null
+            throw new Error("This account was created with social login. Please use Google or Facebook to sign in.")
           }
 
           console.log("✅ User found, validating password...")
+          
+          // Ensure password is a string
+          if (typeof user.password !== "string" || user.password.length === 0) {
+            console.error("❌ User password is invalid or missing")
+            throw new Error("Invalid email or password")
+          }
+          
           const isPasswordValid = await compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
             console.error("❌ Invalid password")
-            return null
+            throw new Error("Invalid email or password")
           }
 
           console.log("✅ Authentication successful!")
@@ -77,8 +89,10 @@ const providers = [
             message: error?.message,
             stack: error?.stack,
             name: error?.name,
+            email: normalizedEmail,
           })
-          return null
+          // Re-throw to let NextAuth handle it properly
+          throw error
         }
       },
     }),
@@ -145,8 +159,38 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
+  trustHost: true, // Trust the host header in production
 })
 
 export { handler as GET, handler as POST }
