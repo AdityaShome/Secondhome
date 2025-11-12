@@ -25,6 +25,9 @@ const providers = [
             return null
           }
 
+          // Normalize email to lowercase for consistent lookup
+          const normalizedEmail = credentials.email.toLowerCase().trim()
+
           console.log("🔌 Connecting to MongoDB...")
           
           // Explicitly connect to MongoDB first
@@ -35,12 +38,20 @@ const providers = [
           const User = await getUserModel()
           console.log("✅ User model obtained")
 
-          // Find user
-          console.log(`🔍 Searching for user with email: ${credentials.email}`)
-          const user = await User.findOne({ email: credentials.email }).lean()
+          // Find user (emails are stored normalized)
+          console.log(`🔍 Searching for user with email: ${normalizedEmail}`)
+          const user = await User.findOne({ 
+            email: normalizedEmail
+          }).lean()
 
           if (!user) {
-            console.error("❌ No user found with this email")
+            console.error(`❌ No user found with email: ${normalizedEmail}`)
+            return null
+          }
+
+          // Check if user has a password (OAuth users might not have one)
+          if (!user.password) {
+            console.error("❌ User account has no password (likely OAuth account)")
             return null
           }
 
@@ -60,10 +71,13 @@ const providers = [
             image: user.image || null,
             role: user.role || "user",
           }
-        } catch (error) {
-          // Log error and return null
-          // This prevents errors from bubbling up
-          console.error("❌ Authentication error:", error)
+        } catch (error: any) {
+          // Log detailed error for debugging
+          console.error("❌ Authentication error:", {
+            message: error?.message,
+            stack: error?.stack,
+            name: error?.name,
+          })
           return null
         }
       },
@@ -88,6 +102,11 @@ if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
     })
   )
+}
+
+// Validate NEXTAUTH_SECRET in production
+if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
+  console.error("❌ NEXTAUTH_SECRET is required in production")
 }
 
 const handler = NextAuth({
@@ -126,7 +145,7 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET || (process.env.NODE_ENV === "production" ? undefined : "dev-secret-key-replace-in-production"),
+  secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
 })
 

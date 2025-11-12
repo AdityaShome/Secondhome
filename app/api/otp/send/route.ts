@@ -16,6 +16,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
     }
 
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim()
+
     // Validate SMTP credentials (check both naming conventions)
     const emailUser = process.env.EMAIL_USER || process.env.HOST_EMAIL
     const emailPassword = process.env.EMAIL_PASSWORD || process.env.HOST_EMAIL_PASSWORD
@@ -35,12 +38,18 @@ export async function POST(req: Request) {
     const otp = generateOTP()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Delete any existing OTP for this email
-    await OTP.deleteMany({ email, type })
+    // Delete any existing OTP for this email (check both normalized and original)
+    await OTP.deleteMany({ 
+      $or: [
+        { email: normalizedEmail },
+        { email: email }
+      ],
+      type 
+    })
 
-    // Save OTP to database
+    // Save OTP to database with normalized email
     await OTP.create({
-      email,
+      email: normalizedEmail,
       otp,
       type,
       expiresAt,
@@ -58,7 +67,7 @@ export async function POST(req: Request) {
     // Email content
     const mailOptions = {
       from: `"Second Home" <${emailUser}>`,
-      to: email,
+      to: normalizedEmail,
       subject: type === "registration" 
         ? "🔐 Verify Your Email - Second Home Property Owner Registration"
         : "🔐 Your Login OTP - Second Home",
@@ -115,7 +124,7 @@ export async function POST(req: Request) {
     // Send email
     await transporter.sendMail(mailOptions)
 
-    console.log(`✅ OTP sent to ${email}`)
+    console.log(`✅ OTP sent to ${normalizedEmail}`)
 
     return NextResponse.json({ 
       message: "OTP sent successfully",

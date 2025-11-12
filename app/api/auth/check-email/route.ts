@@ -10,11 +10,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
     }
 
+    // Normalize email to lowercase for consistent lookup
+    const normalizedEmail = email.toLowerCase().trim()
+
     await connectToDatabase()
     const User = await getUserModel()
     
-    // Check if user already exists
-    const existingUser = await User.findOne({ email })
+    // Check if user already exists (emails are stored normalized)
+    const existingUser = await User.findOne({ 
+      email: normalizedEmail
+    })
     
     if (existingUser) {
       return NextResponse.json({ 

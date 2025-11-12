@@ -64,3 +64,5 @@ NewsletterSchema.index({ isActive: 1 })
 export default mongoose.models.Newsletter || mongoose.model<INewsletter>("Newsletter", NewsletterSchema)
 
 
+
+

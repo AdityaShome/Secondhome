@@ -25,11 +25,14 @@ export async function POST(req: Request) {
 
     const { name, email, password, phone, otp } = body
 
+    // Normalize email to lowercase for consistency
+    const normalizedEmail = email.toLowerCase().trim()
+
     await connectToDatabase()
 
-    // Verify OTP first
+    // Verify OTP first (use normalized email)
     const otpRecord = await OTP.findOne({ 
-      email, 
+      email: normalizedEmail,
       otp,
       type: "registration",
       expiresAt: { $gt: new Date() }
@@ -45,8 +48,10 @@ export async function POST(req: Request) {
       // Get User model
       const User = await getUserModel()
 
-      // Check if user already exists
-      const existingUser = await User.findOne({ email })
+      // Check if user already exists (emails are stored normalized)
+      const existingUser = await User.findOne({ 
+        email: normalizedEmail
+      })
       
       if (existingUser) {
         // Delete used OTP
@@ -84,7 +89,7 @@ export async function POST(req: Request) {
       // Create new user (set role to owner if coming from property registration)
       const newUser = new User({
         name,
-        email,
+        email: normalizedEmail, // Store normalized email
         password: hashedPassword,
         phone: phone || undefined,
         role: body.isPropertyOwner ? "owner" : "user",
@@ -97,7 +102,7 @@ export async function POST(req: Request) {
       // Delete used OTP
       await OTP.deleteOne({ _id: otpRecord._id })
 
-      console.log(`✅ User registered successfully: ${email}`)
+      console.log(`✅ User registered successfully: ${normalizedEmail}`)
 
       return NextResponse.json({ 
         message: "Registration successful! You can now login.",
