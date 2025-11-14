@@ -45,17 +45,7 @@ const EmptyState = ({ onReset }: { onReset: () => void }) => (
     animate={{ opacity: 1, y: 0 }}
     className="col-span-full flex flex-col items-center justify-center py-20"
   >
-    <div className="w-64 h-64 relative mb-8 opacity-50">
-      <Image src="/placeholder.svg" alt="No properties" fill className="object-contain grayscale" />
-    </div>
-    <h3 className="text-2xl font-bold text-gray-900 mb-2">No Properties Found</h3>
-    <p className="text-gray-600 mb-6 text-center max-w-md">
-      We couldn't find any properties matching your criteria. Try adjusting your filters.
-    </p>
-    <Button onClick={onReset} className="bg-orange-500 hover:bg-orange-600">
-      <X className="w-4 h-4 mr-2" />
-      Clear All Filters
-    </Button>
+    <h3 className="text-2xl font-bold text-gray-900">No property found</h3>
   </motion.div>
 )
 
@@ -280,7 +270,7 @@ export default function ListingsPage() {
     const amenitiesSet = new Set<string>()
     listings.forEach(listing => {
       if (listing.amenities && Array.isArray(listing.amenities)) {
-        listing.amenities.forEach(amenity => amenitiesSet.add(amenity))
+        listing.amenities.forEach((amenity: string) => amenitiesSet.add(amenity))
       }
     })
     return Array.from(amenitiesSet).sort()
