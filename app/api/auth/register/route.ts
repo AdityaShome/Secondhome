@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { z } from "zod"
 import { getUserModel } from "@/models/user"
+import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 
 const userSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -70,6 +71,36 @@ export async function POST(req: Request) {
       })
 
       await newUser.save()
+
+      // If returnToken is true (for mobile apps), generate and return JWT tokens
+      if (body.returnToken === true) {
+        const accessToken = await generateAccessToken({
+          userId: newUser._id.toString(),
+          email: newUser.email,
+          role: newUser.role || "user",
+        })
+
+        const refreshToken = await generateRefreshToken({
+          userId: newUser._id.toString(),
+          email: newUser.email,
+          role: newUser.role || "user",
+        })
+
+        return NextResponse.json({ 
+          message: "User registered successfully",
+          created: true,
+          accessToken,
+          refreshToken,
+          user: {
+            id: newUser._id.toString(),
+            name: newUser.name,
+            email: newUser.email,
+            role: newUser.role || "user",
+            image: newUser.image || null,
+            phone: newUser.phone || null,
+          },
+        }, { status: 201 })
+      }
 
       return NextResponse.json({ 
         message: "User registered successfully",
