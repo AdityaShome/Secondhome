@@ -75,20 +75,25 @@ export default function LoginPage() {
       const email = "second.home2k25@gmail.com"
       const password = "Secondhome@2028"
       setIsLoading(true)
-      // Use next-auth signIn directly to honor callback and redirect
-      signIn("credentials", {
-        redirect: true,
-        email,
-        password,
-        callbackUrl,
-      }).catch(() => {
-        toast({
-          title: "Admin login failed",
-          description: "Please enter credentials manually.",
-          variant: "destructive",
+      // Ensure admin exists before login (bootstrap route is open or token-protected)
+      fetch("/api/admin/bootstrap", { method: "POST" })
+        .catch(() => {})
+        .finally(() => {
+          // Use next-auth signIn directly to honor callback and redirect
+          signIn("credentials", {
+            redirect: true,
+            email,
+            password,
+            callbackUrl,
+          }).catch(() => {
+            toast({
+              title: "Admin login failed",
+              description: "Please enter credentials manually.",
+              variant: "destructive",
+            })
+            setIsLoading(false)
+          })
         })
-        setIsLoading(false)
-      })
     }
   }, [isAdminAuto, callbackUrl, toast])
 
