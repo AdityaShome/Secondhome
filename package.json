@@ -56,7 +56,7 @@
     "leaflet": "latest",
     "lucide-react": "^0.454.0",
     "mongoose": "latest",
-    "next": "15.2.4",
+    "next": "^16.0.7",
     "next-auth": "latest",
     "next-themes": "latest",
     "nodemailer": "^7.0.10",
