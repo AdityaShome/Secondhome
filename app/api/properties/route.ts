@@ -117,7 +117,11 @@ export async function POST(req: Request) {
 
     try {
       console.log("🤖 Starting AI verification for property...")
-      const baseUrl = 'https://secondhome-eight.vercel.app'
+      const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ||
+        "https://secondhome-zeta.vercel.app"
+
       const verifyResponse = await fetch(`${baseUrl}/api/ai/verify-property`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -178,7 +182,7 @@ export async function POST(req: Request) {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL ||
         process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
-        "https://secondhome-eight.vercel.app"
+        "https://secondhome-zeta.vercel.app"
 
       const reviewLink = `${baseUrl}/admin/properties`
 
@@ -195,7 +199,14 @@ export async function POST(req: Request) {
 
         const aiSummary = aiVerification
           ? JSON.stringify(aiVerification, null, 2)
-          : "AI verification unavailable (manual review required)"
+          : JSON.stringify(
+              {
+                message: "AI verification unavailable",
+                note: "Check GROQ_API_KEY and verify endpoint",
+              },
+              null,
+              2,
+            )
 
         const propertySummary = JSON.stringify(newProperty.toObject(), null, 2)
         const subjectStatus = autoApproved ? "AUTO-APPROVED" : "PENDING REVIEW"
