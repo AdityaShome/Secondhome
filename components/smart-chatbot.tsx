@@ -136,7 +136,7 @@ export function SmartChatbot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group"
+          className="fixed bottom-6 right-6 z-[99999] group"
           aria-label="Open chat"
         >
           <div className="relative">
@@ -176,7 +176,7 @@ export function SmartChatbot() {
       {isOpen && (
         <div
           className={cn(
-            "fixed z-50 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 flex flex-col transition-all duration-300",
+            "fixed z-[99999] bg-white rounded-2xl shadow-2xl border-2 border-gray-200 flex flex-col transition-all duration-300",
             isMinimized
               ? "bottom-6 right-6 w-80 h-16"
               : "bottom-6 right-6 w-[420px] h-[600px]"
