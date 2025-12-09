@@ -51,13 +51,22 @@ export async function POST(req: NextRequest) {
     const from = params["From"] || "caller"
 
     const base = resolvePublicBase(req)
-    const actionUrl = base ? `${base}/api/twilio/voice` : "/api/twilio/voice"
+    if (!base || !base.startsWith("https://")) {
+      // Fail fast with a TwiML response Twilio can speak, instead of a 500
+      return buildXmlResponse((vr) => {
+        vr.say(
+          "Sorry, our voice bot is misconfigured. Please contact support or use WhatsApp. Configure T W I L I O public base URL to continue.",
+        )
+        vr.hangup()
+      })
+    }
+    const actionUrl = `${base}/api/twilio/voice`
 
     // First turn: greet and gather speech
     if (!callerSpeech && !digits) {
       return buildXmlResponse((vr) => {
         const gather = vr.gather({
-          input: "speech dtmf",
+          input: ["speech", "dtmf"],
           action: actionUrl,
           method: "POST",
           speechTimeout: "auto",
@@ -106,12 +115,14 @@ Return a concise, natural voice reply under 70 words. Mention secondhome.com onc
         aiReply = completion.choices[0]?.message?.content?.trim() || aiReply
       } catch (err) {
         console.error("Groq voice error", err)
+        aiReply =
+          "Thanks for calling SecondHome! I can help with PGs, flats, and hostels. Tell me your city or college, or press 1 to reach an executive."
       }
     }
 
     return buildXmlResponse((vr) => {
       const gather = vr.gather({
-        input: "speech dtmf",
+        input: ["speech", "dtmf"],
         action: actionUrl,
         method: "POST",
         speechTimeout: "auto",
