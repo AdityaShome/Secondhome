@@ -76,7 +76,7 @@ export default function ContactPage() {
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="relative h-7 w-7">
-                      <Image src="/whatsapp.svg" alt="WhatsApp" fill priority sizes="28px" />
+                      <Image src="/WhatsApp.svg.webp" alt="WhatsApp" fill priority sizes="28px" />
                     </div>
                     <h2 className="text-xl font-semibold">WhatsApp Business</h2>
                     <Badge variant="secondary">Botkida</Badge>
