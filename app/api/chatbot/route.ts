@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       })
     }
 
-    // Get Groq API key
+    // Get AI API key
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
       console.error("GROQ_API_KEY not found")
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       unisex: properties.filter((p: any) => p.gender === "Unisex").length,
     }
 
-    // Create comprehensive context for Groq
+    // Create comprehensive context for AI
     const systemContext = `You are SecondHome AI Assistant, a friendly and helpful chatbot for SecondHome - India's #1 student accommodation platform.
 
 YOUR IDENTITY:
@@ -164,7 +164,7 @@ You: "I specialize in student accommodations only! 😊 But I can help you find 
 
 Remember: You are a REAL-TIME assistant with access to actual database. Use the data provided!`
 
-    // Initialize Groq
+    // Initialize AI provider
     const groq = new Groq({ apiKey })
 
     // Build conversation history

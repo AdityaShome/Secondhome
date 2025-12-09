@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "No subscribers for instant updates" })
     }
 
-    // Generate AI content using Groq
+    // Generate AI content using SecondHome AI
 
     const prompt = `Create an EXCITING instant alert email for "Second Home" about a new property listing.
 

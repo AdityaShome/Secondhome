@@ -1718,7 +1718,7 @@ function PreviewTab({ propertyData }: any) {
                   <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">NEW</span>
                 </h4>
                 <p className="text-sm text-gray-700 mb-2">
-                  Your property will be instantly analyzed by Groq AI for authenticity and quality.
+                  Your property will be instantly analyzed by SecondHome AI for authenticity and quality.
                 </p>
                 <div className="text-xs text-gray-600 space-y-1">
                   <div className="flex items-center gap-2">

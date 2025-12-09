@@ -5,7 +5,7 @@ import { Property } from "@/models/property"
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const BOTKIDA_API_KEY = process.env.BOTKIDA_API_KEY
 const BOTKIDA_API_URL = process.env.BOTKIDA_API_URL || "https://app.botkida.com/api/v1/whatsapp/send"
-// WhatsApp Business AI Number from Botkida
+// WhatsApp Business AI Number from configured provider
 const WHATSAPP_AI_NUMBER = process.env.WHATSAPP_AI_NUMBER || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "917384662005"
 
 export async function POST(req: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "BOTKIDA_API_KEY not configured" }, { status: 500 })
     }
 
-    // Botkida webhook format may vary, adjust based on actual format
+    // Webhook format may vary, adjust based on actual provider format
     const { from, message, type } = webhookData
 
     if (type !== "message" || !message || !from) {
@@ -182,12 +182,12 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string) {
         errorText = await response.text()
         if (contentType?.includes("application/json")) {
           const errorData = JSON.parse(errorText)
-          throw new Error(errorData.error || errorData.message || `Botkida API error: ${response.status}`)
+          throw new Error(errorData.error || errorData.message || `WhatsApp provider API error: ${response.status}`)
         }
       } catch (parseError) {
-        console.error("Botkida API returned non-JSON error:", errorText.substring(0, 200))
+        console.error("WhatsApp provider API returned non-JSON error:", errorText.substring(0, 200))
       }
-      throw new Error(`Botkida API error: HTTP ${response.status}`)
+      throw new Error(`WhatsApp provider API error: HTTP ${response.status}`)
     }
 
     // Parse response safely
@@ -209,7 +209,7 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string) {
   }
 }
 
-// GET endpoint for webhook verification (if required by Botkida)
+// GET endpoint for webhook verification (if required by provider)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const mode = searchParams.get("hub.mode")

@@ -32,7 +32,7 @@ export function WhatsAppChatButton({
   const { user } = useAuth()
 
   const handleWhatsAppChat = async () => {
-    // General contact uses official WhatsApp Business/Botkida link if provided
+    // General contact uses official WhatsApp Business link if provided
     const isGeneralContact = propertyId === "contact" || !ownerPhone
     const botkidaUrl = process.env.NEXT_PUBLIC_BOTKIDA_WHATSAPP_URL
     const defaultBusinessUrl = "https://wa.me/917384662005" // Safe default to SecondHome business number
@@ -51,9 +51,9 @@ export function WhatsAppChatButton({
     setLoading(true)
 
     try {
-      // 1) If general contact and Botkida URL is configured, open it directly
+      // 1) If general contact and preferred URL is configured, open it directly
       if (isGeneralContact) {
-        // Prefer Botkida URL if provided, else fall back to default wa.me link
+        // Prefer configured URL if provided, else fall back to default wa.me link
         window.open(botkidaUrl || defaultBusinessUrl, "_blank")
         toast({
           title: "WhatsApp opened! 💬",
@@ -85,7 +85,7 @@ export function WhatsAppChatButton({
       })
     } catch (error: any) {
       console.error("WhatsApp error:", error)
-      // As a last resort, try opening the Botkida URL if present
+      // As a last resort, try opening the configured URL if present
       if (botkidaUrl || defaultBusinessUrl) {
         window.open(botkidaUrl || defaultBusinessUrl, "_blank")
         toast({ title: "Opening WhatsApp", description: "Redirecting to SecondHome WhatsApp Business." })
@@ -171,7 +171,7 @@ export function WhatsAppScheduleButton({
         }),
       })
 
-      // If Botkida URL exists and this is general contact, prefer that
+      // If a preferred URL exists and this is general contact, prefer that
       const botkidaUrl = process.env.NEXT_PUBLIC_BOTKIDA_WHATSAPP_URL
       if (useAINumber && botkidaUrl) {
         window.open(botkidaUrl, "_blank")

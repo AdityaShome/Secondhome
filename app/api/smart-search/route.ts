@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       })
     }
 
-    // Get Groq API key
+    // Get AI API key
     const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
       console.error("GROQ_API_KEY not found in environment variables")
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return await fallbackSearch(query)
     }
 
-    // Initialize Groq
+    // Initialize AI provider
     const groq = new Groq({ apiKey })
 
     // Connect to database to get real locations
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       if (mess.city) realCities.add(mess.city)
     })
 
-    // Create context for Groq
+    // Create context for AI
     const locationsList = Array.from(realCities).join(", ")
     const collegesList = Array.from(realColleges).slice(0, 20).join(", ")
 
@@ -94,7 +94,7 @@ Return ONLY a JSON object with this exact structure:
 
 IMPORTANT: Only suggest locations that exist in the Available Cities list. Do not make up locations.`
 
-    // Call Groq API
+    // Call AI API
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "llama-3.3-70b-versatile",
@@ -102,7 +102,7 @@ IMPORTANT: Only suggest locations that exist in the Available Cities list. Do no
     })
     const text = completion.choices[0]?.message?.content || ""
 
-    // Parse Groq response
+    // Parse AI response
     let aiData
     try {
       // Extract JSON from response
@@ -113,7 +113,7 @@ IMPORTANT: Only suggest locations that exist in the Available Cities list. Do no
         throw new Error("No JSON found in response")
       }
     } catch (parseError) {
-      console.error("Error parsing Groq response:", parseError)
+      console.error("Error parsing AI response:", parseError)
       return await fallbackSearch(query)
     }
 
@@ -171,7 +171,7 @@ IMPORTANT: Only suggest locations that exist in the Available Cities list. Do no
   }
 }
 
-// Fallback search without Groq
+// Fallback search without AI
 async function fallbackSearch(query: string) {
   try {
     await connectToDatabase()

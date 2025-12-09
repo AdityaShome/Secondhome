@@ -9,12 +9,12 @@ export async function POST(req: Request) {
     const GROQ_API_KEY = process.env.GROQ_API_KEY
 
     if (!GROQ_API_KEY) {
-      return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 })
+      return NextResponse.json({ error: "AI service not configured" }, { status: 500 })
     }
 
     const groq = new Groq({ apiKey: GROQ_API_KEY })
 
-    // Build detailed prompt for Groq
+    // Build detailed prompt for AI
     const prompt = `You are an AI real estate advisor for students and bachelors in India. Analyze this location and provide insights.
 
 Location: ${location}
@@ -60,7 +60,7 @@ Format your response as JSON with this structure:
 
 Be honest, balanced, and practical. Consider Indian context and student lifestyle.`
 
-    // Call Groq AI
+    // Call AI provider
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "llama-3.3-70b-versatile",
@@ -68,7 +68,7 @@ Be honest, balanced, and practical. Consider Indian context and student lifestyl
     })
 
     if (!completion.choices || completion.choices.length === 0) {
-      console.error("Groq API error: No response")
+      console.error("AI provider error: No response")
       
       // Fallback response
       return NextResponse.json({
@@ -90,9 +90,9 @@ Be honest, balanced, and practical. Consider Indian context and student lifestyl
     }
 
     const aiText = completion.choices[0]?.message?.content || ""
-    console.log("Groq AI response:", aiText)
+    console.log("AI response:", aiText)
 
-    // Parse Groq response
+    // Parse AI response
     if (aiText) {
 
       // Try to extract JSON from the response
@@ -102,7 +102,7 @@ Be honest, balanced, and practical. Consider Indian context and student lifestyl
           const parsed = JSON.parse(jsonMatch[0])
           return NextResponse.json(parsed)
         } catch (e) {
-          console.error("Failed to parse JSON from Groq response:", e)
+          console.error("Failed to parse JSON from AI response:", e)
         }
       }
 
@@ -116,7 +116,7 @@ Be honest, balanced, and practical. Consider Indian context and student lifestyl
       })
     }
 
-    // Fallback if Groq fails
+    // Fallback if AI fails
     return NextResponse.json({
       recommendation: `${location} has a bachelor score of ${insights.scores.overall}/100. ${
         insights.scores.overall >= 80 ? 'Excellent choice for students!' : 

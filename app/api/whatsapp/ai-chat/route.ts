@@ -133,7 +133,7 @@ COMMON QUESTIONS TO ANSWER:
 If user wants to schedule a visit, respond with: "I can help you schedule a visit! Please reply with your preferred date and time, or type 'schedule' for available slots."
 `
 
-    // Initialize Groq
+    // Initialize AI provider
     const groq = new Groq({ apiKey: GROQ_API_KEY })
 
     // Build conversation history

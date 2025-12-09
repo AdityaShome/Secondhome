@@ -852,14 +852,14 @@ export default function MapPage() {
     })
   }
 
-  // Get AI insights using Groq
+  // Get AI insights using SecondHome AI
   const getAIInsights = async (location: [number, number]) => {
     if (!insights) {
       console.log("⏳ Waiting for insights data...")
       return
     }
     
-    console.log("🤖 Requesting AI insights from Groq...")
+    console.log("🤖 Requesting AI insights from SecondHome AI...")
     setIsLoadingAI(true)
     try {
       const response = await fetch('/api/ai/location-insights', {
@@ -2851,7 +2851,7 @@ export default function MapPage() {
                       nearestCollege: nearestCollege?.name
                     }
 
-                    // Call Groq API
+                    // Call SecondHome AI service
                     const response = await fetch('/api/ai/chat', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },

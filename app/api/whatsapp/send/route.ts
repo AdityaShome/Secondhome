@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 const BOTKIDA_API_KEY = process.env.BOTKIDA_API_KEY
 const BOTKIDA_API_URL = process.env.BOTKIDA_API_URL || "https://app.botkida.com/api/v1/whatsapp/send"
-// WhatsApp Business AI Number from Botkida
+// WhatsApp Business AI Number from configured provider
 const WHATSAPP_AI_NUMBER = process.env.WHATSAPP_AI_NUMBER || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "917384662005" // This is the AI bot number that will handle messages
 
 export async function POST(req: NextRequest) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       formattedPhone = "91" + formattedPhone // Add India country code
     }
 
-    // Send message via Botkida API
+    // Send message via WhatsApp provider API
     const response = await fetch(BOTKIDA_API_URL, {
       method: "POST",
       headers: {
@@ -54,12 +54,12 @@ export async function POST(req: NextRequest) {
         // Try to parse as JSON if possible
         if (contentType?.includes("application/json")) {
           const errorData = JSON.parse(errorText)
-          console.error("Botkida API error:", errorData)
+          console.error("WhatsApp provider API error:", errorData)
           throw new Error(errorData.error || errorData.message || `Failed to send WhatsApp message: ${response.status}`)
         }
       } catch (parseError) {
         // If it's HTML or other non-JSON response
-        console.error("Botkida API returned non-JSON error:", errorText.substring(0, 200))
+        console.error("WhatsApp provider API returned non-JSON error:", errorText.substring(0, 200))
       }
       throw new Error(`Failed to send WhatsApp message: HTTP ${response.status}`)
     }
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     } else {
       // If response is not JSON (might be HTML or plain text)
       const responseText = await response.text()
-      console.warn("Botkida API returned non-JSON response:", responseText.substring(0, 200))
+      console.warn("WhatsApp provider API returned non-JSON response:", responseText.substring(0, 200))
       data = { message: "Message sent (non-JSON response received)" }
     }
 

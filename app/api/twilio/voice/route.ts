@@ -114,7 +114,7 @@ Return a concise, natural voice reply under 70 words. Mention secondhome.com onc
         })
         aiReply = completion.choices[0]?.message?.content?.trim() || aiReply
       } catch (err) {
-        console.error("Groq voice error", err)
+        console.error("AI voice error", err)
         aiReply =
           "Thanks for calling SecondHome! I can help with PGs, flats, and hostels. Tell me your city or college, or press 1 to reach an executive."
       }

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "No new properties this week" })
     }
 
-    // Generate AI content using Groq
+    // Generate AI content using SecondHome AI
 
     const propertyData = newProperties.map((p: any) => ({
       title: p.title,

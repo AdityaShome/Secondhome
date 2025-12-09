@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const GROQ_API_KEY = process.env.GROQ_API_KEY
 
     if (!GROQ_API_KEY) {
-      return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 })
+      return NextResponse.json({ error: "AI service not configured" }, { status: 500 })
     }
 
     const groq = new Groq({ apiKey: GROQ_API_KEY })
@@ -46,7 +46,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       roomTypes: property.roomTypes,
     }
 
-    // Call Groq API
+    // Call AI service
     const prompt = `You are an AI property verification system for a student accommodation platform. Review the following property listing and determine if it's legitimate and suitable for students.
 
 Property Details:
@@ -87,10 +87,10 @@ Only approve if confidence is above 80% and no major red flags exist.`
     
     const aiText = completion.choices[0]?.message?.content || ""
     
-    console.log("Groq AI Response:", aiText)
+    console.log("AI response:", aiText)
     
     if (!aiText) {
-      console.error("Invalid Groq response: empty response")
+      console.error("Invalid AI response: empty response")
       
       // Fallback: Auto-approve if AI fails (better than blocking)
       const aiResult = {
@@ -139,7 +139,7 @@ Only approve if confidence is above 80% and no major red flags exist.`
       })
     }
 
-    console.log("Groq AI Text Response:", aiText)
+    console.log("AI Text Response:", aiText)
     
     // Extract JSON from response (AI might include markdown code blocks)
     let aiResult

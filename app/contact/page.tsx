@@ -79,11 +79,11 @@ export default function ContactPage() {
                       <Image src="/WhatsApp.svg.webp" alt="WhatsApp" fill priority sizes="28px" />
                     </div>
                     <h2 className="text-xl font-semibold">WhatsApp Business</h2>
-                    <Badge variant="secondary">Botkida</Badge>
+                    <Badge variant="secondary">SecondHome AI</Badge>
                   </div>
                   <p className="text-muted-foreground text-sm">
-                    Chat instantly on WhatsApp with our AI (powered by Botkida + Groq). We’ll detect frustration and surface quick-action buttons
-                    to get you answers or route you to a human fast.
+                    Chat instantly on WhatsApp with our SecondHome AI. We’ll detect frustration and surface quick-action buttons to get you answers or
+                    route you to a human fast.
                   </p>
                   <WhatsAppChatButton propertyId="contact" propertyTitle="SecondHome Contact" label="Chat on WhatsApp" className="w-full" />
                   <p className="text-xs text-muted-foreground">
@@ -99,14 +99,14 @@ export default function ContactPage() {
                   <div className="flex items-center gap-2">
                     <HeadphonesIcon className="h-5 w-5 text-primary" />
                     <h2 className="text-xl font-semibold">Website chat / Executive</h2>
-                  </div>
+                      </div>
                   <p className="text-muted-foreground text-sm">
                     Prefer to stay here? Use the in-site chat for AI help or connect to an executive. You can return to the mode selector or end a session anytime.
-                  </p>
+                      </p>
                   <ContactChat />
                 </CardContent>
               </Card>
-            </motion.div>
+                    </motion.div>
 
             <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
               <Card className="shadow-lg border-t-4 border-t-orange-500 h-full">
@@ -114,21 +114,21 @@ export default function ContactPage() {
                   <div className="flex items-center gap-2">
                     <Phone className="h-5 w-5 text-orange-500" />
                     <h2 className="text-xl font-semibold">Call our AI agent</h2>
-                  </div>
+                        </div>
                   <p className="text-muted-foreground text-sm">
-                    Call our Twilio-powered AI agent. It will greet callers with key info about SecondHome and answer common questions using Groq.
+                    Call our AI agent. It will greet callers with key info about SecondHome and answer common questions.
                   </p>
                   <div className="rounded-lg border p-3 bg-muted/40">
                     <div className="text-sm font-semibold">{TWILIO_NUMBER_DISPLAY}</div>
                     <div className="text-xs text-muted-foreground">24/7 AI receptionist</div>
-                  </div>
+                        </div>
                   <Button className="w-full" onClick={handleCallNow} disabled={callLoading}>
                     {callLoading ? "Calling..." : (
                       <>
                         <Phone className="h-4 w-4 mr-2" /> Call now
-                      </>
-                    )}
-                  </Button>
+                            </>
+                          )}
+                        </Button>
                   <p className="text-xs text-muted-foreground">
                     If you say “talk to a human”, we’ll route you to our executive workflow.
                   </p>
