@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Home, Mail, Phone, MapPin, Instagram, Facebook, Twitter, Linkedin, ArrowRight, Check, Loader2 } from "lucide-react"
+import { Home, Mail, Phone, MapPin, Instagram, Facebook, Twitter, Linkedin, Youtube, ArrowRight, Check, Loader2, Globe2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
@@ -12,15 +12,17 @@ export default function Footer() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
+  const [language, setLanguage] = useState("English")
 
   // Socials from env so links always work or are hidden if not set
   const socials = useMemo(() => {
     return [
-      { Icon: Instagram, label: "Instagram", href: process.env.NEXT_PUBLIC_INSTAGRAM_URL },
-      { Icon: Facebook, label: "Facebook", href: process.env.NEXT_PUBLIC_FACEBOOK_URL },
-      { Icon: Twitter, label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL },
-      { Icon: Linkedin, label: "LinkedIn", href: process.env.NEXT_PUBLIC_LINKEDIN_URL },
-    ].filter((s) => !!s.href)
+      { Icon: Instagram, label: "Instagram", href: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "#" },
+      { Icon: Youtube, label: "YouTube", href: process.env.NEXT_PUBLIC_YOUTUBE_URL || "#" },
+      { Icon: Facebook, label: "Facebook", href: process.env.NEXT_PUBLIC_FACEBOOK_URL || "#" },
+      { Icon: Twitter, label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL || "#" },
+      { Icon: Linkedin, label: "LinkedIn", href: process.env.NEXT_PUBLIC_LINKEDIN_URL || "#" },
+    ]
   }, [])
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -77,6 +79,47 @@ export default function Footer() {
   return (
     <footer className="bg-slate-950 text-slate-100">
       <div className="container px-4 py-16 mx-auto space-y-14">
+        {/* Utility bar */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-slate-300">
+          <div className="flex items-center gap-2">
+            <Home className="h-5 w-5 text-orange-400" />
+            <span className="font-semibold text-white">Second Home</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+              <Globe2 className="h-4 w-4 text-orange-300" />
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-transparent text-slate-100 text-sm outline-none"
+              >
+                {["English", "हिन्दी", "मराठी", "తెలుగు"].map((lang) => (
+                  <option key={lang} value={lang} className="text-slate-900">
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              {socials.map(({ Icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target={href === "#" ? "_self" : "_blank"}
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (href === "#") e.preventDefault()
+                  }}
+                  className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-orange-300 transition-all duration-300 border border-white/10"
+                  aria-label={label}
+                >
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Top CTA bar */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 rounded-2xl px-6 py-5 shadow-xl border border-orange-300/40">
           <div className="space-y-1 text-center lg:text-left">
@@ -155,22 +198,23 @@ export default function Footer() {
             <p className="text-slate-300 leading-relaxed">
               Simplifying student accommodation across India. Find your perfect place near campus with verified options and AI-guided help.
             </p>
-            {socials.length > 0 && (
-              <div className="flex gap-3 pt-2">
-                {socials.map(({ Icon, label, href }) => (
-                  <a
-                    key={label}
-                    href={href as string}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-orange-300 transition-all duration-300 hover:scale-110 border border-white/10"
-                    aria-label={label}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </a>
-                ))}
-              </div>
-            )}
+            <div className="flex gap-3 pt-2 flex-wrap">
+              {socials.map(({ Icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target={href === "#" ? "_self" : "_blank"}
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (href === "#") e.preventDefault()
+                  }}
+                  className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-orange-300 transition-all duration-300 hover:scale-110 border border-white/10"
+                  aria-label={label}
+                >
+                  <Icon className="h-5 w-5" />
+                </a>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-4">
