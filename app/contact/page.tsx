@@ -1,73 +1,46 @@
 ﻿"use client"
 
 import { useState } from "react"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Card, CardContent } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+import Link from "next/link"
+import Image from "next/image"
 import { motion } from "framer-motion"
-import { Send, Loader2, CheckCircle, MessageCircle, Mail, Phone, MapPin } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Phone, MessageCircle, HeadphonesIcon } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import { ContactChat } from "@/components/contact-chat"
+import { WhatsAppChatButton } from "@/components/whatsapp-chat-button"
 
-const formSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
-  subject: z.string().min(1, "Please select a subject"),
-  message: z.string().min(10, "Message must be at least 10 characters"),
-})
+const TWILIO_NUMBER_DISPLAY = "+1 855 500 3465"
+const TWILIO_NUMBER_TEL = "+18555003465"
 
 export default function ContactPage() {
   const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
+  const [callLoading, setCallLoading] = useState(false)
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    },
-  })
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true)
+  const handleCallNow = async () => {
+    const raw = window.prompt("Enter the number to connect (with country code or 10-digit):")
+    if (!raw) return
+    const digits = raw.replace(/\D/g, "")
+    if (digits.length < 10) {
+      toast({ title: "Invalid number", description: "Please enter a valid phone number.", variant: "destructive" })
+      return
+    }
+    setCallLoading(true)
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      console.log(values)
-
-      setIsSuccess(true)
-      toast({
-        title: "Message sent successfully",
-        description: "We'll get back to you as soon as possible.",
+      const res = await fetch("/api/twilio/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: digits }),
       })
-
-      form.reset()
-
-      // Reset success state after 3 seconds
-      setTimeout(() => {
-        setIsSuccess(false)
-      }, 3000)
-    } catch (error) {
-      console.error("Error sending message:", error)
-      toast({
-        title: "Failed to send message",
-        description: "Please try again later or contact us directly.",
-        variant: "destructive",
-      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to place call")
+      toast({ title: "Calling now", description: `We’re calling ${data.toDisplay || raw} from ${TWILIO_NUMBER_DISPLAY}.` })
+    } catch (e: any) {
+      toast({ title: "Could not place call", description: e?.message || "Please try again.", variant: "destructive" })
     } finally {
-      setIsSubmitting(false)
+      setCallLoading(false)
     }
   }
 
@@ -94,145 +67,71 @@ export default function ContactPage() {
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent"></div>
       </section>
 
-      {/* Contact Info & Form Section */}
+      {/* Contact Channels */}
       <section className="py-20">
         <div className="container px-4 mx-auto">
-          <div className="max-w-4xl mx-auto">
-            {/* Contact Form */}
-            <motion.div
-              className=""
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Card className="shadow-lg border-t-4 border-t-primary">
-                <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold mb-6">Send Us a Message</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+              <Card className="shadow-lg border-t-4 border-t-green-600 h-full">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-7 w-7">
+                      <Image src="/whatsapp.svg" alt="WhatsApp" fill priority sizes="28px" />
+                    </div>
+                    <h2 className="text-xl font-semibold">WhatsApp Business</h2>
+                    <Badge variant="secondary">Botkida</Badge>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    Chat instantly on WhatsApp with our AI (powered by Botkida + Groq). We’ll detect frustration and surface quick-action buttons
+                    to get you answers or route you to a human fast.
+                  </p>
+                  <WhatsAppChatButton propertyId="contact" propertyTitle="SecondHome Contact" label="Chat on WhatsApp" className="w-full" />
+                  <p className="text-xs text-muted-foreground">
+                    Tip: say what you need in one line. The AI will propose buttons like “Schedule a visit” or “Talk to an executive”.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-                  {isSuccess ? (
-                    <motion.div
-                      className="flex flex-col items-center justify-center py-12 text-center"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                        <CheckCircle className="w-8 h-8 text-green-600" />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">Message Sent!</h3>
-                      <p className="text-muted-foreground mb-6">
-                        Thank you for reaching out. We'll get back to you as soon as possible.
-                      </p>
-                      <Button onClick={() => setIsSuccess(false)}>Send Another Message</Button>
-                    </motion.div>
-                  ) : (
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Full Name</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="John Doe" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
+              <Card className="shadow-lg border-t-4 border-t-primary h-full">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <HeadphonesIcon className="h-5 w-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Website chat / Executive</h2>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    Prefer to stay here? Use the in-site chat for AI help or connect to an executive. You can return to the mode selector or end a session anytime.
+                  </p>
+                  <ContactChat />
+                </CardContent>
+              </Card>
+            </motion.div>
 
-                          <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email Address</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="your.email@example.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="+91 73846 62005" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="subject"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Subject</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a subject" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="general">General Inquiry</SelectItem>
-                                    <SelectItem value="property">Property Related</SelectItem>
-                                    <SelectItem value="booking">Booking Issue</SelectItem>
-                                    <SelectItem value="feedback">Feedback</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="message"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Message</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="How can we help you?" className="min-h-[120px]" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <Button
-                          type="submit"
-                          className="w-full h-12 transition-all duration-200 transform hover:scale-[1.02]"
-                          disabled={isSubmitting}
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Send className="mr-2 h-4 w-4" />
-                              Send Message
-                            </>
-                          )}
-                        </Button>
-                      </form>
-                    </Form>
-                  )}
+            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
+              <Card className="shadow-lg border-t-4 border-t-orange-500 h-full">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-orange-500" />
+                    <h2 className="text-xl font-semibold">Call our AI agent</h2>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    Call our Twilio-powered AI agent. It will greet callers with key info about SecondHome and answer common questions using Groq.
+                  </p>
+                  <div className="rounded-lg border p-3 bg-muted/40">
+                    <div className="text-sm font-semibold">{TWILIO_NUMBER_DISPLAY}</div>
+                    <div className="text-xs text-muted-foreground">24/7 AI receptionist</div>
+                  </div>
+                  <Button className="w-full" onClick={handleCallNow} disabled={callLoading}>
+                    {callLoading ? "Calling..." : (
+                      <>
+                        <Phone className="h-4 w-4 mr-2" /> Call now
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    If you say “talk to a human”, we’ll route you to our executive workflow.
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>

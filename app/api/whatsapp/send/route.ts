@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const BOTKIDA_API_KEY = process.env.BOTKIDA_API_KEY || "90621m18C0yCqyC06cfuwiNYsRjSve5ylNtLOUpzoAUv6"
-const BOTKIDA_API_URL = "https://app.botkida.com/api/v1/whatsapp/send"
+const BOTKIDA_API_KEY = process.env.BOTKIDA_API_KEY
+const BOTKIDA_API_URL = process.env.BOTKIDA_API_URL || "https://app.botkida.com/api/v1/whatsapp/send"
 // WhatsApp Business AI Number from Botkida
-const WHATSAPP_AI_NUMBER = "917384662005" // This is the AI bot number that will handle messages
+const WHATSAPP_AI_NUMBER = process.env.WHATSAPP_AI_NUMBER || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "917384662005" // This is the AI bot number that will handle messages
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +13,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Phone number and message are required" },
         { status: 400 }
+      )
+    }
+
+    if (!BOTKIDA_API_KEY) {
+      return NextResponse.json(
+        { error: "BOTKIDA_API_KEY not configured" },
+        { status: 500 }
       )
     }
 

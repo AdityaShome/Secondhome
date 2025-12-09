@@ -14,6 +14,11 @@ interface MessageItem {
   ts: number
 }
 
+interface QuickSuggestion {
+  label: string
+  text: string
+}
+
 export function ContactChat() {
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<"idle" | "ai" | "escalating" | "connected">("idle")
@@ -23,6 +28,8 @@ export function ContactChat() {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [userToken, setUserToken] = useState<string | null>(null)
   const [agentJoined, setAgentJoined] = useState(false)
+  const [sessionClosed, setSessionClosed] = useState(false)
+  const [suggestions, setSuggestions] = useState<QuickSuggestion[]>([])
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -37,7 +44,7 @@ export function ContactChat() {
 
   // Poll conversation if created
   useEffect(() => {
-    if (!conversationId || !userToken) return
+    if (!conversationId || !userToken || !open) return
     let stop = false
     const poll = async () => {
       try {
@@ -53,6 +60,10 @@ export function ContactChat() {
           setMessages(serverMsgs)
           setAgentJoined(data.status === "connected")
           if (data.status === "connected") setMode("connected")
+          if (data.status === "closed") {
+            setSessionClosed(true)
+            setMode("idle")
+          }
         }
       } catch (e) {
         // ignore transient errors
@@ -61,9 +72,20 @@ export function ContactChat() {
     const id = setInterval(() => { if (!stop) poll() }, 2000)
     poll()
     return () => { stop = true; clearInterval(id) }
-  }, [conversationId, userToken])
+  }, [conversationId, userToken, open])
 
   const disabledSend = useMemo(() => loading || !input.trim(), [loading, input])
+
+  const resetConversationState = () => {
+    setConversationId(null)
+    setUserToken(null)
+    setMessages([])
+    setSuggestions([])
+    setAgentJoined(false)
+    setSessionClosed(false)
+    setMode("idle")
+    setInput("")
+  }
 
   const sendAI = async (text: string) => {
     setLoading(true)
@@ -77,11 +99,17 @@ export function ContactChat() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "AI error")
 
+      const aiResponse = data.response || ""
+      const quickButtons: QuickSuggestion[] = Array.isArray(data.suggestions)
+        ? data.suggestions.slice(0, 6)
+        : []
+
       setMessages((prev) => [
         ...prev,
         { role: "user", content: text, ts: Date.now() },
-        { role: "ai", content: data.response, ts: Date.now() },
+        { role: "ai", content: aiResponse, ts: Date.now() },
       ])
+      setSuggestions(quickButtons)
     } catch (e: any) {
       toast({ title: "AI unavailable", description: e.message || "Please try again.", variant: "destructive" })
     } finally {
@@ -124,6 +152,29 @@ export function ContactChat() {
     }
   }
 
+  const handleEndSession = async () => {
+    if (!conversationId || !userToken) {
+      resetConversationState()
+      return
+    }
+    setLoading(true)
+    try {
+      await fetch(`/api/contact/chat/${conversationId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: userToken, endSession: true }),
+      })
+      setMessages((prev) => [...prev, { role: "system", content: "Session ended. We hope we helped!", ts: Date.now() }])
+      setSessionClosed(true)
+      resetConversationState()
+      toast({ title: "Session closed", description: "You can start a new chat anytime." })
+    } catch (e: any) {
+      toast({ title: "Could not end session", description: e?.message || "Please try again.", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const onSend = async () => {
     const text = input.trim()
     if (!text) return
@@ -147,6 +198,7 @@ export function ContactChat() {
 
     // Before escalation, use AI quick help
     if (mode === "ai" || mode === "idle") {
+      setSuggestions([])
       await sendAI(text)
       return
     }
@@ -161,8 +213,20 @@ export function ContactChat() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[680px] p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <BotMessageSquare className="h-5 w-5 text-primary" /> {headerTitle}
+          <DialogTitle className="flex items-center justify-between gap-3 text-lg w-full">
+            <div className="flex items-center gap-2">
+              {mode !== "idle" && (
+                <Button variant="ghost" size="sm" onClick={resetConversationState} className="px-2">
+                  Back
+                </Button>
+              )}
+              <BotMessageSquare className="h-5 w-5 text-primary" /> {headerTitle}
+            </div>
+            {conversationId && (
+              <Button variant="outline" size="sm" onClick={handleEndSession}>
+                End session
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -194,6 +258,9 @@ export function ContactChat() {
               {messages.length === 0 && (
                 <div className="text-sm text-muted-foreground">Start by asking a question, or switch to "Connect with executive" for priority assistance.</div>
               )}
+              {sessionClosed && (
+                <div className="text-xs text-muted-foreground">Session closed. Start a new chat anytime.</div>
+              )}
               {messages.map((m, idx) => (
                 <div key={idx} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow ${m.role === "user" ? "bg-primary text-primary-foreground" : m.role === "system" ? "bg-amber-100" : "bg-white"}`}>
@@ -205,6 +272,27 @@ export function ContactChat() {
                 <div className="text-xs text-muted-foreground">Connecting to an executive… please wait.</div>
               )}
             </div>
+            {suggestions.length > 0 && !conversationId && (
+              <div className="border-t px-4 py-2 bg-white">
+                <div className="text-xs text-muted-foreground mb-1">Quick actions</div>
+                <div className="flex flex-wrap gap-2">
+                  {suggestions.map((s, idx) => (
+                    <Button
+                      key={idx}
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setInput(s.text)
+                        // Immediately send to AI for speed
+                        sendAI(s.text)
+                      }}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="border-t p-3 flex items-center gap-2">
               <Textarea
                 value={input}

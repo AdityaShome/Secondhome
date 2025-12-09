@@ -37,3 +37,4 @@ const ScheduleVisitSchema = new Schema<IScheduleVisit>({
 export const ScheduleVisit = mongoose.models.ScheduleVisit || mongoose.model<IScheduleVisit>("ScheduleVisit", ScheduleVisitSchema)
 
 
+

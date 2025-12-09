@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import Groq from "groq-sdk"
 import { connectToDatabase } from "@/lib/mongodb"
 import { Property } from "@/models/property"
-import { ScheduleVisit } from "@/models/schedule-visit"
-import mongoose from "mongoose"
-
 const GROQ_API_KEY = process.env.GROQ_API_KEY
-const BOTKIDA_API_KEY = process.env.BOTKIDA_API_KEY || "90621m18C0yCqyC06cfuwiNYsRjSve5ylNtLOUpzoAUv6"
-const BOTKIDA_API_URL = "https://app.botkida.com/api/v1/whatsapp/send"
+const BOTKIDA_API_KEY = process.env.BOTKIDA_API_KEY
+const BOTKIDA_API_URL = process.env.BOTKIDA_API_URL || "https://app.botkida.com/api/v1/whatsapp/send"
 // WhatsApp Business AI Number from Botkida
-const WHATSAPP_AI_NUMBER = "917384662005"
+const WHATSAPP_AI_NUMBER = process.env.WHATSAPP_AI_NUMBER || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "917384662005"
 
 export async function POST(req: NextRequest) {
   try {
     const webhookData = await req.json()
+
+    if (!BOTKIDA_API_KEY) {
+      return NextResponse.json({ success: false, error: "BOTKIDA_API_KEY not configured" }, { status: 500 })
+    }
 
     // Botkida webhook format may vary, adjust based on actual format
     const { from, message, type } = webhookData

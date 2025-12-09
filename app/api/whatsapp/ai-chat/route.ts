@@ -4,6 +4,21 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { Property } from "@/models/property"
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
+const frustrationKeywords = ["angry", "frustrated", "upset", "annoyed", "bad", "useless", "complaint", "cancel", "hate", "issue"]
+const defaultButtons = [
+  { label: "Talk to an executive", text: "Please connect me to an executive now" },
+  { label: "Schedule a visit", text: "Schedule a property visit" },
+  { label: "Share pricing", text: "Tell me the exact price and any deposits" },
+]
+
+function withFrustrationSafety(message: string, suggestions: Array<{ label: string; text: string }>) {
+  const frustrated = frustrationKeywords.some((k) => message.toLowerCase().includes(k))
+  if (frustrated) {
+    const merged = suggestions.length ? suggestions : defaultButtons
+    return merged.slice(0, 5)
+  }
+  return suggestions
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,7 +54,7 @@ STRICT INSTRUCTIONS:
 1. Answer ONLY with information relevant to SecondHome and student accommodation. If unsure, ask a clarifying question.
 2. Keep responses concise, WhatsApp style.
 3. Prefer asking for missing details (city, college, budget, room type).
-4. If user asks for human help, suggest "Connect with executive".
+4. If the user sounds frustrated or asks for help, include buttons that escalate (executive, callback) or resolve quickly.
 5. Respond in JSON with the exact shape:
 {
   "message": string,              // the reply to show the user
@@ -71,6 +86,7 @@ USER_MESSAGE: ${message}`
       } catch {
         msg = raw || msg
       }
+      suggestions = withFrustrationSafety(message, suggestions)
 
       return NextResponse.json({ success: true, response: msg, suggestions, propertyId: null })
     }
@@ -160,6 +176,7 @@ USER_MESSAGE: ${message}`
     } catch {
       msg = raw || msg
     }
+    suggestions = withFrustrationSafety(message, suggestions)
 
     return NextResponse.json({ success: true, response: msg, suggestions, propertyId })
   } catch (error: any) {

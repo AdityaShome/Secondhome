@@ -33,12 +33,21 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     await connectToDatabase()
-    const { token, content } = await req.json()
+    const { token, content, endSession } = await req.json()
     const { id } = await context.params
     const convo = await ContactConversation.findById(id)
     if (!convo) return NextResponse.json({ error: "Not found" }, { status: 404 })
     if (token !== convo.userToken && token !== convo.agentToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (endSession) {
+      convo.status = "closed"
+      convo.messages.push({ role: "system", content: "Session closed by user.", ts: new Date() } as any)
+      await convo.save()
+      return NextResponse.json({ success: true, closed: true })
+    }
+    if (convo.status === "closed") {
+      return NextResponse.json({ error: "Conversation closed" }, { status: 409 })
     }
     const role = token === convo.agentToken ? "agent" : "user"
     convo.messages.push({ role, content: String(content || ""), ts: new Date() } as any)
