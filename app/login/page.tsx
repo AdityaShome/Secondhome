@@ -12,9 +12,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/hooks/use-auth"
-import { Eye, EyeOff, Loader2, Home, Mail, Lock, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, Loader2, Home, Mail, Lock, ArrowRight, Building2, ShieldCheck, BadgePercent, Zap } from "lucide-react"
 import { signIn, useSession } from "next-auth/react"
 import Image from "next/image"
+import { useLanguage } from "@/providers/language-provider"
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const { login } = useAuth()
+  const { t } = useLanguage()
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -134,22 +136,22 @@ export default function LoginPage() {
 
           <div className="space-y-4">
             <h2 className="text-4xl font-bold text-gray-900 leading-tight">
-              Welcome Back!
+              {t("login.welcomeTitle")}
             </h2>
             <p className="text-lg text-gray-600">
-              Sign in to access your account and continue your search for the perfect accommodation.
+              {t("login.welcomeSubtitle")}
             </p>
           </div>
 
           <div className="space-y-4 pt-8">
             {[
-              { icon: "🏠", text: "Browse 1000+ properties" },
-              { icon: "✅", text: "100% verified listings" },
-              { icon: "💰", text: "Zero brokerage fees" },
-              { icon: "⚡", text: "Instant booking" },
+              { Icon: Building2, text: t("login.benefit.inventory"), color: "text-orange-500" },
+              { Icon: ShieldCheck, text: t("login.benefit.verified"), color: "text-green-600" },
+              { Icon: BadgePercent, text: t("login.benefit.brokerage"), color: "text-blue-600" },
+              { Icon: Zap, text: t("login.benefit.booking"), color: "text-amber-500" },
             ].map((item, index) => (
               <div key={index} className="flex items-center gap-3">
-                <div className="text-2xl">{item.icon}</div>
+                <item.Icon className={`w-5 h-5 ${item.color}`} />
                 <span className="text-gray-700 font-medium">{item.text}</span>
               </div>
             ))}
@@ -171,11 +173,11 @@ export default function LoginPage() {
               </Link>
 
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t("login.signIn")}</h2>
                 <p className="text-gray-600">
                   {isAdminAuto
-                    ? "Admin access for verification"
-                    : "Enter your credentials to access your account"}
+                    ? t("login.adminAccess")
+                    : t("login.enterCredentials")}
                 </p>
               </div>
 
@@ -187,14 +189,14 @@ export default function LoginPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-900 font-semibold">Email Address</FormLabel>
+                        <FormLabel className="text-gray-900 font-semibold">{t("login.email")}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <Input
                               {...field}
                               type="email"
-                              placeholder="your.email@example.com"
+                              placeholder={t("login.emailPlaceholder")}
                               disabled={isLoading || isAdminAuto}
                               className="pl-11 h-12 border-2 border-gray-300 focus:border-orange-500 bg-white text-gray-900"
                             />
@@ -211,12 +213,12 @@ export default function LoginPage() {
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel className="text-gray-900 font-semibold">Password</FormLabel>
+                          <FormLabel className="text-gray-900 font-semibold">{t("login.password")}</FormLabel>
                           <Link
                             href="/forgot-password"
                             className="text-sm text-orange-600 hover:text-orange-700 font-medium"
                           >
-                            Forgot password?
+                            {t("login.forgotPassword")}
                           </Link>
                         </div>
                         <FormControl>
@@ -225,7 +227,7 @@ export default function LoginPage() {
                             <Input
                               {...field}
                               type={showPassword ? "text" : "password"}
-                              placeholder="Enter your password"
+                              placeholder={t("login.passwordPlaceholder")}
                               disabled={isLoading || isAdminAuto}
                               className="pl-11 pr-11 h-12 border-2 border-gray-300 focus:border-orange-500 bg-white text-gray-900"
                             />
@@ -251,11 +253,11 @@ export default function LoginPage() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Signing in...
+                        {t("login.signingIn")}
                       </>
                     ) : (
                       <>
-                        Sign In
+                        {t("login.signInCta")}
                         <ArrowRight className="w-5 h-5 ml-2" />
                       </>
                     )}
@@ -265,15 +267,15 @@ export default function LoginPage() {
 
               <div className="text-center space-y-2">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{" "}
+                  {t("login.noAccount")}{" "}
                   <Link href="/signup" className="text-orange-600 hover:text-orange-700 font-bold">
-                    Sign up now
+                    {t("login.signUpNow")}
                   </Link>
                 </p>
                 <p className="text-sm text-gray-600">
-                  Property owner?{" "}
+                  {t("login.ownerPrompt")}{" "}
                   <Link href="/register-property" className="text-orange-600 hover:text-orange-700 font-bold">
-                    Register here
+                    {t("login.registerHere")}
                   </Link>
                 </p>
               </div>

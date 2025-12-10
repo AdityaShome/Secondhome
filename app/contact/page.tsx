@@ -11,6 +11,7 @@ import { Phone, MessageCircle, HeadphonesIcon } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ContactChat } from "@/components/contact-chat"
 import { WhatsAppChatButton } from "@/components/whatsapp-chat-button"
+import { useLanguage } from "@/providers/language-provider"
 
 const TWILIO_NUMBER_DISPLAY = "+1 855 500 3465"
 const TWILIO_NUMBER_TEL = "+18555003465"
@@ -18,13 +19,14 @@ const TWILIO_NUMBER_TEL = "+18555003465"
 export default function ContactPage() {
   const { toast } = useToast()
   const [callLoading, setCallLoading] = useState(false)
+  const { t } = useLanguage()
 
   const handleCallNow = async () => {
-    const raw = window.prompt("Enter the number to connect (with country code or 10-digit):")
+    const raw = window.prompt(t("contact.prompt.callNumber"))
     if (!raw) return
     const digits = raw.replace(/\D/g, "")
     if (digits.length < 10) {
-      toast({ title: "Invalid number", description: "Please enter a valid phone number.", variant: "destructive" })
+      toast({ title: t("contact.error.invalidNumber.title"), description: t("contact.error.invalidNumber.desc"), variant: "destructive" })
       return
     }
     setCallLoading(true)
@@ -36,9 +38,11 @@ export default function ContactPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to place call")
-      toast({ title: "Calling now", description: `We’re calling ${data.toDisplay || raw} from ${TWILIO_NUMBER_DISPLAY}.` })
+      const numberDisplay = data.toDisplay || raw
+      const desc = t("contact.toast.calling.desc").replace("{{number}}", numberDisplay)
+      toast({ title: t("contact.toast.calling.title"), description: desc })
     } catch (e: any) {
-      toast({ title: "Could not place call", description: e?.message || "Please try again.", variant: "destructive" })
+      toast({ title: t("contact.toast.failed.title"), description: e?.message || t("contact.toast.failed.desc"), variant: "destructive" })
     } finally {
       setCallLoading(false)
     }
@@ -55,10 +59,10 @@ export default function ContactPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">Contact Us</h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Have questions or need assistance? We're here to help you find your perfect second home.
-            </p>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">{t("contact.heroTitle")}</h1>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            {t("contact.heroSubtitle")}
+          </p>
             <div className="flex justify-center">
               <ContactChat />
             </div>
@@ -78,16 +82,15 @@ export default function ContactPage() {
                     <div className="relative h-7 w-7">
                       <Image src="/WhatsApp.svg.webp" alt="WhatsApp" fill priority sizes="28px" />
                     </div>
-                    <h2 className="text-xl font-semibold">WhatsApp Business</h2>
-                    <Badge variant="secondary">SecondHome AI</Badge>
+                    <h2 className="text-xl font-semibold">{t("contact.whatsapp.title")}</h2>
+                    <Badge variant="secondary">{t("contact.whatsapp.badge")}</Badge>
                   </div>
                   <p className="text-muted-foreground text-sm">
-                    Chat instantly on WhatsApp with our SecondHome AI. We’ll detect frustration and surface quick-action buttons to get you answers or
-                    route you to a human fast.
+                    {t("contact.whatsapp.desc")}
                   </p>
-                  <WhatsAppChatButton propertyId="contact" propertyTitle="SecondHome Contact" label="Chat on WhatsApp" className="w-full" />
+                  <WhatsAppChatButton propertyId="contact" propertyTitle="SecondHome Contact" label={t("contact.whatsapp.button")} className="w-full" />
                   <p className="text-xs text-muted-foreground">
-                    Tip: say what you need in one line. The AI will propose buttons like “Schedule a visit” or “Talk to an executive”.
+                    {t("contact.whatsapp.tip")}
                   </p>
                 </CardContent>
               </Card>
@@ -98,10 +101,10 @@ export default function ContactPage() {
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <HeadphonesIcon className="h-5 w-5 text-primary" />
-                    <h2 className="text-xl font-semibold">Website chat / Executive</h2>
+                    <h2 className="text-xl font-semibold">{t("contact.webchat.title")}</h2>
                       </div>
                   <p className="text-muted-foreground text-sm">
-                    Prefer to stay here? Use the in-site chat for AI help or connect to an executive. You can return to the mode selector or end a session anytime.
+                    {t("contact.webchat.desc")}
                       </p>
                   <ContactChat />
                 </CardContent>
@@ -113,24 +116,24 @@ export default function ContactPage() {
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2">
                     <Phone className="h-5 w-5 text-orange-500" />
-                    <h2 className="text-xl font-semibold">Call our AI agent</h2>
+                    <h2 className="text-xl font-semibold">{t("contact.call.title")}</h2>
                         </div>
                   <p className="text-muted-foreground text-sm">
-                    Call our AI agent. It will greet callers with key info about SecondHome and answer common questions.
+                    {t("contact.call.desc")}
                   </p>
                   <div className="rounded-lg border p-3 bg-muted/40">
                     <div className="text-sm font-semibold">{TWILIO_NUMBER_DISPLAY}</div>
-                    <div className="text-xs text-muted-foreground">24/7 AI receptionist</div>
+                    <div className="text-xs text-muted-foreground">{t("contact.call.numberLabel")}</div>
                         </div>
                   <Button className="w-full" onClick={handleCallNow} disabled={callLoading}>
-                    {callLoading ? "Calling..." : (
+                    {callLoading ? t("contact.call.calling") : (
                       <>
-                        <Phone className="h-4 w-4 mr-2" /> Call now
+                        <Phone className="h-4 w-4 mr-2" /> {t("contact.call.button")}
                             </>
                           )}
                         </Button>
                   <p className="text-xs text-muted-foreground">
-                    If you say “talk to a human”, we’ll route you to our executive workflow.
+                    {t("contact.call.note")}
                   </p>
                 </CardContent>
               </Card>
@@ -149,37 +152,32 @@ export default function ContactPage() {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
-            <p className="text-lg text-muted-foreground">Find quick answers to common questions</p>
+          <h2 className="text-3xl font-bold mb-4">{t("contact.faq.title")}</h2>
+          <p className="text-lg text-muted-foreground">{t("contact.faq.subtitle")}</p>
           </motion.div>
 
           <div className="max-w-3xl mx-auto">
             <div className="space-y-6">
               {[
                 {
-                  question: "How do I book a property?",
-                  answer:
-                    "To book a property, browse our listings, select a property you like, and click on the 'Book Now' button. Follow the instructions to complete your booking. You'll receive a confirmation once the property owner approves your request.",
+                  question: t("contact.faq.q1"),
+                  answer: t("contact.faq.a1"),
                 },
                 {
-                  question: "What payment methods do you accept?",
-                  answer:
-                    "We accept various payment methods including credit/debit cards, UPI, net banking, and wallet payments. All transactions are secure and encrypted.",
+                  question: t("contact.faq.q2"),
+                  answer: t("contact.faq.a2"),
                 },
                 {
-                  question: "How can I list my property on Second Home?",
-                  answer:
-                    "To list your property, click on the 'List Your Property' button, fill out the property details form, upload clear images, and submit for review. Our team will verify your listing and make it live within 24-48 hours.",
+                  question: t("contact.faq.q3"),
+                  answer: t("contact.faq.a3"),
                 },
                 {
-                  question: "What if I need to cancel my booking?",
-                  answer:
-                    "Cancellation policies vary by property. You can find the specific cancellation policy on each property's listing page. In general, cancellations made at least 7 days before check-in are eligible for a full refund.",
+                  question: t("contact.faq.q4"),
+                  answer: t("contact.faq.a4"),
                 },
                 {
-                  question: "How do I contact a property owner?",
-                  answer:
-                    "You can contact property owners through our platform by clicking the 'Contact Owner' button on the property listing page. This ensures your communication is tracked and secured.",
+                  question: t("contact.faq.q5"),
+                  answer: t("contact.faq.a5"),
                 },
               ].map((faq, index) => (
                 <motion.div

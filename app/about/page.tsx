@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { Home, Shield, Award, Users, Clock } from "lucide-react"
+import { useLanguage } from "@/providers/language-provider"
 
 export default function AboutPage() {
+  const { t } = useLanguage()
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -19,18 +22,18 @@ export default function AboutPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
-              About <span className="text-primary">Second Home</span>
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Founded in 2025 by students, for students. We're revolutionizing how students find authentic PGs and flats by eliminating fake properties and bringing transparency to accommodation search.
-            </p>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
+            {t("about.heroTitle")}
+          </h1>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            {t("about.heroSubtitle")}
+          </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" className="h-12 px-6" asChild>
-                <Link href="/listings">Find Accommodation</Link>
+              <Link href="/listings">{t("about.hero.ctaPrimary")}</Link>
               </Button>
               <Button size="lg" variant="outline" className="h-12 px-6" asChild>
-                <Link href="/contact">Contact Us</Link>
+              <Link href="/contact">{t("about.hero.ctaSecondary")}</Link>
               </Button>
             </div>
           </motion.div>
@@ -48,23 +51,13 @@ export default function AboutPage() {
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl font-bold mb-6">Our Story</h2>
+            <h2 className="text-3xl font-bold mb-6">{t("about.story.title")}</h2>
               <div className="space-y-4 text-muted-foreground">
-                <p>
-                  Second Home was founded in <strong className="text-foreground">2025</strong> by three passionate students who faced the same frustrating problem: finding genuine accommodation near their colleges.
-                </p>
-                <p>
-                  As students from <strong className="text-foreground">Dayananda Sagar College of Engineering (DSCE)</strong> and <strong className="text-foreground">IIIT Hyderabad</strong>, we experienced the nightmare of dealing with fake property listings, unreliable brokers, and misleading information when searching for PGs and flats.
-                </p>
-                <p>
-                  Fed up with the rampant fraud in the student accommodation market, we decided to build a solution. What started as a mission to solve our own problem has become a platform that verifies every property, eliminates fake listings, and ensures students can find authentic accommodations with complete transparency.
-                </p>
-                <p>
-                  We believe every student deserves a safe, comfortable, and genuine "second home" - not just a room, but a place where they can focus on their studies and build their future. That's why we verify every property, verify every owner, and maintain the highest standards of authenticity.
-                </p>
-                <p className="pt-4">
-                  <strong className="text-foreground">Built by students, for students.</strong> We understand your struggles because we've been there. Join us in revolutionizing how students find their perfect accommodation.
-                </p>
+              <p>{t("about.story.p1")}</p>
+              <p>{t("about.story.p2")}</p>
+              <p>{t("about.story.p3")}</p>
+              <p>{t("about.story.p4")}</p>
+              <p className="pt-4">{t("about.story.p5")}</p>
               </div>
             </motion.div>
             <motion.div
@@ -91,8 +84,8 @@ export default function AboutPage() {
                     <Home className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Helping students since 2025</p>
-                    <p className="text-xs text-muted-foreground">Verified accommodations only</p>
+                    <p className="text-sm font-medium">{t("about.story.callout.title")}</p>
+                    <p className="text-xs text-muted-foreground">{t("about.story.callout.subtitle")}</p>
                   </div>
                 </div>
               </div>
@@ -111,34 +104,31 @@ export default function AboutPage() {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl font-bold mb-4">Our Mission & Values</h2>
-            <p className="text-lg text-muted-foreground">Solving the real problems students face when searching for accommodation</p>
+          <h2 className="text-3xl font-bold mb-4">{t("about.values.title")}</h2>
+          <p className="text-lg text-muted-foreground">{t("about.values.subtitle")}</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
                 icon: Shield,
-                title: "Zero Fake Properties",
-                description:
-                  "Every property is verified using AI-powered authentication. We eliminate fake listings so you only see real, legitimate accommodations.",
+              title: t("about.values.card1.title"),
+              description: t("about.values.card1.desc"),
               },
               {
                 icon: Users,
-                title: "Built by Students",
-                description:
-                  "Founded by students who faced the same challenges. We understand your struggles because we've been through them ourselves.",
+              title: t("about.values.card2.title"),
+              description: t("about.values.card2.desc"),
               },
               {
                 icon: Award,
-                title: "AI Verification",
-                description:
-                  "Advanced AI technology analyzes every property listing for authenticity, pricing, and safety before it goes live on our platform.",
+              title: t("about.values.card3.title"),
+              description: t("about.values.card3.desc"),
               },
               {
                 icon: Clock,
-                title: "Transparent Process",
-                description: "No hidden fees, no misleading information. We provide complete transparency so students can make informed decisions with confidence.",
+              title: t("about.values.card4.title"),
+              description: t("about.values.card4.desc"),
               },
             ].map((value, index) => (
               <motion.div
@@ -173,8 +163,8 @@ export default function AboutPage() {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl font-bold mb-4">Meet Our Team</h2>
-            <p className="text-lg text-muted-foreground">The passionate people behind Second Home</p>
+          <h2 className="text-3xl font-bold mb-4">{t("about.team.title")}</h2>
+          <p className="text-lg text-muted-foreground">{t("about.team.subtitle")}</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -239,16 +229,16 @@ export default function AboutPage() {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl font-bold mb-6">Ready to Find Your Second Home?</h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Join us in revolutionizing student accommodation. Find verified, authentic PGs and flats without the hassle of fake properties.
-            </p>
+          <h2 className="text-3xl font-bold mb-6">{t("about.cta.title")}</h2>
+          <p className="text-lg text-muted-foreground mb-8">
+            {t("about.cta.subtitle")}
+          </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" className="h-12 px-8" asChild>
-                <Link href="/listings">Browse Listings</Link>
+              <Link href="/listings">{t("about.cta.primary")}</Link>
               </Button>
               <Button size="lg" variant="outline" className="h-12 px-8" asChild>
-                <Link href="/register-property">List Your Property</Link>
+              <Link href="/register-property">{t("about.cta.secondary")}</Link>
               </Button>
             </div>
           </motion.div>
