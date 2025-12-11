@@ -29,6 +29,19 @@ import { ToastAction } from "@/components/ui/toast"
 import { motion, AnimatePresence } from "framer-motion"
 import { useDebounce } from "@/hooks/use-debounce"
 import "leaflet/dist/leaflet.css"
+import dynamic from "next/dynamic"
+
+const Map3DWorld = dynamic(() => import("@/components/Map3DWorld"), { 
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 bg-slate-950 flex items-center justify-center z-[99999]">
+      <div className="text-center">
+        <div className="text-6xl mb-4 animate-bounce">🗺️</div>
+        <div className="text-white text-xl font-bold">Loading 3D Map...</div>
+      </div>
+    </div>
+  )
+})
 
 interface Property {
   _id: string
@@ -268,6 +281,7 @@ export default function MapPage() {
   const [isVoiceActive, setIsVoiceActive] = useState(false)
   const [currentLocationName, setCurrentLocationName] = useState("Bangalore")
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d")
   const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([])
   const [chatInput, setChatInput] = useState("")
   const [isAiThinking, setIsAiThinking] = useState(false)
@@ -855,7 +869,7 @@ export default function MapPage() {
   // Get AI insights using Groq
   const getAIInsights = async (location: [number, number]) => {
     if (!insights) {
-      console.log("⏳ Waiting for insights data...")
+      console.log("⏳ Insights data not ready yet")
       return
     }
     
@@ -876,12 +890,14 @@ export default function MapPage() {
       if (response.ok) {
         const data = await response.json()
         setAiInsight(data)
+      } else {
+        console.log("AI insights unavailable (API key may be missing)")
       }
     } catch (error) {
       console.error("Error getting AI insights:", error)
-      } finally {
+    } finally {
       setIsLoadingAI(false)
-      }
+    }
   }
 
   // Add markers to map
@@ -2901,24 +2917,81 @@ export default function MapPage() {
         )}
       </AnimatePresence>
 
-      {/* AI Chat FAB */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-orange-500 hover:bg-orange-600 rounded-full shadow-xl flex items-center justify-center z-50 transition-all"
-      >
-        {isChatOpen ? (
-          <X className="w-8 h-8 text-white" />
-        ) : (
-          <Bot className="w-8 h-8 text-white" />
+      {/* --- 3D IMMERSIVE OVERLAY --- */}
+      <AnimatePresence mode="wait">
+        {viewMode === "3d" && (
+          <>
+            {console.log("🎮 3D MODE ACTIVE - Rendering Map3DWorld")}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-[99999]"
+            >
+              <Map3DWorld 
+                properties={properties}
+                places={places}
+                insights={insights}
+                mapCenter={mapCenter}
+                onClose={() => setViewMode("2d")}
+              />
+            </motion.div>
+          </>
         )}
-        {!isChatOpen && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
-            AI
-          </span>
-        )}
-      </motion.button>
+      </AnimatePresence>
+
+      {/* AI Chat FAB - Only visible in 2D mode */}
+      {viewMode === "2d" && !isLoading && (
+        <motion.button
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="fixed bottom-6 right-6 w-16 h-16 bg-orange-500 hover:bg-orange-600 rounded-full shadow-xl flex items-center justify-center z-50 transition-all"
+        >
+          {isChatOpen ? (
+            <X className="w-8 h-8 text-white" />
+          ) : (
+            <Bot className="w-8 h-8 text-white" />
+          )}
+          {!isChatOpen && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
+              AI
+            </span>
+          )}
+        </motion.button>
+      )}
+
+      {/* Floating Toggle Button - Always visible in 2D mode */}
+      {viewMode === "2d" && (
+        <motion.div 
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
+          className="fixed left-1/2 -translate-x-1/2 bottom-6 z-[90] flex items-center gap-2 p-1.5 bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-gray-200"
+        >
+          <button
+            onClick={() => setViewMode("2d")}
+            disabled
+            className="px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg transition-all cursor-default"
+          >
+            <MapPin className="w-5 h-5" />
+            2D Map
+          </button>
+          <button
+            onClick={() => {
+              console.log("🎮 BUTTON CLICKED - Switching to 3D mode");
+              setViewMode("3d");
+            }}
+            className="px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 active:scale-95 transition-all shadow-lg"
+          >
+            <Sparkles className="w-5 h-5 animate-pulse" />
+            🎮 Play 3D Mode
+          </button>
+        </motion.div>
+      )}
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
