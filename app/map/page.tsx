@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useDebounce } from "@/hooks/use-debounce"
 import "leaflet/dist/leaflet.css"
 import dynamic from "next/dynamic"
+import CommunityReviewsModal from "@/components/community-reviews-modal"
 
 const Map3DWorld = dynamic(() => import("@/components/Map3DWorld"), { 
   ssr: false,
@@ -282,6 +283,17 @@ export default function MapPage() {
   const [currentLocationName, setCurrentLocationName] = useState("Bangalore")
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d")
+  const [communityReviewsModal, setCommunityReviewsModal] = useState<{
+    isOpen: boolean
+    locationName: string
+    address?: string
+    type?: string
+  }>({
+    isOpen: false,
+    locationName: "",
+    address: "",
+    type: ""
+  })
   const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([])
   const [chatInput, setChatInput] = useState("")
   const [isAiThinking, setIsAiThinking] = useState(false)
@@ -307,6 +319,18 @@ export default function MapPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!mapRef.current || mapInitialized.current) return
+
+    // Add event listener for community reviews
+    const handleCommunityReviewsOpen = (event: any) => {
+      const { locationName, address, type } = event.detail
+      setCommunityReviewsModal({
+        isOpen: true,
+        locationName,
+        address,
+        type
+      })
+    }
+    window.addEventListener('openCommunityReviews', handleCommunityReviewsOpen as EventListener)
 
     const checkAndInitMap = async () => {
       const container = mapRef.current
@@ -405,6 +429,7 @@ export default function MapPage() {
     initTimeoutRef.current = setTimeout(checkAndInitMap, 100)
 
     return () => {
+      window.removeEventListener('openCommunityReviews', handleCommunityReviewsOpen as EventListener)
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current)
       }
@@ -935,11 +960,31 @@ export default function MapPage() {
           const marker = L.marker([lat, lng], { icon: propertyIcon })
             .addTo(map)
             .bindPopup(
-              `<div class="text-sm p-2">
-                <strong class="text-base">${property.title}</strong><br/>
-                <span class="text-gray-600">${property.location}</span><br/>
-                <span class="font-bold text-blue-600 text-lg">₹${property.price}/month</span>
-              </div>`
+              `<div class="p-3 min-w-[240px]">
+                <strong class="text-base font-bold text-gray-900">${property.title}</strong><br/>
+                <span class="text-gray-600 text-sm">${property.location}</span><br/>
+                <span class="font-bold text-orange-600 text-lg">₹${property.price}/month</span>
+                <div class="mt-3 flex flex-col gap-2">
+                  <button 
+                    onclick="window.dispatchEvent(new CustomEvent('openCommunityReviews', {detail: {locationName: '${property.title.replace(/'/g, "\\'")}', address: '${property.location.replace(/'/g, "\\'")}', type: '${property.type}'}}))" 
+                    class="w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    Community Reviews
+                  </button>
+                  <div class="flex gap-2">
+                    <a href="/listings/${property._id}" class="flex-1 px-3 py-2 border border-gray-300 hover:border-orange-500 hover:bg-orange-50 text-gray-700 rounded-lg text-sm font-medium text-center transition-all">
+                      Details
+                    </a>
+                    <button class="flex-1 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all">
+                      Book Now
+                    </button>
+                  </div>
+                </div>
+              </div>`,
+              { maxWidth: 280, className: 'custom-popup' }
             )
 
           marker.on("click", () => {
@@ -967,11 +1012,23 @@ export default function MapPage() {
             const marker = L.marker([place.lat, place.lon], { icon: placeIcon })
               .addTo(map)
               .bindPopup(
-                `<div class="text-sm p-2">
-                  <strong class="text-base">${place.name}</strong><br/>
-                  <span class="text-gray-600">${category.name}</span>
+                `<div class="p-3 min-w-[220px]">
+                  <strong class="text-base font-bold text-gray-900">${place.name}</strong><br/>
+                  <span class="text-orange-600 text-sm font-medium">${category.name}</span>
                   ${place.openingHours ? `<br/><span class="text-xs text-gray-500">⏰ ${place.openingHours}</span>` : ''}
-                </div>`
+                  <div class="mt-3">
+                    <button 
+                      onclick="window.dispatchEvent(new CustomEvent('openCommunityReviews', {detail: {locationName: '${place.name.replace(/'/g, "\\'")}', address: '${place.lat}, ${place.lon}', type: '${category.name}'}}))" 
+                      class="w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                      </svg>
+                      Community Reviews
+                    </button>
+                  </div>
+                </div>`,
+                { maxWidth: 260, className: 'custom-popup' }
               )
 
             marker.on("click", () => {
@@ -1555,7 +1612,7 @@ export default function MapPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
-                        className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5"
+                        className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5 z-[50]"
               >
                 <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -1576,7 +1633,7 @@ export default function MapPage() {
                             <X className="h-4 w-4" />
                   </Button>
                 </div>
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-4 flex gap-2 relative z-50">
                           <Button variant="outline" size="sm" asChild className="flex-1 border-gray-300 hover:border-orange-500 hover:bg-orange-50">
                             <Link href={`/listings/${selectedProperty._id}`}>
                               <MapPinned className="w-3 h-3 mr-1" />
@@ -1599,7 +1656,7 @@ export default function MapPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
-                        className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5"
+                        className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5 z-[50]"
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -2992,6 +3049,15 @@ export default function MapPage() {
           </button>
         </motion.div>
       )}
+
+      {/* Community Reviews Modal */}
+      <CommunityReviewsModal
+        isOpen={communityReviewsModal.isOpen}
+        onClose={() => setCommunityReviewsModal({ isOpen: false, locationName: "", address: "", type: "" })}
+        locationName={communityReviewsModal.locationName}
+        address={communityReviewsModal.address}
+        type={communityReviewsModal.type}
+      />
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
