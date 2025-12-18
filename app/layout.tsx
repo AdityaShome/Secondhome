@@ -6,6 +6,7 @@ import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/providers/auth-provider"
+import { LanguageProvider } from "@/providers/language-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
 import { SmartChatbot } from "@/components/smart-chatbot"
 
@@ -46,16 +47,18 @@ export default function RootLayout({
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main className="flex-grow">{children}</main>
-              <Footer />
-            </div>
-            <Toaster />
-            <ScrollToTop />
-            <SmartChatbot />
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-grow">{children}</main>
+                <Footer />
+              </div>
+              <Toaster />
+              <ScrollToTop />
+              <SmartChatbot />
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
