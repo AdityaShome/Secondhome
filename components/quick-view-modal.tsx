@@ -52,9 +52,9 @@ export function QuickViewModal({ isOpen, onClose, property }: QuickViewModalProp
               variant="secondary"
               size="icon"
               onClick={onClose}
-              className="bg-white/90 backdrop-blur-sm hover:bg-white rounded-full"
+              className="bg-white/90 backdrop-blur-sm hover:bg-white rounded-full text-gray-700"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-gray-700" />
             </Button>
           </div>
 

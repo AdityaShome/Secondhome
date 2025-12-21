@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState, useMemo } from "react"
 import maplibregl from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
-import { X, Maximize2, RotateCcw } from "lucide-react"
+import { X, Maximize2, RotateCcw, Navigation, Globe, Eye, EyeOff } from "lucide-react"
 
 interface Property {
   _id: string
@@ -50,9 +50,18 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const rotationRef = useRef<number | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
+  const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null)
   const [isMapLoaded, setIsMapLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [mapViewType, setMapViewType] = useState<"standard" | "satellite">("standard")
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false)
+  
+  // Extract primitive values for stable dependencies
+  const propertiesLength = properties.length
+  const placesLength = places.length
+  const mapCenterLat = mapCenter[0]
+  const mapCenterLng = mapCenter[1]
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -90,6 +99,10 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
         pitch: 65,
         bearing: -20,
         antialias: true,
+        touchZoomRotate: true,
+        touchPitch: true,
+        dragRotate: true,
+        dragPan: true,
       })
 
       mapRef.current = map
@@ -104,21 +117,13 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
         setIsMapLoaded(true)
         map.resize()
 
-        // Smooth continuous rotation with easing
-        let bearing = map.getBearing()
-        const rotate = () => {
-          if (!mapRef.current) return
-          bearing = (bearing + 0.05) % 360
-          map.easeTo({ 
-            bearing, 
-            duration: 50, 
-            easing: (t: number) => t 
-          })
-          rotationRef.current = requestAnimationFrame(rotate)
-        }
-        rotationRef.current = requestAnimationFrame(rotate)
+        // NO AUTO-ROTATION - Map stays static
+        // User can manually rotate using controls
 
-        // Markers are handled in a separate effect once data arrives
+        // Enable touch interactions (pinch zoom, pan, rotate)
+        map.touchZoomRotate.enable()
+        map.dragRotate.enable()
+        map.touchPitch.enable()
 
         // Add navigation control
         map.addControl(new maplibregl.NavigationControl(), "top-right")
@@ -153,6 +158,10 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
       }
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove()
+        userLocationMarkerRef.current = null
+      }
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
@@ -165,11 +174,36 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
 
     const map = mapRef.current
 
-    // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove())
-    markersRef.current = []
+    // Small delay to ensure map is fully rendered
+    const addMarkers = () => {
+      // Clear existing markers
+      markersRef.current.forEach((marker) => marker.remove())
+      markersRef.current = []
+      
+      // Clear user location marker
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove()
+        userLocationMarkerRef.current = null
+      }
 
-    const propertyColors = {
+      // Add user location marker FIRST with highest z-index
+      const userLocationEl = document.createElement("div")
+      userLocationEl.className = "sh-user-location-marker"
+      userLocationEl.style.zIndex = "10000"
+      userLocationEl.innerHTML = `
+        <div class="sh-user-location-pulse"></div>
+        <div class="sh-user-location-dot"></div>
+        <div class="sh-user-location-ring"></div>
+      `
+      
+      userLocationMarkerRef.current = new maplibregl.Marker({ 
+        element: userLocationEl, 
+        anchor: "center"
+      })
+        .setLngLat([mapCenter[1], mapCenter[0]])
+        .addTo(map)
+
+      const propertyColors = {
       PG: {
         base: "#3b82f6",
         top: "#60a5fa",
@@ -190,9 +224,45 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
       },
     } as const
 
+    // Helper function to check if markers are too close (clustering)
+    const areMarkersClose = (lat1: number, lng1: number, lat2: number, lng2: number, threshold: number = 0.0001) => {
+      const latDiff = Math.abs(lat1 - lat2)
+      const lngDiff = Math.abs(lng1 - lng2)
+      return latDiff < threshold && lngDiff < threshold
+    }
+
+    // Group nearby properties for clustering
+    const propertyGroups: Array<{ properties: typeof properties; center: [number, number] }> = []
+    const processedIndices = new Set<number>()
+
     properties.forEach((property, index) => {
-      if (!property.coordinates?.coordinates) return
+      if (!property.coordinates?.coordinates || processedIndices.has(index)) return
       const [lng, lat] = property.coordinates.coordinates
+      
+      // Find nearby properties
+      const group = [property]
+      processedIndices.add(index)
+      
+      properties.forEach((p, idx) => {
+        if (idx === index || processedIndices.has(idx) || !p.coordinates?.coordinates) return
+        const [plng, plat] = p.coordinates.coordinates
+        if (areMarkersClose(lat, lng, plat, plng, 0.00015)) {
+          group.push(p)
+          processedIndices.add(idx)
+        }
+      })
+      
+      // Calculate center of group
+      const avgLng = group.reduce((sum, p) => sum + p.coordinates!.coordinates[0], 0) / group.length
+      const avgLat = group.reduce((sum, p) => sum + p.coordinates!.coordinates[1], 0) / group.length
+      
+      propertyGroups.push({ properties: group, center: [avgLng, avgLat] })
+    })
+
+    // Add property markers with clustering
+    propertyGroups.forEach((group, groupIndex) => {
+      const [lng, lat] = group.center
+      const property = group.properties[0] // Use first property for styling
       const buildingHeight = Math.min(80, property.price / 150)
       const colorScheme =
         propertyColors[property.type as keyof typeof propertyColors] || propertyColors.PG
@@ -204,12 +274,16 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
       el.style.setProperty("--marker-color-side", colorScheme.side)
       el.style.setProperty("--marker-color-glow", colorScheme.glow)
       el.style.setProperty("--marker-height", `${buildingHeight}px`)
-      el.style.setProperty("--marker-delay", `${index * 60}ms`)
+      el.style.setProperty("--marker-delay", `${groupIndex * 80}ms`)
+      el.style.zIndex = `${1000 + groupIndex}` // Stagger z-index
 
       const windowRows = Math.min(6, Math.floor(buildingHeight / 15))
       const windowsMarkup = Array.from({ length: windowRows * 2 })
         .map(() => '<span class="sh-property-marker__window"></span>')
         .join("")
+
+      const clusterCount = group.properties.length > 1 ? group.properties.length : 0
+      const badgeContent = clusterCount > 0 ? `<span class="sh-property-marker__cluster-badge">${clusterCount}</span>` : "🏠"
 
       el.innerHTML = `
         <div class="sh-property-marker__shadow"></div>
@@ -220,7 +294,7 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
           </div>
           <div class="sh-property-marker__side"></div>
         </div>
-        <div class="sh-property-marker__badge">🏠</div>
+        <div class="sh-property-marker__badge">${badgeContent}</div>
       `
 
       el.addEventListener("mouseenter", () => {
@@ -230,7 +304,11 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
         el.classList.remove("sh-property-marker--active")
       })
       el.addEventListener("click", () => {
-        setSelectedItem({ type: "property", data: property })
+        if (group.properties.length === 1) {
+          setSelectedItem({ type: "property", data: property })
+        } else {
+          setSelectedItem({ type: "cluster", data: { properties: group.properties, center: group.center } })
+        }
         map.flyTo({
           center: [lng, lat],
           zoom: 17.5,
@@ -247,60 +325,12 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
 
       markersRef.current.push(marker)
     })
-
-    const amenityConfig: { [key: string]: { icon: string; color: string; bgColor: string; label: string } } = {
-      restaurant: { icon: "🍽️", color: "#f59e0b", bgColor: "#fef3c7", label: "Restaurant" },
-      hospital: { icon: "🏥", color: "#ef4444", bgColor: "#fee2e2", label: "Hospital" },
-      transport: { icon: "🚌", color: "#8b5cf6", bgColor: "#ede9fe", label: "Bus Stop" },
-      college: { icon: "🎓", color: "#eab308", bgColor: "#fef9c3", label: "College" },
-      atm: { icon: "💰", color: "#10b981", bgColor: "#d1fae5", label: "ATM" },
-      gym: { icon: "💪", color: "#ec4899", bgColor: "#fce7f3", label: "Gym" },
-      grocery: { icon: "🛒", color: "#f97316", bgColor: "#ffedd5", label: "Grocery" },
-      pharmacy: { icon: "💊", color: "#06b6d4", bgColor: "#cffafe", label: "Pharmacy" },
-      police: { icon: "👮", color: "#3b82f6", bgColor: "#dbeafe", label: "Police" },
     }
-
-    places.forEach((place, index) => {
-      const config = amenityConfig[place.type] || {
-        icon: "📍",
-        color: "#6b7280",
-        bgColor: "#f3f4f6",
-        label: "Place",
-      }
-
-      const el = document.createElement("div")
-      el.className = "sh-amenity-marker"
-      el.style.setProperty("--amenity-color", config.color)
-      el.style.setProperty("--amenity-bg", config.bgColor)
-      el.style.setProperty("--amenity-delay", `${index * 50}ms`)
-
-      el.innerHTML = `
-        <div class="sh-amenity-marker__shadow"></div>
-        <div class="sh-amenity-marker__platform">
-          <span class="sh-amenity-marker__icon">${config.icon}</span>
-          <span class="sh-amenity-marker__shine"></span>
-        </div>
-        <span class="sh-amenity-marker__label">${config.label}</span>
-      `
-
-      const label = el.querySelector(".sh-amenity-marker__label") as HTMLElement
-
-      el.addEventListener("mouseenter", () => {
-        el.classList.add("sh-amenity-marker--active")
-        label.classList.add("sh-amenity-marker__label--active")
-      })
-      el.addEventListener("mouseleave", () => {
-        el.classList.remove("sh-amenity-marker--active")
-        label.classList.remove("sh-amenity-marker__label--active")
-      })
-
-      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([place.lon, place.lat])
-        .addTo(map)
-
-      markersRef.current.push(marker)
-    })
-  }, [properties, places, isMapLoaded])
+    
+    // Add markers after a small delay to ensure map is fully ready
+    setTimeout(addMarkers, 100)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propertiesLength, placesLength, mapCenterLat, mapCenterLng, isMapLoaded])
 
   const toggleRotation = () => {
     if (!mapRef.current || !isMapLoaded) return
@@ -321,10 +351,12 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
 
   const resetView = () => {
     if (!mapRef.current || !isMapLoaded) return
+    // Stop any rotation
     if (rotationRef.current) {
       cancelAnimationFrame(rotationRef.current)
       rotationRef.current = null
     }
+    // Reset to center without auto-rotation
     mapRef.current.flyTo({
       center: [mapCenter[1], mapCenter[0]],
       zoom: 15.5,
@@ -332,18 +364,92 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
       bearing: -20,
       duration: 1500,
     })
-    // Restart rotation after reset
-    setTimeout(() => {
-      if (!mapRef.current || !isMapLoaded) return
-      let bearing = mapRef.current.getBearing()
-      const rotate = () => {
-        if (!mapRef.current) return
-        bearing = (bearing + 0.08) % 360
-        mapRef.current.easeTo({ bearing, duration: 100, easing: (t: number) => t })
-        rotationRef.current = requestAnimationFrame(rotate)
+  }
+
+  const toggleMapView = () => {
+    if (!mapRef.current || !isMapLoaded) return
+    
+    const map = mapRef.current
+    
+    if (mapViewType === "standard") {
+      // Switch to satellite
+      // Remove old layer and source
+      if (map.getLayer("osm-layer")) {
+        map.removeLayer("osm-layer")
       }
-      rotationRef.current = requestAnimationFrame(rotate)
-    }, 1600)
+      if (map.getSource("osm-tiles")) {
+        map.removeSource("osm-tiles")
+      }
+      
+      // Add satellite source
+      map.addSource("satellite-tiles", {
+        type: "raster",
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        attribution: '© Esri',
+      })
+      
+      // Add satellite layer
+      map.addLayer({
+        id: "satellite-layer",
+        type: "raster",
+        source: "satellite-tiles",
+        minzoom: 0,
+        maxzoom: 19,
+      })
+      
+      setMapViewType("satellite")
+    } else {
+      // Switch to standard
+      // Remove old layer and source
+      if (map.getLayer("satellite-layer")) {
+        map.removeLayer("satellite-layer")
+      }
+      if (map.getSource("satellite-tiles")) {
+        map.removeSource("satellite-tiles")
+      }
+      
+      // Add OSM source
+      map.addSource("osm-tiles", {
+        type: "raster",
+        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors',
+      })
+      
+      // Add OSM layer
+      map.addLayer({
+        id: "osm-layer",
+        type: "raster",
+        source: "osm-tiles",
+        minzoom: 0,
+        maxzoom: 19,
+      })
+      
+      setMapViewType("standard")
+    }
+  }
+
+  const toggleImmersiveMode = () => {
+    setIsImmersiveMode(!isImmersiveMode)
+  }
+
+  const centerOnUserLocation = () => {
+    if (!mapRef.current || !isMapLoaded) return
+    // Stop any rotation
+    if (rotationRef.current) {
+      cancelAnimationFrame(rotationRef.current)
+      rotationRef.current = null
+    }
+    // Fly to user location (mapCenter)
+    mapRef.current.flyTo({
+      center: [mapCenter[1], mapCenter[0]],
+      zoom: 17,
+      pitch: 65,
+      bearing: mapRef.current.getBearing(),
+      duration: 1200,
+      essential: true,
+    })
   }
 
   // Show error state
@@ -379,45 +485,71 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
         </div>
       )}
 
-      {/* Modern Top Bar */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <span className="text-3xl">🗺️</span>
-              3D Immersive Map
-            </h1>
-            <p className="text-sm text-gray-300 mt-1">Explore properties & amenities in 3D</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all shadow-lg"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+      {/* Immersive Mode Toggle - Always visible at top center */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[100000]">
+        <button
+          onClick={toggleImmersiveMode}
+          className="p-4 bg-white/90 hover:bg-white rounded-xl shadow-xl transition-all backdrop-blur-sm"
+          title={isImmersiveMode ? "Show Controls" : "Hide Controls (Immersive Mode)"}
+        >
+          {isImmersiveMode ? (
+            <Eye className="w-5 h-5 text-blue-600" />
+          ) : (
+            <EyeOff className="w-5 h-5 text-slate-800" />
+          )}
+        </button>
       </div>
+
+      {/* Modern Top Bar */}
+      {!isImmersiveMode && (
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-6 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                <span className="text-3xl">🗺️</span>
+                3D Immersive Map
+              </h1>
+              <p className="text-sm text-gray-300 mt-1">Explore properties & amenities in 3D</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-3 bg-red-500 hover:bg-red-600 text-white rounded-full transition-all shadow-lg"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating Controls */}
-      <div className="absolute left-6 top-1/2 -translate-y-1/2 space-y-3">
-        <button
-          onClick={toggleRotation}
-          className="p-4 bg-white/90 hover:bg-white rounded-xl shadow-xl transition-all backdrop-blur-sm"
-          title="Toggle rotation"
-        >
-          <RotateCcw className="w-5 h-5 text-slate-800" />
-        </button>
-        <button
-          onClick={resetView}
-          className="p-4 bg-white/90 hover:bg-white rounded-xl shadow-xl transition-all backdrop-blur-sm"
-          title="Reset view"
-        >
-          <Maximize2 className="w-5 h-5 text-slate-800" />
-        </button>
-      </div>
+      {!isImmersiveMode && (
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 space-y-3">
+          <button
+            onClick={toggleMapView}
+            className="p-4 bg-white/90 hover:bg-white rounded-xl shadow-xl transition-all backdrop-blur-sm"
+            title={mapViewType === "standard" ? "Switch to Satellite View" : "Switch to Standard View"}
+          >
+            <Globe className="w-5 h-5 text-green-600" />
+          </button>
+          <button
+            onClick={toggleRotation}
+            className="p-4 bg-white/90 hover:bg-white rounded-xl shadow-xl transition-all backdrop-blur-sm"
+            title="Toggle rotation"
+          >
+            <RotateCcw className="w-5 h-5 text-slate-800" />
+          </button>
+          <button
+            onClick={resetView}
+            className="p-4 bg-white/90 hover:bg-white rounded-xl shadow-xl transition-all backdrop-blur-sm"
+            title="Reset view"
+          >
+            <Maximize2 className="w-5 h-5 text-slate-800" />
+          </button>
+        </div>
+      )}
 
       {/* Insights Panel */}
-      {insights && (
+      {!isImmersiveMode && insights && (
         <div className="absolute right-6 top-24 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 max-w-sm">
           <h3 className="text-lg font-bold text-slate-900 mb-4">📊 Area Insights</h3>
           <div className="space-y-3">
@@ -486,13 +618,13 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
       )}
 
       {/* Selected Property Card */}
-      {selectedItem?.type === "property" && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+      {!isImmersiveMode && selectedItem?.type === "property" && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 z-[99998]">
           <button
             onClick={() => setSelectedItem(null)}
-            className="absolute top-3 right-3 p-1 hover:bg-slate-100 rounded-full"
+            className="absolute top-3 right-3 p-1 hover:bg-slate-100 rounded-full text-gray-700"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-gray-700" />
           </button>
           <h3 className="text-xl font-bold text-slate-900 mb-2">{selectedItem.data.title}</h3>
           <p className="text-sm text-slate-600 mb-3">{selectedItem.data.location}</p>
@@ -505,24 +637,80 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-md rounded-xl shadow-lg p-4">
-        <h4 className="text-xs font-bold text-slate-900 mb-2">Legend</h4>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-slate-700">PG</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span className="text-slate-700">Flat</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-            <span className="text-slate-700">Hostel</span>
+      {/* Selected Cluster Card */}
+      {!isImmersiveMode && selectedItem?.type === "cluster" && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 z-[99998]">
+          <button
+            onClick={() => setSelectedItem(null)}
+            className="absolute top-3 right-3 p-1 hover:bg-slate-100 rounded-full text-gray-700"
+          >
+            <X className="w-4 h-4 text-gray-700" />
+          </button>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">
+            {selectedItem.data.properties.length} Properties
+          </h3>
+          <p className="text-sm text-slate-600 mb-4">Multiple properties in this area</p>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {selectedItem.data.properties.slice(0, 5).map((prop: any, idx: number) => (
+              <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-900 text-sm">{prop.title}</h4>
+                    <p className="text-xs text-slate-600">{prop.location}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-blue-600">₹{prop.price}/mo</span>
+                    <span className="block text-xs text-slate-500">{prop.type}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {selectedItem.data.properties.length > 5 && (
+              <p className="text-xs text-slate-500 text-center pt-2">
+                +{selectedItem.data.properties.length - 5} more properties
+              </p>
+            )}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* GPS Location Button */}
+      {!isImmersiveMode && (
+        <div className={`absolute ${selectedItem ? 'bottom-32' : 'bottom-6'} left-6 flex flex-col gap-3 z-[10000]`}>
+          <button
+            onClick={centerOnUserLocation}
+            className="p-4 bg-white hover:bg-gray-50 rounded-xl shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+            title="Center on your location"
+          >
+            <Navigation className="w-5 h-5 text-blue-600" />
+          </button>
+        </div>
+      )}
+
+      {/* Legend */}
+      {!isImmersiveMode && (
+        <div className={`absolute ${selectedItem ? 'bottom-32' : 'bottom-6'} left-20 bg-white/95 backdrop-blur-md rounded-xl shadow-lg p-4 transition-all duration-300 z-[10000]`}>
+          <h4 className="text-xs font-bold text-slate-900 mb-2">Legend</h4>
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="text-slate-700">PG</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-slate-700">Flat</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+              <span className="text-slate-700">Hostel</span>
+            </div>
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
+              <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white"></div>
+              <span className="text-slate-700">Your Location</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes marker-rise {
@@ -782,6 +970,113 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
 
         .maplibregl-canvas {
           outline: none;
+        }
+
+        .sh-user-location-marker {
+          position: relative;
+          width: 48px;
+          height: 48px;
+          z-index: 10000 !important;
+        }
+
+        .sh-user-location-dot {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 20px;
+          height: 20px;
+          background: #3b82f6;
+          border: 4px solid white;
+          border-radius: 50%;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6), 0 0 0 4px rgba(59, 130, 246, 0.2);
+          z-index: 3;
+        }
+
+        .sh-user-location-pulse {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 48px;
+          height: 48px;
+          background: rgba(59, 130, 246, 0.3);
+          border-radius: 50%;
+          animation: user-location-pulse 2s ease-out infinite;
+          z-index: 1;
+        }
+
+        .sh-user-location-ring {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 40px;
+          height: 40px;
+          border: 2px solid rgba(59, 130, 246, 0.5);
+          border-radius: 50%;
+          animation: user-location-ring 2s ease-out infinite;
+          z-index: 2;
+        }
+
+        @keyframes user-location-pulse {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(2.5);
+            opacity: 0;
+          }
+        }
+
+        @keyframes user-location-ring {
+          0% {
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0;
+          }
+        }
+
+        .sh-property-marker__cluster-badge {
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background: #ef4444;
+          color: white;
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: bold;
+          border: 2px solid white;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          z-index: 10;
+        }
+
+        .sh-amenity-marker__cluster-badge {
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          background: #ef4444;
+          color: white;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: bold;
+          border: 2px solid white;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+          z-index: 10;
         }
       `}</style>
     </div>

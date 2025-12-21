@@ -31,8 +31,15 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import HowItWorks from "@/components/how-it-works"
 import { SmartLocationInput } from "@/components/smart-location-input"
+import { useLanguage } from "@/providers/language-provider"
 
 export default function Page() {
+  const { t, lang } = useLanguage()
+  const [forceUpdate, setForceUpdate] = useState(0)
+
+  useEffect(() => {
+    setForceUpdate(prev => prev + 1)
+  }, [lang])
   const router = useRouter()
   const { toast } = useToast()
   const { data: session, status } = useSession()
@@ -132,9 +139,9 @@ export default function Page() {
   }, [])
 
   const services = [
-    { id: "pgs", label: "PG", icon: Home },
-    { id: "flats", label: "Flats", icon: Building2 },
-    { id: "messes", label: "Mess", icon: UtensilsCrossed },
+    { id: "pgs", label: t("home.service.pgs"), icon: Home },
+    { id: "flats", label: t("home.service.flats"), icon: Building2 },
+    { id: "messes", label: t("home.service.mess"), icon: UtensilsCrossed },
   ]
 
   const handleSearch = () => {
@@ -200,7 +207,7 @@ export default function Page() {
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" key={`home-${lang}-${forceUpdate}`}>
       {/* Hero Section with Background Image */}
       <section 
         className="relative min-h-[600px] flex items-center"
@@ -219,10 +226,10 @@ export default function Page() {
           {/* Heading */}
           <div className="text-center mb-10">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">
-              Find Your Perfect Second Home
+              {t("home.heroTitle")}
             </h1>
             <p className="text-xl md:text-2xl text-white/95 drop-shadow-md">
-              Trusted PGs, Flats & Hostels for Students across India
+              {t("home.heroSubtitle")}
             </p>
           </div>
 
@@ -231,11 +238,10 @@ export default function Page() {
             <div className="max-w-2xl mx-auto text-center space-y-6">
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl">
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                  🎓 Welcome to Second Home
+                  🎓 {t("home.welcomeTitle")}
                 </h2>
                 <p className="text-lg text-gray-700 mb-6">
-                  Join thousands of students finding their perfect accommodation. 
-                  Sign up now to search properties, save favorites, and book your next home!
+                  {t("home.welcomeDesc")}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button
@@ -243,30 +249,26 @@ export default function Page() {
                     size="lg"
                     className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-8 py-6 h-auto"
                   >
-                    Get Started - It's Free! 
+                    {t("home.ctaPrimary")} 
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                   <Button
                     onClick={() => router.push("/login")}
                     size="lg"
                     variant="outline"
-                    className="bg-white text-gray-900 text-lg px-8 py-6 h-auto border-2 hover:bg-gray-50"
+                    className="bg-white text-gray-900 text-lg px-8 py-6 h-auto border-2 border-gray-300 hover:bg-white hover:border-orange-500 hover:text-orange-600 transition-all"
                   >
-                    Already Have Account?
+                    {t("home.ctaSecondary")}
                   </Button>
                 </div>
-                <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+                <div className="mt-6 grid grid-cols-2 gap-4 text-center">
                   <div>
-                    <div className="text-3xl font-bold text-orange-600">{stats.properties}+</div>
-                    <div className="text-sm text-gray-600">Properties</div>
+                    <div className="text-3xl font-bold text-orange-600">{stats.properties}</div>
+                    <div className="text-sm text-gray-600">{t("home.statProperties")}</div>
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-orange-600">{stats.cities}+</div>
-                    <div className="text-sm text-gray-600">Cities</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-orange-600">{stats.students}+</div>
-                    <div className="text-sm text-gray-600">Students</div>
+                    <div className="text-3xl font-bold text-orange-600">{stats.cities}</div>
+                    <div className="text-sm text-gray-600">{t("home.statCities")}</div>
                   </div>
                 </div>
               </div>
@@ -276,9 +278,9 @@ export default function Page() {
           {/* Authenticated users: Show Search Card */}
           {isAuthenticated && <div className="max-w-5xl mx-auto">
             <Card className="border-0 shadow-2xl">
-              <CardContent className="p-6 md:p-8">
+              <CardContent className="p-4 md:p-6 lg:p-8">
                 {/* Service Tabs */}
-                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                <div className="flex gap-1 md:gap-2 mb-4 md:mb-6 border-b border-gray-200 overflow-x-auto hide-scrollbar -mx-4 md:-mx-0 px-4 md:px-0">
                   {services.map((service) => {
                     const Icon = service.icon
                     const isActive = selectedService === service.id
@@ -286,25 +288,25 @@ export default function Page() {
                       <button
                         key={service.id}
                         onClick={() => handleServiceChange(service.id)}
-                        className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all border-b-2 ${
+                        className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-6 py-2.5 md:py-3 font-semibold text-sm md:text-base transition-all border-b-2 whitespace-nowrap flex-shrink-0 ${
                           isActive
                             ? "border-orange-500 text-orange-600"
                             : "border-transparent text-gray-600 hover:text-gray-900"
                         }`}
                       >
-                        <Icon className="w-5 h-5" />
-                        {service.label}
+                        <Icon className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                        <span className="truncate">{service.label}</span>
                       </button>
                     )
                   })}
                 </div>
 
                 {/* Search Form */}
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-3 md:space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                     {/* Location - Smart AI Search */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">
+                    <div className="space-y-1.5 md:space-y-2">
+                      <label className="text-xs md:text-sm font-semibold text-gray-700">
                         City, Area or College
                       </label>
                       <SmartLocationInput
@@ -315,16 +317,16 @@ export default function Page() {
                     </div>
 
                     {/* Budget */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">
+                    <div className="space-y-1.5 md:space-y-2">
+                      <label className="text-xs md:text-sm font-semibold text-gray-700">
                         Budget
                       </label>
                       <div className="relative">
-                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
+                        <CreditCard className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 pointer-events-none z-10" />
                         <select
                           value={budget}
                           onChange={(e) => setBudget(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3.5 border-2 border-gray-300 rounded focus:border-orange-500 focus:outline-none appearance-none cursor-pointer bg-white text-gray-900 text-base"
+                          className="w-full pl-9 md:pl-11 pr-8 md:pr-4 py-2.5 md:py-3.5 border-2 border-gray-300 rounded focus:border-orange-500 focus:outline-none appearance-none cursor-pointer bg-white text-gray-900 text-sm md:text-base"
                         >
                           <option value="">Any Budget</option>
                           <option value="5000">Up to ₹5,000</option>
@@ -334,8 +336,8 @@ export default function Page() {
                           <option value="25000">Up to ₹25,000</option>
                           <option value="30000">Up to ₹30,000</option>
                         </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="absolute right-2.5 md:right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg className="w-4 h-4 md:w-5 md:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
@@ -343,18 +345,18 @@ export default function Page() {
                     </div>
 
                     {/* Move-in Date */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">
+                    <div className="space-y-1.5 md:space-y-2">
+                      <label className="text-xs md:text-sm font-semibold text-gray-700">
                         Move-in Date
                       </label>
                       <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none z-10" />
+                        <Calendar className="absolute left-2.5 md:left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 pointer-events-none z-10" />
                         <input
                           type="date"
                           value={moveInDate}
                           onChange={(e) => setMoveInDate(e.target.value)}
                           min={new Date().toISOString().split("T")[0]}
-                          className="w-full pl-11 pr-4 py-3.5 border-2 border-gray-300 rounded focus:border-orange-500 focus:outline-none bg-white text-gray-900 text-base"
+                          className="w-full pl-9 md:pl-11 pr-3 md:pr-4 py-2.5 md:py-3.5 border-2 border-gray-300 rounded focus:border-orange-500 focus:outline-none bg-white text-gray-900 text-sm md:text-base"
                         />
                       </div>
                     </div>
@@ -363,10 +365,11 @@ export default function Page() {
                   {/* Search Button */}
                   <Button
                     onClick={handleSearch}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-lg rounded shadow-md"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 md:py-6 text-base md:text-lg rounded shadow-md"
                   >
-                    <Search className="w-5 h-5 mr-2" />
-                    SEARCH PROPERTIES
+                    <Search className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                    <span className="hidden sm:inline">SEARCH PROPERTIES</span>
+                    <span className="sm:hidden">SEARCH</span>
                   </Button>
                 </div>
               </CardContent>
@@ -378,24 +381,18 @@ export default function Page() {
       {/* Stats Bar - Only show for authenticated users */}
       {isAuthenticated && <section className="bg-orange-50 border-b border-orange-100 py-8">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8">
+          <div className="max-w-4xl mx-auto grid grid-cols-2 gap-8">
             <div className="text-center">
               <div className="text-3xl font-bold text-orange-600 mb-1">
                 {stats.properties || "500+"}
               </div>
-              <div className="text-sm text-gray-700 font-medium">Properties Listed</div>
-            </div>
-            <div className="text-center border-x border-orange-200">
-              <div className="text-3xl font-bold text-orange-600 mb-1">
-                {stats.cities || "25+"}
-              </div>
-              <div className="text-sm text-gray-700 font-medium">Cities</div>
+              <div className="text-sm text-gray-700 font-medium">{t("home.stats.propertiesListed")}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-orange-600 mb-1">
-                {stats.students > 0 ? `${(stats.students / 1000).toFixed(0)}K+` : "10K+"}
+                {stats.cities || "25+"}
               </div>
-              <div className="text-sm text-gray-700 font-medium">Happy Students</div>
+              <div className="text-sm text-gray-700 font-medium">{t("home.stats.cities")}</div>
             </div>
           </div>
         </div>
@@ -453,29 +450,29 @@ export default function Page() {
               {/* Content Side */}
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                  Why Students Trust Second Home
+                  {t("home.trust.title")}
                 </h2>
                 <div className="space-y-6">
                   {[
                     { 
                       icon: Shield, 
-                      title: "100% Verified Properties", 
-                      desc: "Every property is personally verified by our team before listing" 
+                      title: t("home.trust.items.verified.title"), 
+                      desc: t("home.trust.items.verified.desc")
                     },
                     { 
                       icon: Tag, 
-                      title: "Zero Brokerage", 
-                      desc: "No hidden charges. Best prices guaranteed with complete transparency" 
+                      title: t("home.trust.items.brokerage.title"), 
+                      desc: t("home.trust.items.brokerage.desc")
                     },
                     { 
                       icon: Users, 
-                      title: "24/7 Customer Support", 
-                      desc: "Our dedicated support team is always available to help you" 
+                      title: t("home.trust.items.support.title"), 
+                      desc: t("home.trust.items.support.desc")
                     },
                     { 
                       icon: CheckCircle, 
-                      title: "Easy Booking Process", 
-                      desc: "Book in minutes with instant confirmation and secure payments" 
+                      title: t("home.trust.items.booking.title"), 
+                      desc: t("home.trust.items.booking.desc")
                     },
                   ].map((item, idx) => {
                     const Icon = item.icon
@@ -656,10 +653,10 @@ export default function Page() {
               <Home className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Own a Property?<br />List it on Second Home
+              {t("home.listProperty.title")}
             </h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl">
-              Join thousands of property owners earning rental income with zero hassle. Get verified tenants in minutes.
+              {t("home.listProperty.desc")}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/register-property">
@@ -667,7 +664,7 @@ export default function Page() {
                   size="lg"
                   className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-6 text-base"
                 >
-                  LIST YOUR PROPERTY
+                  {t("home.listProperty.ctaPrimary")}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
@@ -677,7 +674,7 @@ export default function Page() {
                   className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-8 py-6 text-base shadow-lg"
                 >
                   <Phone className="w-5 h-5 mr-2" />
-                  TALK TO US
+                  {t("home.listProperty.ctaSecondary")}
                 </Button>
               </Link>
             </div>
@@ -689,17 +686,17 @@ export default function Page() {
       <section className="py-20 bg-gray-900 text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to Find Your Second Home?
+            {t("home.final.title")}
           </h2>
           <p className="text-xl mb-10 text-gray-300 max-w-2xl mx-auto">
-            Join thousands of students who found their perfect accommodation with us
+            {t("home.final.subtitle")}
           </p>
           <Link href="/listings">
             <Button
               size="lg"
               className="bg-orange-500 hover:bg-orange-600 text-white font-bold rounded px-12 py-7 text-lg shadow-xl"
             >
-              EXPLORE PROPERTIES
+              {t("home.final.cta")}
               <ArrowRight className="w-6 h-6 ml-2" />
             </Button>
           </Link>

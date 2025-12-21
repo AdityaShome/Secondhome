@@ -12,9 +12,15 @@ export async function POST(req: Request) {
 
     await connectToDatabase()
 
+    // Normalize email to match how it's stored
+    const normalizedEmail = email.toLowerCase().trim()
+
     // Find OTP
     const otpRecord = await OTP.findOne({
-      email,
+      $or: [
+        { email: normalizedEmail },
+        { email: email }
+      ],
       otp,
       type,
     })
@@ -29,8 +35,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "OTP has expired. Please request a new one." }, { status: 400 })
     }
 
-    // Delete OTP after successful verification
-    await OTP.deleteOne({ _id: otpRecord._id })
+    // For password-reset, keep the OTP until password is actually reset
+    // For other types, delete OTP after successful verification
+    if (type !== "password-reset") {
+      await OTP.deleteOne({ _id: otpRecord._id })
+    } else {
+      // Mark as verified for password-reset (we'll add a verified field or just keep it)
+      // The reset-password endpoint will verify and delete it
+    }
 
     return NextResponse.json({ 
       message: "OTP verified successfully",

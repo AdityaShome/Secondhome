@@ -54,8 +54,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SmartSearchModal } from "@/components/smart-search-modal"
 import { NotificationPanel } from "@/components/notification-panel"
+import { useLanguage } from "@/providers/language-provider"
 
 export default function Navbar() {
+  const { t } = useLanguage()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -129,12 +131,12 @@ export default function Navbar() {
   }, [user])
 
   const navLinks = [
-    { href: "/listings", label: "PGs & Flats", icon: Building2 },
-    { href: "/verified", label: "Verified", icon: Shield },
-    { href: "/messes", label: "Messes", icon: UtensilsCrossed },
-    { href: "/map", label: "Map View", icon: MapPin },
-    { href: "/about", label: "About", icon: Info },
-    { href: "/contact", label: "Contact", icon: Mail },
+    { href: "/listings", label: t("nav.listings"), icon: Building2 },
+    { href: "/verified", label: t("nav.verified"), icon: Shield },
+    { href: "/messes", label: t("nav.messes"), icon: UtensilsCrossed },
+    { href: "/map", label: t("nav.map"), icon: MapPin },
+    { href: "/about", label: t("nav.about"), icon: Info },
+    { href: "/contact", label: t("nav.contact"), icon: Mail },
   ]
 
   const handleLogout = async () => {
@@ -230,7 +232,7 @@ export default function Navbar() {
               size="icon"
               onClick={() => setIsSearchOpen(true)}
               aria-label="Search"
-              className="rounded-full hover:bg-gray-100 text-gray-700"
+              className="rounded-full hover:bg-orange-50 text-gray-700 hover:text-orange-600 transition-all"
             >
               <Search className="h-5 w-5" />
             </Button>
@@ -277,7 +279,7 @@ export default function Navbar() {
                       <ChevronDown className="w-4 h-4 text-gray-600" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72 bg-white border border-gray-200 shadow-xl">
+                  <DropdownMenuContent align="end" className="w-72 bg-white border border-gray-200 shadow-xl z-[100000]">
                     {/* User Info */}
                     <DropdownMenuLabel className="p-4 pb-3">
                       <div className="flex items-center gap-3">
@@ -310,19 +312,19 @@ export default function Navbar() {
                     <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                       <Link href="/profile?tab=overview" className="flex items-center gap-3 w-full px-4 py-2">
                         <LayoutDashboard className="h-4 w-4 text-gray-600" />
-                        <span>Dashboard</span>
+                        <span>{t("nav.dashboard")}</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                       <Link href="/profile?tab=bookings" className="flex items-center gap-3 w-full px-4 py-2">
                         <Calendar className="h-4 w-4 text-gray-600" />
-                        <span>My Bookings</span>
+                        <span>{t("nav.bookings")}</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                       <Link href="/favorites" className="flex items-center gap-3 w-full px-4 py-2">
                         <Heart className="h-4 w-4 text-red-500" />
-                        <span>My Favorites</span>
+                        <span>{t("nav.favorites")}</span>
                       </Link>
                     </DropdownMenuItem>
 
@@ -332,13 +334,13 @@ export default function Navbar() {
                         <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                           <Link href="/profile?tab=properties" className="flex items-center gap-3 w-full px-4 py-2">
                             <Building2 className="h-4 w-4 text-gray-600" />
-                            <span>My Properties</span>
+                            <span>{t("nav.myProperties")}</span>
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                           <Link href="/list-property" className="flex items-center gap-3 w-full px-4 py-2">
                             <Plus className="h-4 w-4 text-gray-600" />
-                            <span>List New Property</span>
+                            <span>{t("nav.listProperty")}</span>
                           </Link>
                         </DropdownMenuItem>
                       </>
@@ -350,7 +352,7 @@ export default function Navbar() {
                         <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                           <Link href="/profile?tab=admin" className="flex items-center gap-3 w-full px-4 py-2">
                             <ListChecks className="h-4 w-4 text-gray-600" />
-                            <span>Admin Panel</span>
+                            <span>{t("nav.admin")}</span>
                           </Link>
                         </DropdownMenuItem>
                       </>
@@ -360,13 +362,13 @@ export default function Navbar() {
                     <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                       <Link href="/profile?tab=settings" className="flex items-center gap-3 w-full px-4 py-2">
                         <Settings className="h-4 w-4 text-gray-600" />
-                        <span>Settings</span>
+                        <span>{t("nav.settings")}</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild className="text-gray-700 hover:bg-gray-50 cursor-pointer">
                       <Link href="/faq" className="flex items-center gap-3 w-full px-4 py-2">
                         <HelpCircle className="h-4 w-4 text-gray-600" />
-                        <span>Help & FAQ</span>
+                        <span>{t("nav.help")}</span>
                       </Link>
                     </DropdownMenuItem>
 
@@ -377,7 +379,7 @@ export default function Navbar() {
                     >
                       <div className="flex items-center gap-3 w-full">
                         <LogOut className="h-4 w-4 text-gray-600" />
-                        <span>Log Out</span>
+                        <span>{t("nav.logout")}</span>
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -386,7 +388,7 @@ export default function Navbar() {
                     >
                       <div className="flex items-center gap-3 w-full">
                         <Trash2 className="h-4 w-4" />
-                        <span>Delete Account</span>
+                        <span>{t("nav.deleteAccount")}</span>
                       </div>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -399,13 +401,13 @@ export default function Navbar() {
                   asChild
                   className="text-gray-700 hover:text-orange-600 hover:bg-gray-50 font-semibold"
                 >
-                  <Link href="/login">Login</Link>
+                  <Link href="/login">{t("nav.login")}</Link>
                 </Button>
                 <Button
                   asChild
                   className="bg-orange-500 hover:bg-orange-600 text-white font-semibold"
                 >
-                  <Link href="/signup">Sign Up</Link>
+                  <Link href="/signup">{t("nav.signup")}</Link>
                 </Button>
               </div>
             )}
@@ -414,11 +416,11 @@ export default function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden rounded-full hover:bg-gray-100 text-gray-700"
+              className="md:hidden rounded-full hover:bg-orange-50 text-gray-700 hover:text-orange-600 transition-all"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Toggle menu"
             >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMenuOpen ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
             </Button>
           </div>
         </div>
@@ -454,7 +456,7 @@ export default function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <User className="w-5 h-5" />
-                    Login
+                    {t("nav.login")}
                   </Link>
                   <Link
                     href="/signup"
@@ -462,7 +464,7 @@ export default function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <User className="w-5 h-5" />
-                    Sign Up
+                    {t("nav.signup")}
                   </Link>
                 </>
               )}
@@ -501,7 +503,7 @@ export default function Navbar() {
               disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {isDeleting ? "Deleting..." : "Delete Account"}
+              {isDeleting ? t("nav.deleteAccount") + "..." : t("nav.deleteAccount")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

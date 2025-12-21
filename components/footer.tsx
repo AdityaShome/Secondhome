@@ -6,18 +6,19 @@ import { Home, Mail, Phone, MapPin, Instagram, Facebook, Twitter, Linkedin, Yout
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
+import { useLanguage, availableLanguages } from "@/providers/language-provider"
 
 export default function Footer() {
   const { toast } = useToast()
+  const { lang, setLang, t } = useLanguage()
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
-  const [language, setLanguage] = useState("English")
 
   // Socials from env so links always work or are hidden if not set
   const socials = useMemo(() => {
     return [
-      { Icon: Instagram, label: "Instagram", href: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "#" },
+      { Icon: Instagram, label: "Instagram", href: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://www.instagram.com/secondhome2k25?igsh=eG1waXpiZDZtZjRv" },
       { Icon: Youtube, label: "YouTube", href: process.env.NEXT_PUBLIC_YOUTUBE_URL || "#" },
       { Icon: Facebook, label: "Facebook", href: process.env.NEXT_PUBLIC_FACEBOOK_URL || "#" },
       { Icon: Twitter, label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL || "#" },
@@ -30,8 +31,8 @@ export default function Footer() {
     
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
+        title: t("contact.error.invalidNumber.title") || "Invalid Email",
+        description: t("contact.error.invalidNumber.desc") || "Please enter a valid email address",
         variant: "destructive",
       })
       return
@@ -89,13 +90,16 @@ export default function Footer() {
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
               <Globe2 className="h-4 w-4 text-orange-300" />
               <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="bg-transparent text-slate-100 text-sm outline-none"
+                value={lang}
+                onChange={(e) => {
+                  const newLang = e.target.value as "en" | "hi" | "kn" | "bn"
+                  setLang(newLang)
+                }}
+                className="bg-transparent text-slate-100 text-sm outline-none cursor-pointer"
               >
-                {["English", "हिन्दी", "मराठी", "తెలుగు"].map((lang) => (
-                  <option key={lang} value={lang} className="text-slate-900">
-                    {lang}
+                {availableLanguages.map((langOption) => (
+                  <option key={langOption.code} value={langOption.code} className="text-slate-900">
+                    {langOption.label}
                   </option>
                 ))}
               </select>
@@ -123,20 +127,20 @@ export default function Footer() {
         {/* Top CTA bar */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 rounded-2xl px-6 py-5 shadow-xl border border-orange-300/40">
           <div className="space-y-1 text-center lg:text-left">
-            <p className="text-sm uppercase tracking-[0.2em] text-white/80 font-semibold">We’re here 24/7</p>
-            <h3 className="text-2xl font-bold leading-tight">Talk to SecondHome AI or a live executive</h3>
+            <p className="text-sm uppercase tracking-[0.2em] text-white/80 font-semibold">{t("ctaBadge")}</p>
+            <h3 className="text-2xl font-bold leading-tight">{t("ctaTitle")}</h3>
           </div>
           <div className="flex flex-wrap justify-center gap-3">
             <Button asChild variant="secondary" className="bg-white text-slate-900 hover:bg-white/90 shadow-md">
               <Link href="tel:+18555003465">
                 <Phone className="h-4 w-4 mr-2 text-orange-600" />
-                Call our AI desk
+                {t("ctaCallAi")}
               </Link>
             </Button>
             <Button asChild variant="secondary" className="bg-slate-900 text-white border border-white/20 hover:bg-slate-800 shadow-md">
               <Link href="/contact">
                 <ArrowRight className="h-4 w-4 mr-2" />
-                Contact support
+                {t("ctaContactSupport")}
               </Link>
             </Button>
           </div>
@@ -146,16 +150,16 @@ export default function Footer() {
         <div className="max-w-5xl mx-auto p-8 bg-slate-900/70 border border-white/10 rounded-2xl shadow-2xl backdrop-blur">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-orange-200 font-semibold">Stay ahead</p>
-              <h3 className="text-3xl font-bold text-white">Get early access to new listings & offers</h3>
+              <p className="text-xs uppercase tracking-[0.3em] text-orange-200 font-semibold">{t("eyebrowStayAhead")}</p>
+              <h3 className="text-3xl font-bold text-white">{t("newsletterTitle")}</h3>
               <p className="text-slate-300 max-w-xl">
-                Weekly curation of verified PGs, flats, and hostels. No spam—just the best options near your campus.
+                {t("newsletterSubtitle")}
               </p>
             </div>
             <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 w-full lg:w-[420px]">
               <Input
                 type="email"
-                placeholder="Work or personal email"
+                placeholder={t("newsletterPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 h-12 rounded-lg border-slate-700 bg-slate-900 text-white placeholder:text-slate-500 focus:border-orange-400 focus:ring-orange-400"
@@ -170,16 +174,16 @@ export default function Footer() {
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Subscribing...
+                    {t("newsletterSubscribing")}
                   </>
                 ) : isSubscribed ? (
                   <>
                     <Check className="h-4 w-4" />
-                    Subscribed
+                    {t("newsletterSubscribed")}
                   </>
                 ) : (
                   <>
-                    Subscribe
+                    {t("newsletterButton")}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -196,7 +200,7 @@ export default function Footer() {
               <span className="text-xl font-bold text-white">Second Home</span>
             </Link>
             <p className="text-slate-300 leading-relaxed">
-              Simplifying student accommodation across India. Find your perfect place near campus with verified options and AI-guided help.
+              {t("brandTagline")}
             </p>
             <div className="flex gap-3 pt-2 flex-wrap">
               {socials.map(({ Icon, label, href }) => (
@@ -218,13 +222,13 @@ export default function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold text-white text-lg">Explore</h3>
+            <h3 className="font-semibold text-white text-lg">{t("explore")}</h3>
             <ul className="space-y-3">
               {[
-                { href: "/listings", label: "PGs & Flats" },
-                { href: "/messes", label: "Messes" },
-                { href: "/map", label: "Map View" },
-                { href: "/register-property", label: "List Property" },
+                { href: "/listings", label: t("nav.listings") },
+                { href: "/messes", label: t("nav.messes") },
+                { href: "/map", label: t("nav.map") },
+                { href: "/register-property", label: t("nav.listProperty") },
                 { href: "/blog", label: "Blog" },
               ].map(({ href, label }) => (
                 <li key={href}>
@@ -241,7 +245,7 @@ export default function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold text-white text-lg">Popular Colleges</h3>
+            <h3 className="font-semibold text-white text-lg">{t("popularColleges")}</h3>
             <ul className="space-y-3">
               {[
                 "Dayananda Sagar College",
@@ -264,14 +268,14 @@ export default function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold text-white text-lg">Contact</h3>
+            <h3 className="font-semibold text-white text-lg">{t("contact")}</h3>
             <ul className="space-y-4 text-slate-300">
               <li className="flex items-start gap-3 group cursor-pointer">
                 <MapPin className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300" />
                 <span className="group-hover:text-white transition-colors">
-                  123 Startup Hub, Koramangala
+                  {t("addressLine1")}
                   <br />
-                  Bangalore, India - 560034
+                  {t("addressLine2")}
                 </span>
               </li>
               <li className="flex items-center gap-3 group cursor-pointer hover:text-orange-300 transition-colors">
@@ -293,13 +297,13 @@ export default function Footer() {
         <div className="border-t border-white/10 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-slate-400">
-              © {new Date().getFullYear()} Second Home. All rights reserved.
+              © {new Date().getFullYear()} {t("footer.copyright")}
             </p>
             <div className="flex gap-6">
               {[
-                { href: "/terms", label: "Terms of Service" },
-                { href: "/privacy", label: "Privacy Policy" },
-                { href: "/faq", label: "FAQ" },
+                { href: "/terms", label: t("footer.terms") },
+                { href: "/privacy", label: t("footer.privacy") },
+                { href: "/faq", label: t("footer.faq") },
               ].map(({ href, label }) => (
                 <Link
                   key={href}

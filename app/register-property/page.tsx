@@ -53,6 +53,10 @@ export default function RegisterPropertyPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
+  const [stats, setStats] = useState([
+    { value: "0", label: "Property Owners", description: "Trusted partners across India" },
+    { value: "0", label: "Student Bookings", description: "Annual bookings on our platform" },
+  ])
 
   const signInForm = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -303,11 +307,24 @@ export default function RegisterPropertyPage() {
     }
   }
 
-  const stats = [
-    { value: "5K+", label: "Property Owners", description: "Trusted partners across India" },
-    { value: "50K+", label: "Student Bookings", description: "Annual bookings on our platform" },
-    { value: "95%", label: "Success Rate", description: "Properties successfully listed" },
-  ]
+  // Fetch real statistics from database
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/stats")
+        if (response.ok) {
+          const data = await response.json()
+          setStats([
+            { value: data.propertyOwnersFormatted, label: "Property Owners", description: "Trusted partners across India" },
+            { value: data.studentBookingsFormatted, label: "Student Bookings", description: "Annual bookings on our platform" },
+          ])
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+      }
+    }
+    fetchStats()
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -350,7 +367,7 @@ export default function RegisterPropertyPage() {
               </p>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-3 gap-4 mt-12">
+              <div className="grid grid-cols-2 gap-4 mt-12">
                 {stats.map((stat, idx) => (
                   <motion.div
                     key={idx}
@@ -467,7 +484,11 @@ export default function RegisterPropertyPage() {
                           <input type="checkbox" className="rounded border-slate-600" />
                           Remember me
                         </label>
-                        <button type="button" className="text-sm text-orange-400 hover:text-orange-300">
+                        <button 
+                          type="button" 
+                          onClick={() => router.push("/forgot-password?type=owner")}
+                          className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+                        >
                           Forgot your password?
                         </button>
                       </div>

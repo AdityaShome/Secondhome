@@ -13,6 +13,7 @@ import {
   MapPin, Star, Shield, CheckCircle2, IndianRupee, Search, Filter, 
   Loader2, TrendingUp, Award, Sparkles, Home, Building2
 } from "lucide-react"
+import { useLanguage } from "@/providers/language-provider"
 
 interface VerifiedProperty {
   _id: string
@@ -30,15 +31,22 @@ interface VerifiedProperty {
 }
 
 export default function VerifiedPropertiesPage() {
+  const { t, lang } = useLanguage()
   const [properties, setProperties] = useState<VerifiedProperty[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedType, setSelectedType] = useState<string>("all")
   const { toast } = useToast()
+  const [forceUpdate, setForceUpdate] = useState(0)
 
   useEffect(() => {
     fetchVerifiedProperties()
   }, [])
+
+  // Force re-render when language changes
+  useEffect(() => {
+    setForceUpdate(prev => prev + 1)
+  }, [lang])
 
   const fetchVerifiedProperties = async () => {
     try {
@@ -50,8 +58,8 @@ export default function VerifiedPropertiesPage() {
     } catch (error) {
       console.error("Error fetching verified properties:", error)
       toast({
-        title: "Error",
-        description: "Failed to load verified properties",
+        title: t("verified.error.title") || "Error",
+        description: t("verified.error.description") || "Failed to load verified properties",
         variant: "destructive",
       })
     } finally {
@@ -68,30 +76,29 @@ export default function VerifiedPropertiesPage() {
   })
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" key={`${lang}-${forceUpdate}`}>
       {/* Header Section */}
       <section className="bg-gradient-to-r from-primary to-primary/80 text-white py-16">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-3 mb-4">
             <Shield className="h-8 w-8" />
-            <h1 className="text-4xl font-bold">Verified Properties</h1>
+            <h1 className="text-4xl font-bold">{t("verified.title")}</h1>
           </div>
           <p className="text-lg text-white/90 max-w-2xl">
-            Discover trusted, verified accommodations with our exclusive verification badge. 
-            These properties have been thoroughly checked and verified by our team.
+            {t("verified.description")}
           </p>
           <div className="mt-6 flex items-center gap-4 flex-wrap">
             <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
               <CheckCircle2 className="h-4 w-4 mr-1" />
-              Verified & Trusted
+              {t("verified.badge.trusted")}
             </Badge>
             <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
               <TrendingUp className="h-4 w-4 mr-1" />
-              3x More Leads
+              {t("verified.badge.leads")}
             </Badge>
             <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
               <Award className="h-4 w-4 mr-1" />
-              Premium Badge
+              {t("verified.badge.premium")}
             </Badge>
           </div>
         </div>
@@ -103,7 +110,7 @@ export default function VerifiedPropertiesPage() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search by location or property name..."
+              placeholder={t("verified.search.placeholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -114,19 +121,19 @@ export default function VerifiedPropertiesPage() {
               variant={selectedType === "all" ? "default" : "outline"}
               onClick={() => setSelectedType("all")}
             >
-              All
+              {t("verified.filter.all")}
             </Button>
             <Button
               variant={selectedType === "PG" ? "default" : "outline"}
               onClick={() => setSelectedType("PG")}
             >
-              PG
+              {t("home.service.pgs")}
             </Button>
             <Button
               variant={selectedType === "Flat" ? "default" : "outline"}
               onClick={() => setSelectedType("Flat")}
             >
-              Flats
+              {t("home.service.flats")}
             </Button>
           </div>
         </div>
@@ -148,12 +155,12 @@ export default function VerifiedPropertiesPage() {
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-20">
             <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-2xl font-bold mb-2">No verified properties found</h3>
+            <h3 className="text-2xl font-bold mb-2">{t("verified.empty.title")}</h3>
             <p className="text-muted-foreground mb-6">
-              {searchQuery ? "Try adjusting your search criteria" : "Be the first to verify your property!"}
+              {searchQuery ? t("verified.empty.searchMessage") : t("verified.empty.noSearchMessage")}
             </p>
             <Button asChild>
-              <Link href="/list-property">List Your Property</Link>
+              <Link href="/list-property">{t("home.listProperty.ctaPrimary")}</Link>
             </Button>
           </div>
         ) : (
@@ -179,13 +186,13 @@ export default function VerifiedPropertiesPage() {
                       <div className="absolute top-3 left-3">
                         <Badge className="bg-green-600 text-white border-none shadow-lg">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Verified
+                          {t("verified.badge.verified")}
                         </Badge>
                       </div>
                       {/* Property Type Badge */}
                       <div className="absolute top-3 right-3">
                         <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm">
-                          {property.type}
+                          {property.type === "PG" ? t("home.service.pgs") : property.type === "Flat" ? t("home.service.flats") : property.type}
                         </Badge>
                       </div>
                       {/* Price Badge */}
@@ -194,7 +201,7 @@ export default function VerifiedPropertiesPage() {
                           <div className="flex items-center gap-1">
                             <IndianRupee className="h-4 w-4" />
                             <span className="text-xl font-bold">{property.price.toLocaleString()}</span>
-                            <span className="text-sm text-white/80">/month</span>
+                            <span className="text-sm text-white/80">/{t("verified.price.perMonth")}</span>
                           </div>
                         </div>
                       </div>
@@ -210,11 +217,11 @@ export default function VerifiedPropertiesPage() {
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                           <span className="text-sm font-medium">{property.rating.toFixed(1)}</span>
                           <span className="text-xs text-muted-foreground">
-                            ({property.reviews} {property.reviews === 1 ? "review" : "reviews"})
+                            ({property.reviews} {property.reviews === 1 ? t("verified.review.singular") : t("verified.review.plural")})
                           </span>
                         </div>
                         <Badge variant="outline" className="text-xs">
-                          {property.gender}
+                          {property.gender === "Male" ? t("common.gender.male") : property.gender === "Female" ? t("common.gender.female") : property.gender === "Co-ed" ? t("common.gender.coed") : property.gender}
                         </Badge>
                       </div>
                       {/* Amenities Preview */}
@@ -226,14 +233,14 @@ export default function VerifiedPropertiesPage() {
                         ))}
                         {property.amenities.length > 3 && (
                           <Badge variant="secondary" className="text-xs">
-                            +{property.amenities.length - 3} more
+                            +{property.amenities.length - 3} {t("verified.amenities.more")}
                           </Badge>
                         )}
                       </div>
                       {/* Verified Info */}
                       <div className="mt-3 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground">
                         <Sparkles className="h-3 w-3 text-green-600" />
-                        <span>Verified on {new Date(property.verifiedAt).toLocaleDateString()}</span>
+                        <span>{t("verified.verifiedOn")} {new Date(property.verifiedAt).toLocaleDateString()}</span>
                       </div>
                     </CardContent>
                   </Link>
@@ -252,7 +259,7 @@ export default function VerifiedPropertiesPage() {
                   <Shield className="h-6 w-6 text-primary" />
                   <span className="text-3xl font-bold">{filteredProperties.length}</span>
                 </div>
-                <p className="text-muted-foreground">Verified Properties</p>
+                <p className="text-muted-foreground">{t("verified.stats.properties")}</p>
               </CardContent>
             </Card>
             <Card>
@@ -261,7 +268,7 @@ export default function VerifiedPropertiesPage() {
                   <TrendingUp className="h-6 w-6 text-primary" />
                   <span className="text-3xl font-bold">3x</span>
                 </div>
-                <p className="text-muted-foreground">More Leads for Owners</p>
+                <p className="text-muted-foreground">{t("verified.stats.leads")}</p>
               </CardContent>
             </Card>
             <Card>
@@ -270,7 +277,7 @@ export default function VerifiedPropertiesPage() {
                   <CheckCircle2 className="h-6 w-6 text-primary" />
                   <span className="text-3xl font-bold">100%</span>
                 </div>
-                <p className="text-muted-foreground">Trusted & Verified</p>
+                <p className="text-muted-foreground">{t("verified.stats.trusted")}</p>
               </CardContent>
             </Card>
           </div>

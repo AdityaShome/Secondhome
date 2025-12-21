@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import nodemailer from "nodemailer"
 import { connectToDatabase } from "@/lib/mongodb"
 import { OTP } from "@/models/otp"
+import { getUserModel } from "@/models/user"
 
 // Generate random 6-digit OTP
 function generateOTP(): string {
@@ -10,7 +11,7 @@ function generateOTP(): string {
 
 export async function POST(req: Request) {
   try {
-    const { email, type = "registration" } = await req.json()
+    const { email, type = "registration", userType = "student" } = await req.json()
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
@@ -33,6 +34,28 @@ export async function POST(req: Request) {
     }
 
     await connectToDatabase()
+
+    // For password-reset type, check if user exists and verify user type
+    if (type === "password-reset") {
+      const User = await getUserModel()
+      const user = await User.findOne({ email: normalizedEmail })
+      
+      if (!user) {
+        // Don't reveal if email exists or not for security
+        return NextResponse.json(
+          { error: "If this email exists, an OTP will be sent." },
+          { status: 404 }
+        )
+      }
+
+      // If userType is "owner", verify the user is actually an owner
+      if (userType === "owner" && user.role !== "owner" && user.role !== "admin") {
+        return NextResponse.json(
+          { error: "This email is not registered as a property owner." },
+          { status: 403 }
+        )
+      }
+    }
 
     // Generate OTP
     const otp = generateOTP()
@@ -70,6 +93,10 @@ export async function POST(req: Request) {
       to: normalizedEmail,
       subject: type === "registration" 
         ? "🔐 Verify Your Email - Second Home Property Owner Registration"
+        : type === "password-reset" && userType === "owner"
+        ? "🔐 Property Owner Password Reset - Second Home"
+        : type === "password-reset"
+        ? "🔐 Password Reset OTP - Second Home"
         : "🔐 Your Login OTP - Second Home",
       html: `
         <!DOCTYPE html>
@@ -90,11 +117,11 @@ export async function POST(req: Request) {
             <div class="container">
               <div class="header">
                 <h1>🏠 Second Home</h1>
-                <p>${type === "registration" ? "Property Owner Registration" : "Secure Login"}</p>
+                <p>${type === "registration" ? "Property Owner Registration" : type === "password-reset" && userType === "owner" ? "Property Owner Password Reset" : type === "password-reset" ? "Password Reset" : "Secure Login"}</p>
               </div>
               <div class="content">
-                <h2>${type === "registration" ? "Welcome to Second Home!" : "Login Verification"}</h2>
-                <p>${type === "registration" ? "Thank you for registering as a property owner on Second Home. To complete your registration, please verify your email address using the OTP below:" : "For your security, please use the OTP below to sign in:"}</p>
+                <h2>${type === "registration" ? "Welcome to Second Home!" : type === "password-reset" && userType === "owner" ? "Property Owner Password Reset Request" : type === "password-reset" ? "Password Reset Request" : "Login Verification"}</h2>
+                <p>${type === "registration" ? "Thank you for registering as a property owner on Second Home. To complete your registration, please verify your email address using the OTP below:" : type === "password-reset" && userType === "owner" ? "You have requested to reset your property owner account password. Please use the OTP below to verify your identity and set a new password:" : type === "password-reset" ? "You have requested to reset your password. Please use the OTP below to verify your identity and set a new password:" : "For your security, please use the OTP below to sign in:"}</p>
                 
                 <div class="otp-box">
                   <div style="font-size: 14px; color: #666; margin-bottom: 10px;">Your Verification Code:</div>
@@ -108,7 +135,7 @@ export async function POST(req: Request) {
                 </div>
 
                 <p style="color: #666; font-size: 14px;">
-                  If you didn't request this ${type === "registration" ? "registration" : "login"}, please ignore this email.
+                  If you didn't request this ${type === "registration" ? "registration" : type === "password-reset" ? "password reset" : "login"}, please ignore this email and your account will remain secure.
                 </p>
               </div>
               <div class="footer">

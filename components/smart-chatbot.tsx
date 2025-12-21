@@ -130,13 +130,123 @@ export function SmartChatbot() {
     setTimeout(() => handleSendMessage(), 100)
   }
 
+  // Format AI responses into readable bullet points
+  const formatMessage = (content: string, role: "user" | "assistant"): React.ReactNode => {
+    // Only format assistant messages
+    if (role !== "assistant") {
+      return <p className="whitespace-pre-wrap leading-relaxed break-words">{content}</p>
+    }
+
+    // Split content into lines
+    const lines = content.split('\n').filter(line => line.trim())
+    
+    // Check if content already has bullet points or numbered lists
+    const hasBullets = content.includes('•') || content.includes('-') || content.includes('*')
+    const hasNumbers = lines.some(line => /^\d+\./.test(line.trim()))
+    
+    // If already formatted, display it nicely
+    if (hasBullets || hasNumbers) {
+      return (
+        <div className="space-y-1.5">
+          {lines.map((line, idx) => {
+            const trimmed = line.trim()
+            if (!trimmed) return null
+            // Check if it's a bullet point or numbered item
+            if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*') || /^\d+\./.test(trimmed)) {
+              return (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="text-orange-600 mt-0.5 flex-shrink-0 font-bold">•</span>
+                  <span className="flex-1 leading-relaxed">{trimmed.replace(/^[•\-\*\d+\.]\s*/, '')}</span>
+                </div>
+              )
+            }
+            return <p key={idx} className="leading-relaxed">{trimmed}</p>
+          })}
+        </div>
+      )
+    }
+
+    // For long responses, try to break into points
+    if (content.length > 120) {
+      // Split by sentences
+      const sentences = content.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 15)
+      
+      // Detect if response contains property/listing information
+      const hasPropertyInfo = /(?:We have|There are|I found|Properties?|PGs?|Flats?|Hostels?|starting at|priced at|₹|month|rating|⭐)/i.test(content)
+      
+      // If it has property info and multiple sentences, format as points
+      if (hasPropertyInfo && sentences.length > 2) {
+        return (
+          <div className="space-y-2">
+            {sentences.map((sentence, idx) => {
+              const trimmed = sentence.trim()
+              if (trimmed.length < 20) return null
+              return (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="text-orange-600 mt-0.5 flex-shrink-0 font-bold">•</span>
+                  <span className="flex-1 leading-relaxed">{trimmed}</span>
+                </div>
+              )
+            }).filter(Boolean)}
+          </div>
+        )
+      }
+      
+      // For other long responses, try splitting by common separators
+      if (sentences.length > 3) {
+        return (
+          <div className="space-y-1.5">
+            {sentences.map((sentence, idx) => {
+              const trimmed = sentence.trim()
+              if (trimmed.length < 20) return null
+              return (
+                <div key={idx} className="flex items-start gap-2">
+                  <span className="text-orange-600 mt-0.5 flex-shrink-0 font-bold">•</span>
+                  <span className="flex-1 leading-relaxed">{trimmed}</span>
+                </div>
+              )
+            }).filter(Boolean)}
+          </div>
+        )
+      }
+    }
+
+    // For medium length responses with commas, try to format
+    if (content.length > 60 && content.includes(',')) {
+      // Check if it looks like a list
+      const commaCount = (content.match(/,/g) || []).length
+      if (commaCount >= 2) {
+        const parts = content.split(/,\s*(?=[A-Z]|₹|We|There|You|I)/).filter(p => p.trim().length > 10)
+        if (parts.length >= 2) {
+          return (
+            <div className="space-y-1.5">
+              {parts.map((part, idx) => {
+                const trimmed = part.trim()
+                if (trimmed.length < 15) return null
+                return (
+                  <div key={idx} className="flex items-start gap-2">
+                    <span className="text-orange-600 mt-0.5 flex-shrink-0 font-bold">•</span>
+                    <span className="flex-1 leading-relaxed">{trimmed.replace(/^[,\s]+/, '')}</span>
+                  </div>
+                )
+              }).filter(Boolean)}
+            </div>
+          )
+        }
+      }
+    }
+
+    // Default: just display as paragraph
+    return <p className="whitespace-pre-wrap leading-relaxed break-words">{content}</p>
+  }
+
   return (
     <>
       {/* Chatbot Trigger Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-[99999] group"
+          className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[99999] group"
           aria-label="Open chat"
         >
           <div className="relative">
@@ -145,24 +255,24 @@ export function SmartChatbot() {
             <div className="absolute inset-0 rounded-full bg-orange-500 animate-pulse opacity-30" />
             
             {/* Main button */}
-            <div className="relative w-16 h-16 bg-white rounded-full shadow-2xl border-4 border-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <div className="relative w-14 h-14 md:w-16 md:h-16 bg-white rounded-full shadow-2xl border-4 border-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
               <Image
                 src="/secrobot.gif"
                 alt="Chat with us"
                 width={48}
                 height={48}
-                className="rounded-full"
+                className="rounded-full w-10 h-10 md:w-12 md:h-12"
                 unoptimized
               />
             </div>
 
             {/* Notification badge */}
-            <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
+            <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-red-500 text-white text-[10px] md:text-xs font-bold rounded-full flex items-center justify-center animate-bounce">
               1
             </div>
 
-            {/* Tooltip */}
-            <div className="absolute bottom-full right-0 mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            {/* Tooltip - hidden on mobile */}
+            <div className="hidden md:block absolute bottom-full right-0 mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
               <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg whitespace-nowrap">
                 Need help? Chat with us!
                 <div className="absolute bottom-0 right-6 transform translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900" />
@@ -176,50 +286,68 @@ export function SmartChatbot() {
       {isOpen && (
         <div
           className={cn(
-            "fixed z-[99999] bg-white rounded-2xl shadow-2xl border-2 border-gray-200 flex flex-col transition-all duration-300",
+            "fixed z-[99999] bg-white shadow-2xl border-2 border-gray-200 flex flex-col transition-all duration-300",
+            // Mobile: full screen
+            "inset-0 md:inset-auto md:rounded-2xl",
             isMinimized
-              ? "bottom-6 right-6 w-80 h-16"
-              : "bottom-6 right-6 w-[420px] h-[600px]"
+              ? "bottom-4 right-4 md:bottom-6 md:right-6 w-[calc(100%-2rem)] md:w-80 h-16"
+              : "bottom-0 right-0 md:bottom-6 md:right-6 w-full md:w-[420px] h-full md:h-[600px] md:rounded-2xl"
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600 rounded-t-2xl">
-            <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full bg-white p-1 shadow-md">
+          <div className={cn(
+            "flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600",
+            "p-3 md:p-4",
+            isMinimized ? "rounded-t-2xl" : "md:rounded-t-2xl"
+          )}>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+              <div className="relative w-8 h-8 md:w-10 md:h-10 rounded-full bg-white p-0.5 md:p-1 shadow-md flex-shrink-0">
                 <Image
                   src="/secrobot.gif"
                   alt="Assistant"
                   width={40}
                   height={40}
-                  className="rounded-full"
+                  className="rounded-full w-full h-full"
                   unoptimized
                 />
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full border-2 border-white" />
               </div>
-              <div>
-                <h3 className="font-bold text-white flex items-center gap-1">
-                  SecondHome Assistant
-                  <Sparkles className="w-4 h-4" />
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-white flex items-center gap-1 text-sm md:text-base">
+                  <span className="truncate">SecondHome Assistant</span>
+                  <Sparkles className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
                 </h3>
-                <p className="text-xs text-orange-100">Online • Responds in seconds</p>
+                <p className="text-[10px] md:text-xs text-orange-100 truncate">Online • Responds in seconds</p>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="h-8 w-8 text-white hover:bg-white/20 rounded-full"
-              >
-                {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-              </Button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {!isMinimized && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="h-7 w-7 md:h-8 md:w-8 text-white hover:bg-white/20 rounded-full"
+                >
+                  <Minimize2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
+              )}
+              {isMinimized && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMinimized(!isMinimized)}
+                  className="h-7 w-7 md:h-8 md:w-8 text-white hover:bg-white/20 rounded-full"
+                >
+                  <Maximize2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsOpen(false)}
-                className="h-8 w-8 text-white hover:bg-white/20 rounded-full"
+                className="h-7 w-7 md:h-8 md:w-8 text-white hover:bg-white/20 rounded-full"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
             </div>
           </div>
@@ -228,41 +356,41 @@ export function SmartChatbot() {
           {!isMinimized && (
             <>
               {/* Messages Area */}
-              <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-                <div className="space-y-4">
+              <ScrollArea className="flex-1 p-3 md:p-4" ref={scrollRef}>
+                <div className="space-y-3 md:space-y-4">
                   {messages.map((message, index) => (
                     <div
                       key={message.id}
                       className={cn(
-                        "flex gap-3 animate-in fade-in slide-in-from-bottom-2",
+                        "flex gap-2 md:gap-3 animate-in fade-in slide-in-from-bottom-2",
                         message.role === "user" ? "flex-row-reverse" : "flex-row"
                       )}
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
                       {message.role === "assistant" && (
-                        <div className="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center">
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center">
                           <Image
                             src="/secrobot.gif"
                             alt="AI"
                             width={24}
                             height={24}
-                            className="rounded-full"
+                            className="rounded-full w-full h-full"
                             unoptimized
                           />
                         </div>
                       )}
                       <div
                         className={cn(
-                          "max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                          "max-w-[80%] md:max-w-[75%] rounded-2xl px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm shadow-sm",
                           message.role === "user"
                             ? "bg-orange-500 text-white rounded-tr-none"
                             : "bg-gray-100 text-gray-900 rounded-tl-none"
                         )}
                       >
-                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                        {formatMessage(message.content, message.role)}
                         <span
                           className={cn(
-                            "text-[10px] mt-1 block",
+                            "text-[9px] md:text-[10px] mt-2 block",
                             message.role === "user" ? "text-orange-100" : "text-gray-500"
                           )}
                         >
@@ -277,22 +405,22 @@ export function SmartChatbot() {
 
                   {/* Typing Indicator */}
                   {isTyping && (
-                    <div className="flex gap-3 animate-in fade-in">
-                      <div className="w-8 h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center">
+                    <div className="flex gap-2 md:gap-3 animate-in fade-in">
+                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-orange-100 flex-shrink-0 flex items-center justify-center">
                         <Image
                           src="/secrobot.gif"
                           alt="AI"
                           width={24}
                           height={24}
-                          className="rounded-full"
+                          className="rounded-full w-full h-full"
                           unoptimized
                         />
                       </div>
-                      <div className="bg-gray-100 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+                      <div className="bg-gray-100 rounded-2xl rounded-tl-none px-3 py-2 md:px-4 md:py-3 shadow-sm">
                         <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                         </div>
                       </div>
                     </div>
@@ -301,13 +429,13 @@ export function SmartChatbot() {
 
                 {/* Quick Actions (show only at start) */}
                 {messages.length <= 1 && (
-                  <div className="mt-6 space-y-2">
-                    <p className="text-xs text-gray-500 font-semibold mb-2">Quick Actions:</p>
+                  <div className="mt-4 md:mt-6 space-y-2">
+                    <p className="text-[10px] md:text-xs text-gray-500 font-semibold mb-2">Quick Actions:</p>
                     {quickActions.map((action, index) => (
                       <button
                         key={index}
                         onClick={() => handleQuickAction(action)}
-                        className="w-full text-left px-4 py-2 text-sm bg-white border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 rounded-lg transition-all"
+                        className="w-full text-left px-3 py-2 md:px-4 md:py-2 text-xs md:text-sm bg-white border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 rounded-lg transition-all"
                       >
                         {action}
                       </button>
@@ -317,7 +445,7 @@ export function SmartChatbot() {
               </ScrollArea>
 
               {/* Input Area */}
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="p-3 md:p-4 border-t border-gray-200 bg-gray-50">
                 <div className="flex gap-2">
                   <Textarea
                     ref={textareaRef}
@@ -326,23 +454,23 @@ export function SmartChatbot() {
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
                     disabled={isLoading}
-                    className="min-h-[44px] max-h-[120px] resize-none border-2 border-gray-300 focus:border-orange-500 rounded-xl bg-white text-gray-900"
+                    className="min-h-[40px] md:min-h-[44px] max-h-[120px] resize-none border-2 border-gray-300 focus:border-orange-500 rounded-xl bg-white text-gray-900 text-sm md:text-base"
                     rows={1}
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={isLoading || !inputMessage.trim()}
-                    className="h-11 w-11 rounded-xl bg-orange-500 hover:bg-orange-600 flex-shrink-0"
+                    className="h-10 w-10 md:h-11 md:w-11 rounded-xl bg-orange-500 hover:bg-orange-600 flex-shrink-0"
                     size="icon"
                   >
                     {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4 md:w-5 md:h-5" />
                     )}
                   </Button>
                 </div>
-                <p className="text-[10px] text-gray-500 mt-2 text-center">
+                <p className="text-[9px] md:text-[10px] text-gray-500 mt-1.5 md:mt-2 text-center">
                   Powered by Smart AI • Real-time data
                 </p>
               </div>

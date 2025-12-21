@@ -58,13 +58,13 @@ const typeIcons = {
 }
 
 const typeColors = {
-  booking: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  property: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  offer: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  review: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-  system: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-  payment: "bg-green-500/10 text-green-400 border-green-500/20",
-  message: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  booking: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  property: "bg-orange-500/10 text-orange-600 border-orange-500/30",
+  offer: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  review: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
+  system: "bg-gray-500/10 text-gray-600 border-gray-500/30",
+  payment: "bg-green-500/10 text-green-600 border-green-500/30",
+  message: "bg-orange-500/10 text-orange-600 border-orange-500/30",
 }
 
 export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
@@ -207,19 +207,19 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 400 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 h-screen w-full max-w-md bg-slate-900/95 backdrop-blur-xl border-l border-slate-700/50 shadow-2xl z-[101] flex flex-col"
+            className="fixed top-0 right-0 h-screen w-full max-w-md bg-white backdrop-blur-xl border-l border-gray-200 shadow-2xl z-[101] flex flex-col"
           >
             {/* Header */}
-            <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/20 to-blue-900/20">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
                     <Bell className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white">Notifications</h2>
+                    <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
                     {unreadCount > 0 && (
-                      <p className="text-sm text-gray-400">{unreadCount} unread</p>
+                      <p className="text-sm text-orange-600 font-medium">{unreadCount} unread</p>
                     )}
                   </div>
                 </div>
@@ -227,9 +227,9 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-600 hover:text-gray-900 hover:bg-orange-50"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-gray-600" />
                 </Button>
               </div>
 
@@ -239,7 +239,11 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant={filter === "all" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter("all")}
-                  className="text-xs"
+                  className={`text-xs ${
+                    filter === "all"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                  }`}
                 >
                   All
                 </Button>
@@ -247,7 +251,11 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant={filter === "unread" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter("unread")}
-                  className="text-xs"
+                  className={`text-xs ${
+                    filter === "unread"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                  }`}
                 >
                   Unread
                 </Button>
@@ -255,7 +263,11 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant={filter === "read" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter("read")}
-                  className="text-xs"
+                  className={`text-xs ${
+                    filter === "read"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                  }`}
                 >
                   Read
                 </Button>
@@ -264,7 +276,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                     variant="outline"
                     size="sm"
                     onClick={markAllAsRead}
-                    className="text-xs ml-auto"
+                    className="text-xs ml-auto border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
                   >
                     <CheckCheck className="w-3 h-3 mr-1" />
                     Mark all read
@@ -279,17 +291,17 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                 <div className="p-6 space-y-4">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-20 bg-slate-800 rounded-lg" />
+                      <div className="h-20 bg-gray-100 rounded-lg" />
                     </div>
                   ))}
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-                    <Bell className="w-8 h-8 text-gray-600" />
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center mb-4">
+                    <Bell className="w-8 h-8 text-orange-500" />
                   </div>
-                  <p className="text-gray-400 text-lg mb-2">No notifications</p>
-                  <p className="text-gray-500 text-sm">You're all caught up!</p>
+                  <p className="text-gray-900 text-lg font-semibold mb-2">No notifications</p>
+                  <p className="text-gray-600 text-sm">You're all caught up!</p>
                 </div>
               ) : (
                 <div className="p-4 space-y-3">
@@ -307,13 +319,13 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                           onClick={() => handleNotificationClick(notification)}
                           className={`group relative p-4 rounded-xl border transition-all cursor-pointer ${
                             notification.read
-                              ? "bg-slate-800/50 border-slate-700/50 hover:border-slate-600"
-                              : "bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-purple-500/30 hover:border-purple-500/50 shadow-lg shadow-purple-500/10"
+                              ? "bg-white border-gray-200 hover:border-orange-200 hover:bg-orange-50/50"
+                              : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300 hover:border-orange-400 shadow-md shadow-orange-100"
                           }`}
                         >
                           {/* Unread indicator */}
                           {!notification.read && (
-                            <div className="absolute top-4 right-4 w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                            <div className="absolute top-4 right-4 w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse" />
                           )}
 
                           <div className="flex gap-4">
@@ -327,27 +339,31 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2 mb-1">
-                                <h3 className="font-semibold text-white text-sm">{notification.title}</h3>
+                                <h3 className={`font-semibold text-sm ${
+                                  notification.read ? "text-gray-700" : "text-gray-900"
+                                }`}>{notification.title}</h3>
                                 <div className="flex items-center gap-2">
                                   {notification.priority === "high" && (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                    <Badge className="text-[10px] px-1.5 py-0 bg-red-500 text-white">
                                       High
                                     </Badge>
                                   )}
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       deleteNotification(notification._id)
                                     }}
                                   >
-                                    <Trash2 className="w-3 h-3 text-gray-400" />
+                                    <Trash2 className="w-3 h-3 text-gray-500 hover:text-red-500" />
                                   </Button>
                                 </div>
                               </div>
-                              <p className="text-gray-400 text-sm mb-2 line-clamp-2">{notification.message}</p>
+                              <p className={`text-sm mb-2 line-clamp-2 ${
+                                notification.read ? "text-gray-600" : "text-gray-700"
+                              }`}>{notification.message}</p>
                               <div className="flex items-center gap-2 text-xs text-gray-500">
                                 <Clock className="w-3 h-3" />
                                 <span>
@@ -365,10 +381,10 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
             </ScrollArea>
 
             {/* Footer */}
-            <div className="p-4 border-t border-slate-700/50 bg-slate-900/50">
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full border-orange-300 text-gray-700 hover:bg-orange-50 hover:border-orange-400 hover:text-orange-600"
                 onClick={() => router.push("/dashboard?tab=notifications")}
               >
                 View All Notifications

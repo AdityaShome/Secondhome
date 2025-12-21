@@ -31,6 +31,7 @@ import { useDebounce } from "@/hooks/use-debounce"
 import "leaflet/dist/leaflet.css"
 import dynamic from "next/dynamic"
 import CommunityReviewsModal from "@/components/community-reviews-modal"
+import { useLanguage } from "@/providers/language-provider"
 
 const Map3DWorld = dynamic(() => import("@/components/Map3DWorld"), { 
   ssr: false,
@@ -180,42 +181,43 @@ interface RouteInfo {
   }>
 }
 
-const CATEGORIES: CategoryFilter[] = [
+// Categories will be created inside component to use translations
+const getCategories = (t: (key: string) => string): CategoryFilter[] => [
   { 
     id: "restaurant", 
-    name: "Restaurants", 
+    name: t("map.categories.restaurant") || "Restaurants", 
     icon: UtensilsCrossed, 
     color: "bg-orange-500", 
     osmTags: ["amenity=restaurant", "amenity=fast_food"],
-    enabled: true 
+    enabled: false 
   },
   { 
     id: "hospital", 
-    name: "Hospitals", 
+    name: t("map.categories.hospital") || "Hospitals", 
     icon: Hospital, 
     color: "bg-red-500", 
     osmTags: ["amenity=hospital", "amenity=clinic"],
-    enabled: false // Disabled by default to reduce API load
+    enabled: false 
   },
   { 
     id: "transport", 
-    name: "Transport", 
+    name: t("map.categories.transport") || "Transport", 
     icon: Bus, 
     color: "bg-purple-500", 
     osmTags: ["highway=bus_stop", "public_transport=station"],
-    enabled: true 
+    enabled: false 
   },
   { 
     id: "college", 
-    name: "Colleges", 
+    name: t("map.categories.college") || "Colleges", 
     icon: GraduationCap, 
     color: "bg-blue-600", 
-    osmTags: ["amenity=university", "amenity=college", "building=university", "building=college"],
+    osmTags: ["amenity=university", "amenity=college", "building=university", "amenity=college", "building=university", "building=college"],
     enabled: true // ALWAYS enabled - this is for students!
   },
   { 
     id: "atm", 
-    name: "ATMs", 
+    name: t("map.categories.atm") || "ATMs", 
     icon: DollarSign, 
     color: "bg-green-600", 
     osmTags: ["amenity=atm", "amenity=bank"],
@@ -223,7 +225,7 @@ const CATEGORIES: CategoryFilter[] = [
   },
   { 
     id: "gym", 
-    name: "Gyms", 
+    name: t("map.categories.gym") || "Gyms", 
     icon: Dumbbell, 
     color: "bg-pink-600", 
     osmTags: ["leisure=fitness_centre", "leisure=sports_centre"],
@@ -231,7 +233,7 @@ const CATEGORIES: CategoryFilter[] = [
   },
   { 
     id: "grocery", 
-    name: "Grocery", 
+    name: t("map.categories.grocery") || "Grocery", 
     icon: ShoppingCart, 
     color: "bg-yellow-600", 
     osmTags: ["shop=supermarket", "shop=convenience", "shop=grocery"],
@@ -239,7 +241,7 @@ const CATEGORIES: CategoryFilter[] = [
   },
   { 
     id: "pharmacy", 
-    name: "Pharmacy", 
+    name: t("map.categories.pharmacy") || "Pharmacy", 
     icon: Cross, 
     color: "bg-teal-600", 
     osmTags: ["amenity=pharmacy"],
@@ -247,7 +249,7 @@ const CATEGORIES: CategoryFilter[] = [
   },
   { 
     id: "police", 
-    name: "Police", 
+    name: t("map.categories.police") || "Police", 
     icon: ShieldCheck, 
     color: "bg-indigo-600", 
     osmTags: ["amenity=police"],
@@ -257,6 +259,7 @@ const CATEGORIES: CategoryFilter[] = [
 
 export default function MapPage() {
   const { toast } = useToast()
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState("")
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
@@ -273,7 +276,7 @@ export default function MapPage() {
   const [markers, setMarkers] = useState<any[]>([])
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null)
-  const [categories, setCategories] = useState<CategoryFilter[]>(CATEGORIES)
+  const [categories, setCategories] = useState<CategoryFilter[]>(getCategories(t))
   const [radius, setRadius] = useState(1500) // Reduced to 1.5km for faster API responses
   const [insights, setInsights] = useState<LocationInsights | null>(null)
   const [aiInsight, setAiInsight] = useState<AIInsight | null>(null)
@@ -282,7 +285,10 @@ export default function MapPage() {
   const [isVoiceActive, setIsVoiceActive] = useState(false)
   const [currentLocationName, setCurrentLocationName] = useState("Bangalore")
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d")
+  const [mapViewType, setMapViewType] = useState<"standard" | "satellite">("standard")
+  const tileLayerRef = useRef<any>(null)
   const [communityReviewsModal, setCommunityReviewsModal] = useState<{
     isOpen: boolean
     locationName: string
@@ -359,10 +365,14 @@ export default function MapPage() {
         zoomControl: true, // Keep zoom controls
       }).setView(mapCenter, 13)
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      // Add default standard tile layer
+      const standardLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '', // Remove attribution text
         maxZoom: 19,
-      }).addTo(mapInstance)
+      })
+      
+      tileLayerRef.current = standardLayer
+      standardLayer.addTo(mapInstance)
 
       setTimeout(() => {
         mapInstance.invalidateSize()
@@ -373,48 +383,101 @@ export default function MapPage() {
       setTimeout(() => {
     if (navigator.geolocation) {
           console.log("🔍 Requesting user location...")
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-              console.log("✅ Location obtained:", position.coords.latitude, position.coords.longitude)
-              const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
-              try {
-                mapInstance.setView(userLocation, 14)
-          setMapCenter(userLocation)
+          
+          // Try multiple times with increasing timeout
+          let attempts = 0
+          const maxAttempts = 3
+          
+          const tryGetLocation = () => {
+            attempts++
+            console.log(`📍 Attempt ${attempts}/${maxAttempts} to get location...`)
+            
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                console.log("✅ Location obtained:", position.coords.latitude, position.coords.longitude)
+                const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
+                try {
+                  mapInstance.setView(userLocation, 14)
+                  setMapCenter(userLocation)
 
-                const userIcon = L.divIcon({
-                  html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
-                  className: "",
-                  iconSize: [16, 16],
-                  iconAnchor: [8, 8],
-                })
-                L.marker(userLocation, { icon: userIcon }).addTo(mapInstance).bindPopup("📍 You are here")
+                  const userIcon = L.divIcon({
+                    html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
+                    className: "",
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8],
+                  })
+                  L.marker(userLocation, { icon: userIcon, isUserMarker: true }).addTo(mapInstance).bindPopup("📍 You are here")
+                  
+                  // Get location name
+                  reverseGeocode(userLocation)
+                  
+                  toast({
+                    title: "📍 Location detected!",
+                    description: "Showing nearby properties and amenities",
+                  })
+                  
+                  loadDataForLocation(userLocation)
+                } catch (err) {
+                  console.error("Error setting user location:", err)
+                  loadDataForLocation(mapCenter)
+                }
+              },
+              (error) => {
+                let errorMessage = "Unable to get your location"
+                switch (error.code) {
+                  case error.PERMISSION_DENIED:
+                    errorMessage = "Location permission denied. Click 'Get My Location' button to enable."
+                    break
+                  case error.POSITION_UNAVAILABLE:
+                    errorMessage = attempts < maxAttempts ? "Retrying location..." : "Location unavailable. Click 'Get My Location' to try again."
+                    break
+                  case error.TIMEOUT:
+                    errorMessage = attempts < maxAttempts ? "Retrying with longer timeout..." : "Location request timed out. Click 'Get My Location' to try again."
+                    break
+                  default:
+                    errorMessage = attempts < maxAttempts ? "Retrying..." : "An unknown error occurred. Click 'Get My Location' to try again."
+                    break
+                }
                 
-                // Get location name
-                reverseGeocode(userLocation)
-                
-                toast({
-                  title: "📍 Location detected!",
-                  description: "Showing nearby properties and amenities",
+                console.error(`❌ Geolocation error (attempt ${attempts}):`, {
+                  code: error.code,
+                  message: errorMessage,
+                  PERMISSION_DENIED: error.PERMISSION_DENIED,
+                  POSITION_UNAVAILABLE: error.POSITION_UNAVAILABLE,
+                  TIMEOUT: error.TIMEOUT
                 })
-              } catch (err) {
-                console.error("Error setting user location:", err)
+                
+                // Retry if not permission denied and haven't exceeded max attempts
+                if (error.code !== error.PERMISSION_DENIED && attempts < maxAttempts) {
+                  setTimeout(() => {
+                    tryGetLocation()
+                  }, 2000 * attempts) // Exponential backoff
+                } else {
+                  // Show toast only on final attempt
+                  if (attempts >= maxAttempts || error.code === error.PERMISSION_DENIED) {
+                    toast({
+                      title: "📍 Using default location",
+                      description: errorMessage,
+                      variant: error.code === error.PERMISSION_DENIED ? "destructive" : "default",
+                      action: error.code === error.PERMISSION_DENIED ? (
+                        <ToastAction altText="Try again" onClick={requestCurrentLocation}>
+                          Get My Location
+                        </ToastAction>
+                      ) : undefined,
+                    })
+                  }
+                  loadDataForLocation(mapCenter)
+                }
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 15000 * attempts, // Increase timeout with each attempt
+                maximumAge: 0
               }
-              loadDataForLocation(userLocation)
-            },
-            (error) => {
-              console.error("❌ Geolocation error:", error)
-              toast({
-                title: "📍 Using default location",
-                description: "Grant location permission for personalized results",
-              })
-              loadDataForLocation(mapCenter)
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0
-            }
-      )
+            )
+          }
+          
+          tryGetLocation()
     } else {
           console.warn("Geolocation not supported")
           toast({
@@ -767,10 +830,14 @@ export default function MapPage() {
         })
       }
       
-      calculateInsights(processedPlaces, location)
+      // Filter places by enabled categories before displaying
+      const enabledCategoryIds = categories.filter(c => c.enabled).map(c => c.id)
+      const filteredPlacesForDisplay = processedPlaces.filter(p => enabledCategoryIds.includes(p.type))
+      
+      calculateInsights(filteredPlacesForDisplay, location)
       
         if (map) {
-        addMarkersToMap(properties, processedPlaces)
+        addMarkersToMap(properties, filteredPlacesForDisplay)
         }
       } catch (error) {
         console.error("Error fetching nearby places:", error)
@@ -933,11 +1000,22 @@ export default function MapPage() {
       try {
         const L = (await import('leaflet')).default
 
+        // Remove ALL existing markers (both from state and map)
         markers.forEach((marker) => {
           if (marker && marker.remove) {
             marker.remove()
           }
         })
+        
+        // Also remove any markers that might be on the map but not in state
+        if (map) {
+          map.eachLayer((layer: any) => {
+            // Remove only marker layers (not tile layers or other controls)
+            if (layer instanceof L.Marker && !layer.options?.isUserMarker) {
+              map.removeLayer(layer)
+            }
+          })
+        }
 
         const newMarkers: any[] = []
 
@@ -998,7 +1076,7 @@ export default function MapPage() {
         if (places.length > 0) {
       places.forEach((place) => {
             const category = categories.find(c => c.id === place.type)
-            if (!category) return
+            if (!category || !category.enabled) return
 
             const placeIcon = L.divIcon({
               html: `<div class="flex items-center justify-center w-8 h-8 ${category.color} rounded-full border-2 border-white shadow-lg hover:scale-110 transition-transform cursor-pointer">
@@ -1045,7 +1123,7 @@ export default function MapPage() {
         console.error("Error adding markers to map:", error)
       }
     },
-    [map, categories, markers]
+    [map, categories]
   )
 
   // Handle category toggle
@@ -1074,12 +1152,93 @@ export default function MapPage() {
     setCategories(updated)
   }
 
+  // Update categories when language changes
+  useEffect(() => {
+    const currentEnabled = categories.map(c => ({ id: c.id, enabled: c.enabled }))
+    const newCategories = getCategories(t)
+    const updatedCategories = newCategories.map(newCat => {
+      const current = currentEnabled.find(c => c.id === newCat.id)
+      return { ...newCat, enabled: current ? current.enabled : newCat.enabled }
+    })
+    setCategories(updatedCategories)
+  }, [t])
+
   // Refetch when categories change
   useEffect(() => {
-    if (map && mapCenter && !isLoading) {
-      fetchNearbyPlaces(mapCenter)
+    if (map && mapCenter && !isLoading && mapInitialized.current) {
+      // Immediately filter and update markers for disabled categories
+      const enabledCategoryIds = categories.filter(c => c.enabled).map(c => c.id)
+      const filteredPlaces = places.filter(p => enabledCategoryIds.includes(p.type))
+      
+      // Update markers immediately to remove disabled category markers
+      // This will clear all markers and only add enabled ones
+      addMarkersToMap(properties, filteredPlaces)
+      
+      // Recalculate insights with filtered places
+      if (filteredPlaces.length > 0) {
+        calculateInsights(filteredPlaces, mapCenter)
+      } else if (enabledCategoryIds.length === 0) {
+        setInsights(null)
+      }
+      
+      // Then refetch if needed (for newly enabled categories)
+      // Only refetch if we have enabled categories
+      if (enabledCategoryIds.length > 0) {
+        fetchNearbyPlaces(mapCenter)
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories])
+
+  // Toggle between standard and satellite view
+  const toggleMapView = () => {
+    if (!map || !tileLayerRef.current) return
+    
+    // Dynamically import Leaflet
+    import('leaflet').then((L) => {
+      // Remove current tile layer
+      map.removeLayer(tileLayerRef.current)
+      
+      // Add new tile layer based on current view
+      if (mapViewType === "standard") {
+        // Switch to satellite
+        const satelliteLayer = L.default.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          attribution: '',
+          maxZoom: 19,
+        })
+        tileLayerRef.current = satelliteLayer
+        satelliteLayer.addTo(map)
+        setMapViewType("satellite")
+      } else {
+        // Switch to standard
+        const standardLayer = L.default.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '',
+          maxZoom: 19,
+        })
+        tileLayerRef.current = standardLayer
+        standardLayer.addTo(map)
+        setMapViewType("standard")
+      }
+    })
+  }
+
+  // Center map on user location
+  const centerOnUserLocation = () => {
+    if (!map || !mapCenter) return
+    
+    map.setView(mapCenter, 16, {
+      animate: true,
+      duration: 0.8,
+      easeLinearity: 0.25
+    })
+    
+    // Find and open user marker popup if it exists
+    map.eachLayer((layer: any) => {
+      if (layer.options && layer.options.isUserMarker && layer.getPopup) {
+        layer.openPopup()
+      }
+    })
+  }
 
   // Handle search suggestion click
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
@@ -1185,7 +1344,7 @@ export default function MapPage() {
     recognition.start()
   }
 
-  // Request current location
+  // Request current location - improved with retry logic
   const requestCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast({
@@ -1196,22 +1355,46 @@ export default function MapPage() {
       return
     }
 
+    setIsGettingLocation(true)
     toast({
       title: "📍 Getting your location...",
-      description: "Please allow location access",
+      description: "Please allow location access when prompted",
     })
 
-    navigator.geolocation.getCurrentPosition(
+    // Use watchPosition for better accuracy, then clear after first position
+    const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        console.log("✅ Location obtained:", position.coords.latitude, position.coords.longitude)
         const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
         setMapCenter(userLocation)
         
         if (map) {
           map.setView(userLocation, 14)
+          
+          // Remove existing user marker if any
+          map.eachLayer((layer: any) => {
+            if (layer.options && layer.options.isUserMarker) {
+              map.removeLayer(layer)
+            }
+          })
+          
+          // Add user marker
+          const userIcon = L.divIcon({
+            html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
+            className: "",
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          })
+          const marker = L.marker(userLocation, { icon: userIcon, isUserMarker: true }).addTo(map)
+          marker.bindPopup("📍 You are here").openPopup()
         }
         
         reverseGeocode(userLocation)
         loadDataForLocation(userLocation)
+        
+        // Clear watch after getting position
+        navigator.geolocation.clearWatch(watchId)
+        setIsGettingLocation(false)
         
         toast({
           title: "✅ Location detected!",
@@ -1223,25 +1406,40 @@ export default function MapPage() {
         let errorMessage = "Could not get your location"
         
         if (error.code === 1) {
-          errorMessage = "Location permission denied. Please enable it in browser settings."
+          errorMessage = "Location permission denied. Please enable it in your browser settings and try again."
         } else if (error.code === 2) {
-          errorMessage = "Location unavailable. Please try again."
+          errorMessage = "Location unavailable. Please check your GPS/WiFi and try again."
         } else if (error.code === 3) {
           errorMessage = "Location request timed out. Please try again."
         }
+        
+        // Clear watch on error
+        navigator.geolocation.clearWatch(watchId)
+        setIsGettingLocation(false)
         
         toast({
           title: "❌ Location error",
           description: errorMessage,
           variant: "destructive",
+          action: (
+            <ToastAction altText="Try again" onClick={requestCurrentLocation}>
+              Retry
+            </ToastAction>
+          ),
         })
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 20000, // Increased timeout
         maximumAge: 0
       }
     )
+    
+    // Fallback: clear watch after 25 seconds if no position received
+    setTimeout(() => {
+      navigator.geolocation.clearWatch(watchId)
+      setIsGettingLocation(false)
+    }, 25000)
   }
 
   // Save location
@@ -1364,10 +1562,20 @@ export default function MapPage() {
                 variant="outline" 
                 size="sm"
                 onClick={requestCurrentLocation}
-                className="border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                disabled={isGettingLocation}
+                className="border-orange-500 bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold"
               >
-                <Navigation className="w-4 h-4 mr-2" />
-                My Location
+                {isGettingLocation ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Getting Location...
+                  </>
+                ) : (
+                  <>
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Get My Location
+                  </>
+                )}
               </Button>
               <Button 
                 variant="outline" 
@@ -1567,7 +1775,7 @@ export default function MapPage() {
                     ))}
                     <div className="ml-auto flex items-center gap-2">
                       <span className="text-xs text-gray-600">
-                        {properties.length} properties • {places.length} places
+                        {properties.length} {t("map.properties")} • {places.length} {t("map.places")}
                       </span>
                     </div>
                   </div>
@@ -1583,37 +1791,58 @@ export default function MapPage() {
           {/* Map - FULL WIDTH */}
           <div className="lg:col-span-2 space-y-6">
             {/* Map */}
-            <Card className="bg-white border-gray-200 overflow-hidden shadow-md relative z-0">
+            <Card className="bg-white border-gray-200 overflow-hidden shadow-md relative">
               <CardContent className="p-0">
-                <div className="relative z-0">
-                  <div ref={mapRef} className="w-full h-[70vh] rounded-lg"></div>
+                <div className="relative">
+                  <div ref={mapRef} className="w-full h-[70vh] rounded-lg" style={{ zIndex: 0 }}></div>
                   
-                  {(isLoading || isFetchingPlaces) && (
-                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 shadow-md">
-                      <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                      <span className="text-sm text-gray-900 font-medium">
-                        {isLoading ? 'Loading properties...' : 'Fetching nearby places...'}
-                      </span>
-              </div>
-            )}
+                  {/* Overlay Container - All buttons and overlays go here */}
+                  <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1000 }}>
+                    <div className="pointer-events-auto">
+                      {(isLoading || isFetchingPlaces) && (
+                        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-200 flex items-center gap-2 shadow-md">
+                          <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                          <span className="text-sm text-gray-900 font-medium">
+                            {isLoading ? t("map.loading") : t("map.fetching")}
+                          </span>
+                        </div>
+                      )}
 
-                  {/* Current Location Badge */}
-                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-200 shadow-md">
-                    <div className="flex items-center gap-2">
-                      <MapPinned className="w-4 h-4 text-orange-500" />
-                      <span className="text-gray-900 font-semibold">{currentLocationName}</span>
-                    </div>
-                  </div>
+                      {/* Current Location Badge */}
+                      <div className={`absolute ${isLoading || isFetchingPlaces ? 'top-20' : 'top-4'} right-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-lg border border-gray-200 shadow-md`}>
+                        <div className="flex items-center gap-2">
+                          <MapPinned className="w-4 h-4 text-orange-500" />
+                          <span className="text-gray-900 font-semibold">{currentLocationName}</span>
+                        </div>
+                      </div>
 
-                  {/* Selected Property Card */}
-                  <AnimatePresence>
-            {selectedProperty && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5 z-[50]"
-              >
+                      {/* Map View Toggle and GPS Location Buttons */}
+                      <div className={`absolute ${selectedProperty || selectedPlace ? 'bottom-72 md:bottom-4' : 'bottom-4'} left-4 flex flex-col gap-3 transition-all duration-300`}>
+                        <button
+                          onClick={toggleMapView}
+                          className="p-3 bg-white hover:bg-gray-50 rounded-xl shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                          title={mapViewType === "standard" ? "Switch to Satellite View" : "Switch to Standard View"}
+                        >
+                          <Globe className="w-5 h-5 text-green-600" />
+                        </button>
+                        <button
+                          onClick={centerOnUserLocation}
+                          className="p-3 bg-white hover:bg-gray-50 rounded-xl shadow-xl transition-all backdrop-blur-sm border border-gray-200"
+                          title="Center on your location"
+                        >
+                          <Navigation className="w-5 h-5 text-blue-600" />
+                        </button>
+                      </div>
+
+                      {/* Selected Property Card */}
+                      <AnimatePresence>
+                        {selectedProperty && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5 pointer-events-auto"
+                          >
                 <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h3 className="font-bold text-gray-900 text-lg">{selectedProperty.title}</h3>
@@ -1646,18 +1875,18 @@ export default function MapPage() {
                   </Button>
                 </div>
               </motion.div>
-            )}
-                  </AnimatePresence>
+                        )}
+                      </AnimatePresence>
 
-                  {/* Selected Place Card */}
-                  <AnimatePresence>
-                    {selectedPlace && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5 z-[50]"
-                      >
+                      {/* Selected Place Card */}
+                      <AnimatePresence>
+                        {selectedPlace && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="absolute bottom-4 left-4 right-4 md:w-96 md:left-auto bg-white/98 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl p-5 pointer-events-auto"
+                          >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <h3 className="font-bold text-gray-900 text-lg">{selectedPlace.name}</h3>
@@ -1681,11 +1910,13 @@ export default function MapPage() {
                           </Button>
               </div>
                       </motion.div>
-                    )}
-                  </AnimatePresence>
-              </div>
-                  </CardContent>
-                </Card>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* WIDGETS BELOW MAP - FILL ALL EMPTY SPACE! */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1714,10 +1945,21 @@ export default function MapPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-orange-300 hover:bg-orange-50"
+                          className="border-orange-500 bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold"
                           onClick={requestCurrentLocation}
+                          disabled={isGettingLocation}
                         >
-                          Use My Location
+                          {isGettingLocation ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Getting Location...
+                            </>
+                          ) : (
+                            <>
+                              <Navigation className="w-4 h-4 mr-2" />
+                              Use My Location
+                            </>
+                          )}
                         </Button>
                       </div>
                     </CardContent>
@@ -1838,7 +2080,7 @@ export default function MapPage() {
                         <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
                           <p className="text-lg font-bold text-gray-900">{colleges.length}</p>
                           <p className="text-gray-600 font-medium">Colleges</p>
-          </div>
+                        </div>
                         <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
                           <p className="text-lg font-bold text-gray-900">{insights.restaurants}</p>
                           <p className="text-gray-600 font-medium">Eateries</p>
@@ -1846,6 +2088,10 @@ export default function MapPage() {
                         <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
                           <p className="text-lg font-bold text-gray-900">{insights.transport}</p>
                           <p className="text-gray-600 font-medium">Transport</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
+                          <p className="text-lg font-bold text-gray-900">{insights.hospitals}</p>
+                          <p className="text-gray-600 font-medium">Hospitals</p>
                         </div>
                         <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
                           <p className="text-lg font-bold text-gray-900">{insights.atms}</p>
@@ -1856,9 +2102,27 @@ export default function MapPage() {
                           <p className="text-gray-600 font-medium">Groceries</p>
                         </div>
                         <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
+                          <p className="text-lg font-bold text-gray-900">{insights.gyms}</p>
+                          <p className="text-gray-600 font-medium">Gyms</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
+                          <p className="text-lg font-bold text-gray-900">{insights.pharmacies}</p>
+                          <p className="text-gray-600 font-medium">Pharmacies</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
+                          <p className="text-lg font-bold text-gray-900">{insights.police}</p>
+                          <p className="text-gray-600 font-medium">Police</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
                           <p className="text-lg font-bold text-gray-900">{insights.cafes}</p>
                           <p className="text-gray-600 font-medium">Cafés</p>
                         </div>
+                        {insights.laundries > 0 && (
+                          <div className="p-2 bg-gray-50 border border-gray-200 rounded text-center">
+                            <p className="text-lg font-bold text-gray-900">{insights.laundries}</p>
+                            <p className="text-gray-600 font-medium">Laundries</p>
+                          </div>
+                        )}
                       </div>
                       {insights.is24x7Available && (
                         <div className="mt-2 p-1.5 bg-green-50 border border-green-200 rounded text-center">
@@ -2700,90 +2964,240 @@ export default function MapPage() {
                   </motion.div>
             )}
 
-            {/* Detailed Insights Tabs */}
+            {/* AI Area Analysis - Show when insights are available */}
             {insights && (
-              <Card className="bg-white border-gray-200 shadow-md">
-                <CardContent className="p-0">
-                  <Tabs defaultValue="scores" className="w-full">
-                    <TabsList className="w-full grid grid-cols-2 bg-gray-100 rounded-t-lg">
-                      <TabsTrigger value="scores">Scores</TabsTrigger>
-                      <TabsTrigger value="details">Details</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="scores" className="p-4 space-y-3">
-                      {Object.entries({
-                        food: { label: 'Food', icon: UtensilsCrossed, count: insights.restaurants },
-                        connectivity: { label: 'Transport', icon: Bus, count: insights.transport },
-                        walkability: { label: 'Walkability', icon: Footprints, count: 0 },
-                        safety: { label: 'Safety', icon: ShieldCheck, count: insights.police },
-                        nightSafety: { label: 'Night Safety', icon: Moon, count: 0 },
-                        wifiAvailability: { label: 'WiFi Spots', icon: Wifi, count: insights.cafes },
-                        health: { label: 'Healthcare', icon: Hospital, count: insights.hospitals + insights.pharmacies },
-                        convenience: { label: 'Convenience', icon: ShoppingCart, count: insights.groceries + insights.atms },
-                        fitness: { label: 'Fitness', icon: Dumbbell, count: insights.gyms },
-                      }).map(([key, { label, icon: Icon, count }]) => (
-                        <div key={key}>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-gray-700 font-medium flex items-center gap-1">
-                              <Icon className="w-3 h-3 text-orange-500" />
-                              {label} {count > 0 && `(${count})`}
-                            </span>
-                            <span className={`font-bold ${getScoreColor(insights.scores[key as keyof typeof insights.scores])}`}>
-                              {insights.scores[key as keyof typeof insights.scores]}/100
-                            </span>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 overflow-hidden shadow-lg">
+                  <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600">
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      AI Area Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      {/* Overall Analysis */}
+                      <div className="p-4 bg-white/60 backdrop-blur-sm rounded-lg border border-blue-200">
+                        <div className="flex items-start gap-3">
+                          <Bot className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900 mb-2">Comprehensive Area Analysis</h4>
+                            {aiInsight ? (
+                              <p className="text-gray-700 text-sm leading-relaxed">{aiInsight.recommendation}</p>
+                            ) : (
+                              <p className="text-gray-700 text-sm leading-relaxed">
+                                {insights.scores.overall >= 80 
+                                  ? "This area offers excellent facilities and amenities, making it highly suitable for student accommodation. With strong scores across food, transport, and safety, it provides a well-rounded living experience."
+                                  : insights.scores.overall >= 60
+                                  ? "This location provides good facilities and amenities. While not perfect, it offers decent access to essential services and could work well for students looking for affordable accommodation."
+                                  : insights.scores.overall >= 40
+                                  ? "This area has average facilities. Some amenities are available but may be limited. Consider your specific needs before choosing this location."
+                                  : "This area has limited facilities and amenities. It may not be ideal for student accommodation unless you have specific requirements or budget constraints."}
+                              </p>
+                            )}
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-orange-500 h-2 rounded-full transition-all"
-                              style={{ width: `${insights.scores[key as keyof typeof insights.scores]}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    <TabsContent value="details" className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                          {insights.is24x7Available ? (
-                            <>
-                              <Clock className="w-8 h-8 text-green-600" />
-                              <div>
-                                <div className="text-gray-900 font-semibold">24/7 Services</div>
-                                <div className="text-sm text-green-600 font-medium">Available</div>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="w-8 h-8 text-gray-400" />
-                              <div>
-                                <div className="text-gray-900 font-semibold">24/7 Services</div>
-                                <div className="text-sm text-gray-600">Limited</div>
-                              </div>
-              </>
-            )}
-          </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                          {[
-                            { icon: GraduationCap, label: 'Colleges', count: insights.colleges, color: 'text-orange-500' },
-                            { icon: DollarSign, label: 'ATMs', count: insights.atms, color: 'text-green-600' },
-                            { icon: Dumbbell, label: 'Gyms', count: insights.gyms, color: 'text-pink-600' },
-                            { icon: ShoppingCart, label: 'Groceries', count: insights.groceries, color: 'text-blue-600' },
-                          ].map(({ icon: Icon, label, count, color }) => (
-                            <div key={label} className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                              <Icon className={`w-6 h-6 mx-auto mb-1 ${color}`} />
-                              <div className="text-2xl font-bold text-gray-900">{count}</div>
-                              <div className="text-xs text-gray-600 font-medium">{label}</div>
-                            </div>
-                          ))}
                         </div>
                       </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
+
+                      {/* Key Metrics Analysis */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-blue-200">
+                          <div className="text-xs text-gray-600 mb-1">Properties Available</div>
+                          <div className="text-2xl font-bold text-gray-900">{properties.length}</div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {properties.length > 10 ? '✅ Excellent' : properties.length > 5 ? '👍 Good' : '⚠️ Limited'}
+                          </div>
+                        </div>
+                        <div className="p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-blue-200">
+                          <div className="text-xs text-gray-600 mb-1">Total Amenities</div>
+                          <div className="text-2xl font-bold text-gray-900">{places.length}</div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {places.length > 50 ? '✅ Excellent' : places.length > 20 ? '👍 Good' : '⚠️ Limited'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Facilities Breakdown */}
+                      <div className="p-4 bg-white/60 backdrop-blur-sm rounded-lg border border-blue-200">
+                        <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                          <BarChart3 className="w-4 h-4 text-blue-600" />
+                          Facilities Breakdown
+                        </h5>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700 flex items-center gap-2">
+                              <UtensilsCrossed className="w-4 h-4 text-orange-500" />
+                              Food & Dining
+                            </span>
+                            <span className="font-bold text-gray-900">{insights.restaurants} spots</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700 flex items-center gap-2">
+                              <Bus className="w-4 h-4 text-blue-500" />
+                              Transport
+                            </span>
+                            <span className="font-bold text-gray-900">{insights.transport} options</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700 flex items-center gap-2">
+                              <Hospital className="w-4 h-4 text-red-500" />
+                              Healthcare
+                            </span>
+                            <span className="font-bold text-gray-900">{insights.hospitals + insights.pharmacies} facilities</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700 flex items-center gap-2">
+                              <ShieldCheck className="w-4 h-4 text-green-500" />
+                              Safety
+                            </span>
+                            <span className="font-bold text-gray-900">{insights.police} stations</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-700 flex items-center gap-2">
+                              <Wifi className="w-4 h-4 text-purple-500" />
+                              WiFi Spots
+                            </span>
+                            <span className="font-bold text-gray-900">{insights.cafes} cafes</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Best For Section */}
+                      {(aiInsight?.bestFor || insights) && (
+                        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                          <div className="flex items-start gap-3">
+                            <Sparkles className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h5 className="font-semibold text-gray-900 mb-1">✨ Best Suited For</h5>
+                              <p className="text-gray-700 text-sm">
+                                {aiInsight?.bestFor || (
+                                  insights.scores.overall >= 80
+                                    ? "Students looking for premium accommodation with excellent amenities, good transport connectivity, and a safe environment."
+                                    : insights.scores.overall >= 60
+                                    ? "Budget-conscious students who need basic amenities and decent connectivity to colleges and essential services."
+                                    : "Students with specific requirements or those prioritizing affordability over extensive amenities."
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pros and Cons */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="text-xs font-semibold mb-2 text-green-700 flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3" />
+                            Advantages
+                          </div>
+                          <ul className="text-xs space-y-1.5 text-gray-700">
+                            {aiInsight?.pros && aiInsight.pros.length > 0 ? (
+                              aiInsight.pros.map((pro, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-green-600 mt-0.5">✓</span>
+                                  <span>{pro}</span>
+                                </li>
+                              ))
+                            ) : (
+                              <>
+                                {insights.restaurants > 10 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-green-600 mt-0.5">✓</span>
+                                    <span>Good food options available</span>
+                                  </li>
+                                )}
+                                {insights.transport > 5 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-green-600 mt-0.5">✓</span>
+                                    <span>Well connected transport</span>
+                                  </li>
+                                )}
+                                {insights.scores.safety > 60 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-green-600 mt-0.5">✓</span>
+                                    <span>Safe neighborhood</span>
+                                  </li>
+                                )}
+                                {insights.cafes > 5 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-green-600 mt-0.5">✓</span>
+                                    <span>Multiple WiFi spots</span>
+                                  </li>
+                                )}
+                              </>
+                            )}
+                          </ul>
+                        </div>
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="text-xs font-semibold mb-2 text-red-700 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Considerations
+                          </div>
+                          <ul className="text-xs space-y-1.5 text-gray-700">
+                            {aiInsight?.cons && aiInsight.cons.length > 0 ? (
+                              aiInsight.cons.map((con, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="text-red-600 mt-0.5">•</span>
+                                  <span>{con}</span>
+                                </li>
+                              ))
+                            ) : (
+                              <>
+                                {colleges.length === 0 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-red-600 mt-0.5">•</span>
+                                    <span>No colleges nearby</span>
+                                  </li>
+                                )}
+                                {properties.length === 0 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-red-600 mt-0.5">•</span>
+                                    <span>Limited property options</span>
+                                  </li>
+                                )}
+                                {insights.scores.overall < 40 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-red-600 mt-0.5">•</span>
+                                    <span>Limited amenities</span>
+                                  </li>
+                                )}
+                                {insights.transport < 3 && (
+                                  <li className="flex items-start gap-2">
+                                    <span className="text-red-600 mt-0.5">•</span>
+                                    <span>Limited transport options</span>
+                                  </li>
+                                )}
+                              </>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Match Score */}
+                      <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200 text-center">
+                        <div className="text-xs text-gray-600 mb-1">Overall Match Score</div>
+                        <div className="text-4xl font-bold text-orange-600 mb-2">
+                          {aiInsight?.matchScore || insights.scores.overall}%
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 h-2 rounded-full transition-all"
+                            style={{ width: `${aiInsight?.matchScore || insights.scores.overall}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
+
 
             {/* No insights message */}
             {!insights && !isLoading && !isFetchingPlaces && (
@@ -2816,163 +3230,6 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* AI CHAT ASSISTANT - FLOATING WIDGET! */}
-      <AnimatePresence>
-        {isChatOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 100, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 100, scale: 0.8 }}
-            className="fixed bottom-24 right-6 w-96 h-[32rem] bg-white border-2 border-gray-200 rounded-2xl shadow-2xl z-50 flex flex-col"
-          >
-            {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100 flex items-center justify-between rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-gray-900 font-bold">SecondHome AI</h3>
-                  <p className="text-xs text-gray-600">Your smart assistant</p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsChatOpen(false)}
-                className="text-gray-600 hover:text-gray-900 hover:bg-orange-200"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-              {/* Welcome Message */}
-              {chatMessages.length === 0 && (
-                <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-sm text-gray-900 font-semibold">
-                    👋 Hi! I'm your SecondHome AI assistant. I can help you with:
-                  </p>
-                  <ul className="mt-2 text-xs text-gray-700 space-y-1 ml-4">
-                    <li>• Finding properties near colleges</li>
-                    <li>• Comparing different locations</li>
-                    <li>• Understanding area safety & amenities</li>
-                    <li>• Budget recommendations</li>
-                  </ul>
-                  <p className="mt-2 text-xs text-gray-600">
-                    Ask me anything about {currentLocationName}!
-                  </p>
-                </div>
-              )}
-
-              {/* Chat Messages */}
-              {chatMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      msg.role === 'user'
-                        ? 'bg-orange-500 text-white'
-                        : 'bg-gray-100 text-gray-900 border border-gray-200'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                </div>
-              ))}
-
-              {/* AI Thinking */}
-              {isAiThinking && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 border border-gray-200 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                      <span className="text-sm text-gray-600 font-medium">AI is thinking...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Chat Input */}
-            <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault()
-                  if (!chatInput.trim() || isAiThinking) return
-
-                  const userMessage = chatInput.trim()
-                  setChatInput("")
-                  setChatMessages(prev => [...prev, { role: 'user', content: userMessage }])
-                  setIsAiThinking(true)
-
-                  try {
-                    // Prepare context
-                    const context = {
-                      location: currentLocationName,
-                      properties: properties.length,
-                      colleges: colleges.length,
-                      insights: insights ? {
-                        restaurants: insights.restaurants,
-                        transport: insights.transport,
-                        safety: insights.police,
-                        scores: insights.scores
-                      } : null,
-                      nearestCollege: nearestCollege?.name
-                    }
-
-                    // Call SecondHome AI service
-                    const response = await fetch('/api/ai/chat', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        message: userMessage,
-                        context
-                      })
-                    })
-
-                    const data = await response.json()
-
-                    if (data.reply) {
-                      setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
-                    } else {
-                      throw new Error('No reply from AI')
-                    }
-                  } catch (error) {
-                    console.error('Chat error:', error)
-                    setChatMessages(prev => [...prev, { 
-                      role: 'assistant', 
-                      content: "Sorry, I'm having trouble right now. Please try again!" 
-                    }])
-                  } finally {
-                    setIsAiThinking(false)
-                  }
-                }}
-                className="flex gap-2"
-              >
-                <Input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ask me anything..."
-                  className="flex-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 focus:border-orange-500"
-                  disabled={isAiThinking}
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={!chatInput.trim() || isAiThinking}
-                  className="bg-orange-500 hover:bg-orange-600"
-                >
-                  <Sparkles className="w-5 h-5" />
-                </Button>
-              </form>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* --- 3D IMMERSIVE OVERLAY --- */}
       <AnimatePresence mode="wait">
@@ -2998,28 +3255,6 @@ export default function MapPage() {
         )}
       </AnimatePresence>
 
-      {/* AI Chat FAB - Only visible in 2D mode */}
-      {viewMode === "2d" && !isLoading && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-orange-500 hover:bg-orange-600 rounded-full shadow-xl flex items-center justify-center z-50 transition-all"
-        >
-          {isChatOpen ? (
-            <X className="w-8 h-8 text-white" />
-          ) : (
-            <Bot className="w-8 h-8 text-white" />
-          )}
-          {!isChatOpen && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-pulse">
-              AI
-            </span>
-          )}
-        </motion.button>
-      )}
 
       {/* Floating Toggle Button - Always visible in 2D mode */}
       {viewMode === "2d" && (
@@ -3027,25 +3262,27 @@ export default function MapPage() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
-          className="fixed left-1/2 -translate-x-1/2 bottom-6 z-[90] flex items-center gap-2 p-1.5 bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-gray-200"
+          className="fixed inset-x-0 mx-auto bottom-4 md:bottom-6 z-[90] flex items-center justify-center gap-1.5 md:gap-2 p-1 md:p-1.5 bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-gray-200 w-fit max-w-[calc(100%-2rem)]"
         >
           <button
             onClick={() => setViewMode("2d")}
             disabled
-            className="px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg transition-all cursor-default"
+            className="px-4 py-2.5 md:px-6 md:py-3 rounded-full text-xs md:text-sm font-bold flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg transition-all cursor-default flex-1 md:flex-none"
           >
-            <MapPin className="w-5 h-5" />
-            2D Map
+            <MapPin className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="hidden sm:inline">2D Map</span>
+            <span className="sm:hidden">2D</span>
           </button>
           <button
             onClick={() => {
               console.log("🎮 BUTTON CLICKED - Switching to 3D mode");
               setViewMode("3d");
             }}
-            className="px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 active:scale-95 transition-all shadow-lg"
+            className="px-4 py-2.5 md:px-6 md:py-3 rounded-full text-xs md:text-sm font-bold flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 active:scale-95 transition-all shadow-lg flex-1 md:flex-none"
           >
-            <Sparkles className="w-5 h-5 animate-pulse" />
-            🎮 Play 3D Mode
+            <Sparkles className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
+            <span className="hidden sm:inline">3D Mode</span>
+            <span className="sm:hidden">3D</span>
           </button>
         </motion.div>
       )}

@@ -35,6 +35,7 @@ import {
   Star,
   LayoutDashboard,
   ListChecks,
+  Trash2,
 } from "lucide-react"
 import { LikeButton } from "@/components/like-button"
 
@@ -80,6 +81,11 @@ export default function ProfilePage() {
   const [likedProperties, setLikedProperties] = useState<any[]>([])
   const [userProperties, setUserProperties] = useState<any[]>([])
   const [isLoadingData, setIsLoadingData] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  
+  // Counts for overview tab
+  const [savedCount, setSavedCount] = useState(0)
+  const [propertiesCount, setPropertiesCount] = useState(0)
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -137,6 +143,38 @@ export default function ProfilePage() {
     }
   }
 
+  // Fetch counts for overview tab
+  useEffect(() => {
+    if (!user) return
+
+    const fetchCounts = async () => {
+      try {
+        // Fetch saved properties count
+        const favoritesResponse = await fetch("/api/favorites")
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json()
+          setSavedCount(favoritesData.count || 0)
+        }
+
+        // Fetch user's properties count (if owner/admin)
+        if (user.role === "owner" || user.role === "admin") {
+          const propertiesResponse = await fetch("/api/properties")
+          if (propertiesResponse.ok) {
+            const propertiesData = await propertiesResponse.json()
+            const myProperties = (propertiesData.properties || []).filter(
+              (p: any) => p.owner?._id === user.id || p.owner?._id?.toString() === user.id
+            )
+            setPropertiesCount(myProperties.length || 0)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching counts:", error)
+      }
+    }
+
+    fetchCounts()
+  }, [user])
+
   useEffect(() => {
     if (!user) return
 
@@ -150,17 +188,43 @@ export default function ProfilePage() {
             setBookings(data.bookings || data || [])
           }
         } else if (activeTab === "liked") {
-          const response = await fetch("/api/likes?myLikes=true")
+          // Use the same API as favorites page
+          const response = await fetch("/api/favorites")
           if (response.ok) {
             const data = await response.json()
-            setLikedProperties(data.properties || [])
+            const favoritePropertyIds = data.favorites || []
+            
+            // Fetch full property details for each favorite
+            const propertyPromises = favoritePropertyIds.map(async (propertyId: string) => {
+              try {
+                const propRes = await fetch(`/api/properties/${propertyId}`)
+                if (propRes.ok) {
+                  const propData = await propRes.json()
+                  return propData.property
+                }
+                return null
+              } catch (error) {
+                console.error(`Error fetching property ${propertyId}:`, error)
+                return null
+              }
+            })
+
+            const properties = await Promise.all(propertyPromises)
+            const validProperties = properties.filter(Boolean)
+            setLikedProperties(validProperties)
+            // Update saved count when fetching liked properties
+            setSavedCount(validProperties.length)
           }
         } else if (activeTab === "properties" && (user.role === "owner" || user.role === "admin")) {
           const response = await fetch("/api/properties")
           if (response.ok) {
             const data = await response.json()
-            const myProperties = (data.properties || []).filter((p: any) => p.owner?._id === user.id)
+            const myProperties = (data.properties || []).filter(
+              (p: any) => p.owner?._id === user.id || p.owner?._id?.toString() === user.id
+            )
             setUserProperties(myProperties || [])
+            // Update properties count when fetching user properties
+            setPropertiesCount(myProperties.length || 0)
           }
         } else if (activeTab === "settings") {
           const response = await fetch("/api/user/settings")
@@ -187,10 +251,29 @@ export default function ProfilePage() {
     if (activeTab === "liked") {
       interval = setInterval(async () => {
         try {
-          const response = await fetch("/api/likes?myLikes=true")
+          const response = await fetch("/api/favorites")
           if (response.ok) {
             const data = await response.json()
-            setLikedProperties(data.properties || [])
+            const favoritePropertyIds = data.favorites || []
+            
+            // Fetch full property details for each favorite
+            const propertyPromises = favoritePropertyIds.map(async (propertyId: string) => {
+              try {
+                const propRes = await fetch(`/api/properties/${propertyId}`)
+                if (propRes.ok) {
+                  const propData = await propRes.json()
+                  return propData.property
+                }
+                return null
+              } catch (error) {
+                return null
+              }
+            })
+
+            const properties = await Promise.all(propertyPromises)
+            const validProperties = properties.filter(Boolean)
+            setLikedProperties(validProperties)
+            setSavedCount(validProperties.length)
           }
         } catch (err) {
           console.error("Error refreshing saved properties:", err)
@@ -323,6 +406,35 @@ export default function ProfilePage() {
   const handleTabChange = (value: string) => {
     setActiveTab(value)
     router.push(`/profile?tab=${value}`, { scroll: false })
+  }
+
+  const removeFavorite = async (propertyId: string) => {
+    setRemovingId(propertyId)
+    try {
+      const res = await fetch(`/api/favorites?propertyId=${propertyId}`, {
+        method: "DELETE",
+      })
+
+      if (res.ok) {
+        setLikedProperties(prev => prev.filter(p => p._id !== propertyId))
+        setSavedCount(prev => Math.max(0, prev - 1))
+        toast({
+          title: "Removed",
+          description: "Property removed from favorites",
+        })
+      } else {
+        throw new Error("Failed to remove favorite")
+      }
+    } catch (error) {
+      console.error("❌ Error removing favorite:", error)
+      toast({
+        title: "Error",
+        description: "Failed to remove from favorites",
+        variant: "destructive",
+      })
+    } finally {
+      setRemovingId(null)
+    }
   }
 
   const sidebarLinks = [
@@ -477,7 +589,7 @@ export default function ProfilePage() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <p className="text-4xl font-bold text-red-500">{likedProperties.length}</p>
+                          <p className="text-4xl font-bold text-red-500">{savedCount}</p>
                           <p className="text-sm text-gray-700 mt-2">Saved properties</p>
                         </CardContent>
                       </Card>
@@ -490,7 +602,7 @@ export default function ProfilePage() {
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <p className="text-4xl font-bold text-blue-500">{userProperties.length}</p>
+                            <p className="text-4xl font-bold text-blue-500">{propertiesCount}</p>
                             <p className="text-sm text-gray-700 mt-2">Listed properties</p>
                           </CardContent>
                         </Card>
@@ -600,7 +712,11 @@ export default function ProfilePage() {
                     ) : (
                       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {likedProperties.map((property) => (
-                          <Card key={property._id} className="overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                          <Card 
+                            key={property._id} 
+                            className="overflow-hidden hover:shadow-xl transition-all duration-300 group cursor-pointer"
+                            onClick={() => router.push(`/property/${property._id}`)}
+                          >
                             <div className="relative h-48 overflow-hidden bg-muted">
                               <Image
                                 src={property.images?.[0] || "/placeholder.jpg"}
@@ -611,14 +727,21 @@ export default function ProfilePage() {
                               <Badge className="absolute top-3 right-3 bg-white/90 text-foreground">
                                 {property.type}
                               </Badge>
-                              <div className="absolute bottom-3 right-3">
-                                <LikeButton
-                                  itemType="property"
-                                  itemId={property._id}
-                                  size="sm"
-                                  className="bg-white/90 backdrop-blur-sm shadow-lg rounded-full"
-                                />
-                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  removeFavorite(property._id)
+                                }}
+                                disabled={removingId === property._id}
+                                className="absolute top-3 right-3 w-10 h-10 bg-white/95 backdrop-blur rounded-full flex items-center justify-center hover:scale-110 transition-all active:scale-95 disabled:opacity-50 shadow-lg"
+                              >
+                                {removingId === property._id ? (
+                                  <Loader2 className="w-5 h-5 text-red-500 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-5 h-5 text-red-500" />
+                                )}
+                              </button>
                             </div>
                             <CardHeader>
                               <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
@@ -626,7 +749,9 @@ export default function ProfilePage() {
                               </CardTitle>
                               <CardDescription className="flex items-start gap-2">
                                 <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
-                                <span className="line-clamp-2">{property.location}</span>
+                                <span className="line-clamp-2">
+                                  {property.location?.address || property.location || property.city || "Location not specified"}
+                                </span>
                               </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -646,7 +771,7 @@ export default function ProfilePage() {
                             </CardContent>
                             <CardFooter>
                               <Button asChild className="w-full">
-                                <Link href={`/listings/${property._id}`}>View Details</Link>
+                                <Link href={`/property/${property._id}`}>View Details</Link>
                               </Button>
                             </CardFooter>
                           </Card>

@@ -1,3 +1,5 @@
+"use client"
+
 import { CardFooter } from "@/components/ui/card"
 import { CardTitle } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
@@ -5,9 +7,11 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Calendar, User, Tag, Facebook, Twitter, Linkedin } from "lucide-react"
+import { ArrowLeft, Calendar, User, Tag, Facebook, Twitter, Linkedin, ExternalLink, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
-// Sample blog posts data
+// Sample blog posts data (static content)
 const blogPosts = {
   "1": {
     id: "1",
@@ -63,123 +67,252 @@ const blogPosts = {
     category: "Accommodation Tips",
     tags: ["PG Accommodation", "Student Housing", "College Life", "Rental Tips"],
   },
-  // Add more blog posts as needed
+}
+
+interface NewsArticle {
+  id: string
+  title: string
+  excerpt: string
+  image: string
+  date: string
+  author: string
+  category: string
+  source: string
+  url: string
+  publishedAt: string
+  content?: string
 }
 
 export default function BlogPostPage({ params }: { params: { id: string } }) {
-  const post = blogPosts[params.id]
+  const router = useRouter()
+  const [newsArticle, setNewsArticle] = useState<NewsArticle | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const staticPost = blogPosts[params.id as keyof typeof blogPosts]
+
+  // Check if it's a community article (starts with "reddit-" or "news-")
+  const isNewsArticle = params.id.startsWith("reddit-") || params.id.startsWith("news-")
+
+  useEffect(() => {
+    if (isNewsArticle) {
+      // Fetch the article from the blog posts API (Reddit)
+      setIsLoading(true)
+      fetch("/api/blog-posts?pageSize=100")
+        .then((res) => res.json())
+        .then((data) => {
+          const article = data.articles?.find((a: NewsArticle) => a.id === params.id)
+          if (article) {
+            setNewsArticle(article)
+          }
+          setIsLoading(false)
+        })
+        .catch(() => {
+          setIsLoading(false)
+        })
+    }
+  }, [params.id, isNewsArticle])
+
+  // If it's a news article and we have the URL, redirect to the original source
+  if (isNewsArticle && newsArticle?.url) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Redirecting to Article</h2>
+          <p className="text-gray-600 mb-6">
+            You're being redirected to the original article source to read the full content.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => window.open(newsArticle.url, "_blank")}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Open Article
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/blog")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Blog
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const post = staticPost || newsArticle
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading article...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Blog Post Not Found</h1>
-          <p className="mb-6">The blog post you're looking for doesn't exist or has been removed.</p>
-          <Button asChild>
-            <Link href="/blog">Back to Blog</Link>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">Blog Post Not Found</h1>
+          <p className="text-gray-600 mb-6">The blog post you're looking for doesn't exist or has been removed.</p>
+          <Button asChild className="bg-orange-500 hover:bg-orange-600">
+            <Link href="/blog">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Blog
+            </Link>
           </Button>
         </div>
       </div>
     )
   }
 
+  const hasContent = "content" in post && post.content
+
   return (
-    <div className="min-h-screen bg-blue-50">
-      <div className="bg-blue-600 text-white py-16">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-16">
         <div className="container mx-auto px-4">
-          <Link href="/blog" className="inline-flex items-center text-white hover:underline mb-6">
+          <Link
+            href="/blog"
+            className="inline-flex items-center text-white/90 hover:text-white hover:underline mb-6 transition-colors"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Blog
           </Link>
           <h1 className="text-3xl md:text-4xl font-bold mb-4">{post.title}</h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-orange-50">
             <div className="flex items-center">
               <Calendar className="mr-1 h-4 w-4" />
               <span>{post.date}</span>
             </div>
             <div className="flex items-center">
               <User className="mr-1 h-4 w-4" />
-              <span>By {post.author}</span>
+              <span>{post.author}</span>
             </div>
             <div className="flex items-center">
               <Tag className="mr-1 h-4 w-4" />
               <span>{post.category}</span>
             </div>
+            {"source" in post && post.source && (
+              <div className="text-xs bg-white/20 px-3 py-1 rounded-full">
+                {post.source}
+              </div>
+            )}
+            {"upvotes" in post && post.upvotes !== undefined && (
+              <div className="text-xs bg-white/20 px-3 py-1 rounded-full">
+                ⬆️ {post.upvotes} upvotes
+              </div>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Content */}
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="relative h-[400px]">
-            <Image src={post.image || "/placeholder.svg"} alt={post.title} fill className="object-cover" />
+        <div className="max-w-4xl mx-auto">
+          {/* Featured Image */}
+          <div className="relative h-64 md:h-96 mb-8 rounded-lg overflow-hidden shadow-lg">
+            <Image
+              src={post.image || "/placeholder.svg?height=600&width=1200"}
+              alt={post.title}
+              fill
+              className="object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.src = "/placeholder.svg?height=600&width=1200"
+              }}
+            />
           </div>
-          <div className="p-8">
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
 
-            <div className="mt-12 pt-6 border-t">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">Tags:</span>
-                {post.tags.map((tag) => (
-                  <span key={tag} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+          {/* Article Content */}
+          <Card className="mb-8 border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-2xl mb-4">{post.title}</CardTitle>
+              <p className="text-gray-600 text-lg leading-relaxed">{post.excerpt}</p>
+            </CardHeader>
+            <CardContent>
+              {hasContent ? (
+                <div className="prose prose-lg max-w-none">
+                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{post.content}</div>
+                  {"url" in post && post.url && post.url !== "#" && (
+                    <div className="mt-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
+                      <p className="text-gray-700 mb-4 font-semibold">Read the full discussion on Reddit:</p>
+                      <Button
+                        asChild
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        <a href={post.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          View on Reddit
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.excerpt}</p>
+                  {"url" in post && post.url && post.url !== "#" && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
+                      <p className="text-gray-700 mb-4">To read the full discussion, visit the original post:</p>
+                      <Button
+                        asChild
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        <a href={post.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          View on Reddit
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tags */}
+          {"tags" in post && post.tags && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-3 text-gray-900">Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {post.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-medium"
+                  >
                     {tag}
                   </span>
                 ))}
               </div>
             </div>
+          )}
 
-            <div className="mt-8 pt-6 border-t">
-              <div className="flex flex-wrap items-center gap-4">
-                <span className="font-medium">Share this post:</span>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Facebook className="h-4 w-4" />
-                  <span className="sr-only">Share on Facebook</span>
+          {/* Social Share */}
+          <Card className="border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg">Share this article</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm" className="flex-1 border-blue-300 text-blue-600 hover:bg-blue-50">
+                  <Facebook className="w-4 h-4 mr-2" />
+                  Facebook
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Twitter className="h-4 w-4" />
-                  <span className="sr-only">Share on Twitter</span>
+                <Button variant="outline" size="sm" className="flex-1 border-blue-300 text-blue-600 hover:bg-blue-50">
+                  <Twitter className="w-4 h-4 mr-2" />
+                  Twitter
                 </Button>
-                <Button variant="outline" size="icon" className="rounded-full">
-                  <Linkedin className="h-4 w-4" />
-                  <span className="sr-only">Share on LinkedIn</span>
+                <Button variant="outline" size="sm" className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50">
+                  <Linkedin className="w-4 h-4 mr-2" />
+                  LinkedIn
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-3xl mx-auto mt-12">
-          <h2 className="text-2xl font-bold mb-6">Related Posts</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-              <div className="relative h-48">
-                <Image src="/placeholder.svg?height=400&width=600" alt="Related post" fill className="object-cover" />
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">5 Things to Check Before Booking a Mess Subscription</CardTitle>
-              </CardHeader>
-              <CardFooter>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/blog/2">Read More</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-            <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
-              <div className="relative h-48">
-                <Image src="/placeholder.svg?height=400&width=600" alt="Related post" fill className="object-cover" />
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">
-                  Budget-Friendly Decorating Ideas for Your Student Accommodation
-                </CardTitle>
-              </CardHeader>
-              <CardFooter>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/blog/3">Read More</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

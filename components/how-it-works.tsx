@@ -3,13 +3,15 @@
 import { Search, Eye, Calendar, CreditCard, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useLanguage } from "@/providers/language-provider"
 
 export default function HowItWorks() {
+  const { t } = useLanguage()
   const steps = [
     {
       icon: Search,
-      title: "Search & Explore",
-      description: "Use our smart search to find properties by location, college, or amenities. Browse verified listings with real photos and details.",
+      title: t("home.how.steps.search.title"),
+      description: t("home.how.steps.search.desc"),
       number: "01",
       bgColor: "bg-orange-100",
       iconColor: "text-orange-600",
@@ -17,8 +19,8 @@ export default function HowItWorks() {
     },
     {
       icon: Eye,
-      title: "View & Compare",
-      description: "Explore property details, view photos, read reviews from real students, and compare options side by side.",
+      title: t("home.how.steps.compare.title"),
+      description: t("home.how.steps.compare.desc"),
       number: "02",
       bgColor: "bg-cyan-100",
       iconColor: "text-cyan-600",
@@ -26,8 +28,8 @@ export default function HowItWorks() {
     },
     {
       icon: Calendar,
-      title: "Book Instantly",
-      description: "Schedule a visit or book directly online. Choose your move-in date and room preferences instantly.",
+      title: t("home.how.steps.book.title"),
+      description: t("home.how.steps.book.desc"),
       number: "03",
       bgColor: "bg-green-100",
       iconColor: "text-green-600",
@@ -35,8 +37,8 @@ export default function HowItWorks() {
     },
     {
       icon: CreditCard,
-      title: "Secure Payment",
-      description: "Complete your booking with secure payment options. Get instant confirmation and access to your new home.",
+      title: t("home.how.steps.pay.title"),
+      description: t("home.how.steps.pay.desc"),
       number: "04",
       bgColor: "bg-blue-100",
       iconColor: "text-blue-600",
@@ -50,10 +52,10 @@ export default function HowItWorks() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            How It <span className="text-orange-500">Works</span>
+            {t("home.how.title")}
           </h2>
           <p className="text-xl text-gray-600">
-            Finding your perfect accommodation is simple with our 4-step process
+            {t("home.how.subtitle")}
           </p>
         </div>
 
@@ -98,7 +100,7 @@ export default function HowItWorks() {
                       className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-semibold"
                     >
                       <Link href="/listings" className="flex items-center justify-center gap-2">
-                        Start Searching
+                        {t("home.how.startSearching")}
                         <ArrowRight className="w-4 h-4" />
                       </Link>
                     </Button>
@@ -112,7 +114,7 @@ export default function HowItWorks() {
         {/* Bottom CTA */}
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-6 text-lg">
-            Ready to find your perfect accommodation?
+            {t("home.how.readyCta")}
           </p>
           <Button
             size="lg"
@@ -120,7 +122,7 @@ export default function HowItWorks() {
             className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-6 text-base rounded shadow-md"
           >
             <Link href="/listings" className="flex items-center gap-2">
-              Browse All Properties
+              {t("home.how.browseAll")}
               <ArrowRight className="w-5 h-5" />
             </Link>
           </Button>

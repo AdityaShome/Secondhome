@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect, useMemo } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useLanguage } from "@/providers/language-provider"
 import {
   MapPin, Star, Filter, Loader2, SlidersHorizontal, X, Bed, Bath, Users, Eye, TrendingUp, Heart, 
   Search, IndianRupee, Wifi, Car, Home, Shield, Sparkles, ChevronDown, Grid3x3, List, Map as MapIcon,
@@ -39,21 +40,26 @@ const PropertyCardSkeleton = () => (
 )
 
 // Empty State Component
-const EmptyState = ({ onReset }: { onReset: () => void }) => (
-  <motion.div 
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="col-span-full flex flex-col items-center justify-center py-20"
-  >
-    <h3 className="text-2xl font-bold text-gray-900">No property found</h3>
-  </motion.div>
-)
+const EmptyState = ({ onReset }: { onReset: () => void }) => {
+  const { t } = useLanguage()
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="col-span-full flex flex-col items-center justify-center py-20"
+    >
+      <h3 className="text-2xl font-bold text-gray-900">{t("listings.empty.title")}</h3>
+    </motion.div>
+  )
+}
 
 export default function ListingsPage() {
+  const { t, lang } = useLanguage()
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
   const { toast } = useToast()
+  const [forceUpdate, setForceUpdate] = useState(0)
   
   // State Management
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
@@ -72,6 +78,11 @@ export default function ListingsPage() {
     minRating: 0,
     verified: false,
   })
+
+  // Force re-render when language changes
+  useEffect(() => {
+    setForceUpdate(prev => prev + 1)
+  }, [lang])
 
   // Fetch Properties and Favorites
   useEffect(() => {
@@ -124,8 +135,8 @@ export default function ListingsPage() {
   const toggleFavorite = async (propertyId: string) => {
     if (!session) {
       toast({
-        title: "Login Required",
-        description: "Please login to save properties to favorites",
+        title: t("listings.toast.loginRequired.title"),
+        description: t("listings.toast.loginRequired.description"),
         variant: "destructive",
       })
       router.push("/login")
@@ -150,8 +161,8 @@ export default function ListingsPage() {
 
         if (res.ok) {
           toast({
-            title: "Removed from favorites",
-            description: "Property removed from your favorites",
+            title: t("listings.toast.removed.title"),
+            description: t("listings.toast.removed.description"),
           })
         } else {
           throw new Error("Failed to remove favorite")
@@ -313,7 +324,7 @@ export default function ListingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-gray-50" key={`listings-${lang}-${forceUpdate}`}>
       {/* Hero Search Section */}
       <div className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/10" />
@@ -326,10 +337,10 @@ export default function ListingsPage() {
             className="max-w-4xl mx-auto text-center mb-8"
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Find Your Perfect Second Home
+              {t("home.heroTitle")}
             </h1>
             <p className="text-lg md:text-xl text-orange-100 mb-8">
-              {filteredAndSortedListings.length} {filteredAndSortedListings.length === 1 ? 'property' : 'properties'} available
+              {filteredAndSortedListings.length} {filteredAndSortedListings.length === 1 ? t("listings.property.singular") : t("listings.property.plural")} {t("listings.available")}
             </p>
 
             {/* Enhanced Search Bar */}
@@ -337,7 +348,7 @@ export default function ListingsPage() {
               <div className="flex-1 flex items-center gap-3 px-4">
                 <Search className="w-5 h-5 text-gray-400" />
                 <Input
-                  placeholder="Search by college, area, locality..."
+                  placeholder={t("listings.search.placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-none focus-visible:ring-0 text-gray-900 placeholder:text-gray-500"
@@ -347,7 +358,7 @@ export default function ListingsPage() {
                 onClick={() => {/* Search logic */}}
                 className="bg-orange-500 hover:bg-orange-600 px-8"
               >
-                Search
+                {t("nav.search")}
               </Button>
             </div>
           </motion.div>
@@ -381,7 +392,7 @@ export default function ListingsPage() {
                 >
                   {type === "PG" && <Home className="w-4 h-4 mr-2" />}
                   {type === "Flat" && <Building2 className="w-4 h-4 mr-2" />}
-                  {type}
+                  {type === "PG" ? t("home.service.pgs") : type === "Flat" ? t("home.service.flats") : type}
                   <Badge className="ml-2 bg-orange-500 text-white text-xs px-1.5 py-0">
                     {count}
                   </Badge>
@@ -402,7 +413,7 @@ export default function ListingsPage() {
               <SheetTrigger asChild>
                 <Button variant="outline" className="relative">
                   <SlidersHorizontal className="w-4 h-4 mr-2" />
-                  Filters
+                  {t("listings.filters.title")}
                   {activeFiltersCount > 0 && (
                     <Badge className="ml-2 bg-orange-500 text-white">
                       {activeFiltersCount}
@@ -412,9 +423,9 @@ export default function ListingsPage() {
               </SheetTrigger>
               <SheetContent side="left" className="w-full sm:max-w-md overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle className="text-2xl">Filters</SheetTitle>
+                  <SheetTitle className="text-2xl">{t("listings.filters.title")}</SheetTitle>
                   <SheetDescription>
-                    Refine your search to find the perfect property
+                    {t("listings.filters.description")}
                   </SheetDescription>
                 </SheetHeader>
 
@@ -422,7 +433,7 @@ export default function ListingsPage() {
                   {/* Price Range */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Price Range</Label>
+                      <Label className="text-base font-semibold">{t("listings.filters.priceRange")}</Label>
                       <span className="text-sm text-gray-600">
                         {formatPrice(filters.priceRange[0])} - {formatPrice(filters.priceRange[1])}
                       </span>
@@ -441,7 +452,7 @@ export default function ListingsPage() {
 
                   {/* Property Types */}
                   <div className="space-y-4">
-                    <Label className="text-base font-semibold">Property Type</Label>
+                    <Label className="text-base font-semibold">{t("listings.filters.propertyType")}</Label>
                     <div className="space-y-3">
                       {propertyTypes.map((type) => {
                         const count = listings.filter(p => p.type === type).length
@@ -474,7 +485,7 @@ export default function ListingsPage() {
                   {/* Gender */}
                   {genderOptions.length > 0 && (
                     <div className="space-y-4">
-                      <Label className="text-base font-semibold">Gender Preference</Label>
+                      <Label className="text-base font-semibold">{t("listings.filters.gender")}</Label>
                       <div className="space-y-3">
                         {genderOptions.map((gender) => (
                           <div key={gender} className="flex items-center space-x-2">
@@ -491,7 +502,7 @@ export default function ListingsPage() {
                               }}
                             />
                             <Label htmlFor={`gender-${gender}`} className="cursor-pointer">
-                              {gender}
+                              {gender === "Male" ? t("common.gender.male") : gender === "Female" ? t("common.gender.female") : gender === "Co-ed" ? t("common.gender.coed") : gender}
                             </Label>
                           </div>
                         ))}
@@ -501,7 +512,7 @@ export default function ListingsPage() {
 
                   {/* Amenities */}
                   <div className="space-y-4">
-                    <Label className="text-base font-semibold">Amenities</Label>
+                    <Label className="text-base font-semibold">{t("listings.filters.amenities")}</Label>
                     <div className="grid grid-cols-2 gap-3">
                       {availableAmenities.map((amenity) => (
                         <div key={amenity} className="flex items-center space-x-2">
@@ -527,7 +538,7 @@ export default function ListingsPage() {
 
                   {/* Rating */}
                   <div className="space-y-4">
-                    <Label className="text-base font-semibold">Minimum Rating</Label>
+                    <Label className="text-base font-semibold">{t("listings.filters.minRating")}</Label>
                     <div className="flex gap-2">
                       {[0, 3, 4, 4.5].map((rating) => (
                         <Button
@@ -537,7 +548,7 @@ export default function ListingsPage() {
                           onClick={() => setFilters((prev) => ({ ...prev, minRating: rating }))}
                           className={filters.minRating === rating ? "bg-orange-500" : ""}
                         >
-                          {rating === 0 ? "Any" : `${rating}+`}
+                          {rating === 0 ? t("listings.filters.any") : `${rating}+`}
                           {rating > 0 && <Star className="w-3 h-3 ml-1 fill-current" />}
                         </Button>
                       ))}
@@ -555,7 +566,7 @@ export default function ListingsPage() {
                     />
                     <Label htmlFor="verified" className="cursor-pointer flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      <span>Verified Properties Only</span>
+                      <span>{t("listings.filters.verifiedOnly")}</span>
                     </Label>
                   </div>
 
@@ -567,7 +578,7 @@ export default function ListingsPage() {
                       className="w-full"
                     >
                       <X className="w-4 h-4 mr-2" />
-                      Clear All Filters
+                      {t("listings.filters.clearAll")}
                     </Button>
                   )}
                 </div>
@@ -577,7 +588,7 @@ export default function ListingsPage() {
             {/* Active Filters Display */}
             {activeFiltersCount > 0 && (
               <span className="text-sm text-gray-600">
-                {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''} active
+                {activeFiltersCount} {activeFiltersCount > 1 ? t("listings.filters.active.plural") : t("listings.filters.active.singular")}
               </span>
             )}
           </div>
@@ -610,11 +621,11 @@ export default function ListingsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="recent">Most Recent</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-                <SelectItem value="popular">Most Popular</SelectItem>
+                <SelectItem value="recent">{t("listings.sort.recent")}</SelectItem>
+                <SelectItem value="price-low">{t("listings.sort.priceLow")}</SelectItem>
+                <SelectItem value="price-high">{t("listings.sort.priceHigh")}</SelectItem>
+                <SelectItem value="rating">{t("listings.sort.rating")}</SelectItem>
+                <SelectItem value="popular">{t("listings.sort.popular")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -659,7 +670,7 @@ export default function ListingsPage() {
             animate={{ opacity: 1 }}
             className="mt-8 text-center text-gray-600"
           >
-            Showing {filteredAndSortedListings.length} of {listings.length} properties
+            {t("listings.results.showing")} {filteredAndSortedListings.length} {t("listings.results.of")} {listings.length} {t("listings.property.plural")}
           </motion.div>
         )}
       </div>
@@ -681,6 +692,7 @@ function PropertyCard({
   isFavorited: boolean;
   onToggleFavorite: (propertyId: string) => void;
 }) {
+  const { t } = useLanguage()
   const [imageError, setImageError] = useState(false)
   const router = useRouter()
 
@@ -712,29 +724,29 @@ function PropertyCard({
           {/* Overlays */}
           <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
             <Badge className="bg-white/95 text-gray-900 backdrop-blur">
-              {property.type || "PG"}
+              {property.type === "PG" ? t("home.service.pgs") : property.type === "Flat" ? t("home.service.flats") : property.type || t("home.service.pgs")}
             </Badge>
             {property.gender && (
               <Badge variant="secondary" className="bg-blue-500/95 text-white backdrop-blur">
-                {property.gender}
+                {property.gender === "Male" ? t("common.gender.male") : property.gender === "Female" ? t("common.gender.female") : property.gender === "Co-ed" ? t("common.gender.coed") : property.gender}
               </Badge>
             )}
             {property.verificationStatus === "verified" && (
               <Badge className="bg-green-600/95 text-white backdrop-blur border-2 border-white">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
-                Verified
+                {t("verified.badge.verified")}
               </Badge>
             )}
             {property.verificationStatus === "pending" && (
               <Badge className="bg-yellow-500/95 text-white backdrop-blur">
                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                Verification Pending
+                {t("listings.verification.pending")}
               </Badge>
             )}
             {property.approvalMethod === "AI" && !property.isVerified && (
               <Badge className="bg-purple-500/95 text-white backdrop-blur">
                 <Sparkles className="w-3 h-3 mr-1" />
-                AI Reviewed
+                {t("listings.verification.aiReviewed")}
               </Badge>
             )}
           </div>
@@ -752,7 +764,7 @@ function PropertyCard({
 
           <div className="absolute bottom-4 right-4">
             <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold shadow-lg">
-              ₹{formatPrice(property.price)}/mo
+              ₹{formatPrice(property.price)}/{t("verified.price.perMonth")}
             </div>
           </div>
         </div>
@@ -761,13 +773,13 @@ function PropertyCard({
         <CardContent className="p-6 flex-1">
           <Link href={`/listings/${property._id}`}>
             <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
-              {property.title || "Untitled Property"}
+              {property.title || t("listings.property.untitled")}
             </h3>
           </Link>
 
           <div className="flex items-center text-gray-600 mb-4">
             <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-            <span className="text-sm line-clamp-1">{property.location || property.address || "Location not specified"}</span>
+            <span className="text-sm line-clamp-1">{property.location || property.address || t("listings.property.locationNotSpecified")}</span>
           </div>
 
           {/* Rating */}
@@ -778,7 +790,7 @@ function PropertyCard({
                 <span className="text-sm font-semibold">{property.rating.toFixed(1)}</span>
               </div>
               <span className="text-xs text-gray-500">
-                {property.reviews || 0} review{property.reviews !== 1 ? 's' : ''}
+                {property.reviews || 0} {property.reviews !== 1 ? t("verified.review.plural") : t("verified.review.singular")}
               </span>
             </div>
           )}
@@ -798,7 +810,7 @@ function PropertyCard({
               })}
               {property.amenities.length > 4 && (
                 <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  +{property.amenities.length - 4} more
+                  +{property.amenities.length - 4} {t("verified.amenities.more")}
                 </div>
               )}
             </div>
@@ -819,7 +831,7 @@ function PropertyCard({
             onClick={() => router.push(`/listings/${property._id}`)}
             className="w-full bg-orange-500 hover:bg-orange-600 group-hover:bg-orange-600"
           >
-            View Details
+            {t("listings.action.viewDetails")}
             <Eye className="w-4 h-4 ml-2" />
           </Button>
         </CardContent>

@@ -2,13 +2,11 @@ import type React from "react"
 import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/providers/auth-provider"
 import { LanguageProvider } from "@/providers/language-provider"
 import { ScrollToTop } from "@/components/scroll-to-top"
-import { SmartChatbot } from "@/components/smart-chatbot"
+import { LayoutWrapper } from "@/components/layout-wrapper"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -49,14 +47,11 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <LanguageProvider>
             <AuthProvider>
-              <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <main className="flex-grow">{children}</main>
-                <Footer />
-              </div>
+              <LayoutWrapper>
+                {children}
+              </LayoutWrapper>
               <Toaster />
               <ScrollToTop />
-              <SmartChatbot />
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
