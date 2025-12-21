@@ -64,6 +64,7 @@ export default function AdminPropertiesPage() {
       return
     }
     if (user.role !== "admin") {
+      console.log("❌ User is not admin. Role:", user.role)
       router.push("/")
       toast({
         title: "Access Denied",
@@ -72,8 +73,9 @@ export default function AdminPropertiesPage() {
       })
       return
     }
+    console.log("✅ Admin access granted. User:", user)
     fetchProperties()
-  }, [user, activeTab])
+  }, [user, activeTab, router, toast])
 
   const fetchProperties = async () => {
     setLoading(true)

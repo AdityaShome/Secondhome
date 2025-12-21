@@ -20,16 +20,20 @@ export async function POST(req: Request) {
     const emailUser = process.env.EMAIL_USER || process.env.HOST_EMAIL
     const emailPassword = process.env.EMAIL_PASSWORD || process.env.HOST_EMAIL_PASSWORD
 
+    const adminEmail = process.env.OFFICIAL_VERIFICATION_EMAIL || "second.home2k25@gmail.com"
+    
     if (!emailUser || !emailPassword) {
       console.log("⚠️ Email credentials not configured. Property saved but notification not sent.")
-      console.log("📧 Admin email would be sent to: second.home2k25@gmail.com")
+      console.log(`📧 Admin email would be sent to: ${adminEmail}`)
       console.log(`📋 Property: ${propertyTitle} by ${ownerName}`)
       console.log(`🆔 Property ID: ${propertyId}`)
+      console.log(`🔑 EMAIL_USER: ${emailUser ? 'SET' : 'NOT SET'}`)
+      console.log(`🔑 HOST_EMAIL: ${process.env.HOST_EMAIL ? 'SET' : 'NOT SET'}`)
       
       return NextResponse.json({ 
         message: "Property saved successfully. Email notification skipped (credentials not configured)",
         propertyId,
-        adminEmail: "second.home2k25@gmail.com"
+        adminEmail
       })
     }
 
@@ -69,9 +73,11 @@ export async function POST(req: Request) {
       </div>
     ` : ''
 
+    const adminEmail = process.env.OFFICIAL_VERIFICATION_EMAIL || "second.home2k25@gmail.com"
+    
     const mailOptions = {
       from: `"Second Home" <${emailUser}>`,
-      to: "second.home2k25@gmail.com", // Admin email (your email)
+      to: adminEmail,
       subject: `🏠 ${aiReview ? (aiReview.score >= 70 ? '✅' : '⚠️') : ''} New Property Listing - ${propertyTitle}`,
       html: `
         <!DOCTYPE html>

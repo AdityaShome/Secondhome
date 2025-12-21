@@ -40,7 +40,12 @@ export default function LoginPage() {
   useEffect(() => {
     try {
       if (status === "authenticated" && session) {
-        router.replace(callbackUrl)
+        // Redirect admin users to admin portal
+        if (session.user?.role === "admin") {
+          router.replace("/admin/properties")
+        } else {
+          router.replace(callbackUrl)
+        }
       }
     } catch (error) {
       console.error("Redirect error:", error)
@@ -59,13 +64,40 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
-      await login(values.email, values.password).catch(() => {})
-      // after login attempt, navigate to callback
-      setTimeout(() => {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      })
+
+      if (result?.error) {
+        toast({
+          title: "Login failed",
+          description: result.error || "Please check your email and password.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Wait for session to update
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Fetch fresh session to check role
+      const response = await fetch('/api/auth/session')
+      const sessionData = await response.json()
+      
+      if (sessionData?.user?.role === "admin") {
+        router.push("/admin/properties")
+      } else {
         router.push(callbackUrl)
-      }, 300)
+      }
     } catch (error) {
-      // Errors handled in auth provider
+      console.error("Login error:", error)
+      toast({
+        title: "Login failed",
+        description: "An error occurred during login.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
