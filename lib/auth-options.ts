@@ -23,6 +23,29 @@ export const authOptions: NextAuthOptions = {
         // Normalize email to lowercase for consistent lookup
         const normalizedEmail = credentials.email.toLowerCase().trim()
 
+        // Check for admin credentials from environment variables
+        const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim()
+        const adminPassword = process.env.ADMIN_PASSWORD
+
+        console.log("🔍 Admin check:", { 
+          normalizedEmail, 
+          adminEmail, 
+          hasAdminPassword: !!adminPassword,
+          emailMatch: normalizedEmail === adminEmail,
+          passwordMatch: credentials.password === adminPassword
+        })
+
+        if (adminEmail && adminPassword && normalizedEmail === adminEmail && credentials.password === adminPassword) {
+          console.log("✅ Admin authentication successful!")
+          return {
+            id: "000000000000000000000001",
+            name: "Admin",
+            email: adminEmail,
+            image: null,
+            role: "admin",
+          }
+        }
+
         try {
           console.log("🔌 Connecting to MongoDB...")
           
