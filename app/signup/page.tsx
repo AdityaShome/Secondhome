@@ -260,10 +260,10 @@ export default function SignupPage() {
 
           <div className="space-y-4 pt-8">
             {[
-              { icon: "🎓", text: "Made for students" },
-              { icon: "🏠", text: "Thousands of properties" },
+              { icon: "", text: "Made for students" },
+              { icon: "", text: "Thousands of properties" },
               { icon: "", text: "Verified listings only" },
-              { icon: "🚀", text: "Quick & easy booking" },
+              { icon: "", text: "Quick & easy booking" },
             ].map((item, index) => (
               <div key={index} className="flex items-center gap-3">
                 <div className="text-2xl">{item.icon}</div>
