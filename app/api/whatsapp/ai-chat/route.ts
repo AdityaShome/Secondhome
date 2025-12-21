@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       const systemPrompt = `You are SecondHome AI Assistant helping students via WhatsApp.
 
 SECONDHOME INFORMATION:
-- Email: second.home2k25@gmail.com
+- Email: ${process.env.ADMIN_EMAIL || "info@secondhome.com"}
 - Phone: +91 73846 62005
 - Platform: Student accommodation platform (PGs, Flats, Hostels)
 - Location: India-wide

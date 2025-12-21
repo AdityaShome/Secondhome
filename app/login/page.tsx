@@ -56,8 +56,8 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: isAdminAuto ? "second.home2k25@gmail.com" : "",
-      password: isAdminAuto ? "Secondhome@2028" : "",
+      email: isAdminAuto ? (process.env.NEXT_PUBLIC_ADMIN_EMAIL || "") : "",
+      password: isAdminAuto ? (process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "") : "",
     },
   })
 
@@ -106,8 +106,8 @@ export default function LoginPage() {
   // Auto-submit for admin auto-login
   useEffect(() => {
     if (isAdminAuto) {
-      const email = "second.home2k25@gmail.com"
-      const password = "Secondhome@2028"
+      const email = process.env.NEXT_PUBLIC_ADMIN_EMAIL || ""
+      const password = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || ""
       setIsLoading(true)
       // Ensure admin exists before login (bootstrap route is open or token-protected)
       fetch("/api/admin/bootstrap", { method: "POST" })

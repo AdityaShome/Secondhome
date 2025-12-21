@@ -20,9 +20,9 @@ export async function POST(req: Request) {
     const emailUser = process.env.EMAIL_USER || process.env.HOST_EMAIL
     const emailPassword = process.env.EMAIL_PASSWORD || process.env.HOST_EMAIL_PASSWORD
 
-    const adminEmail = process.env.OFFICIAL_VERIFICATION_EMAIL || "second.home2k25@gmail.com"
+    const adminEmail = process.env.ADMIN_EMAIL
     
-    if (!emailUser || !emailPassword) {
+    if (!emailUser || !emailPassword || !adminEmail) {
       console.log("⚠️ Email credentials not configured. Property saved but notification not sent.")
       console.log(`📧 Admin email would be sent to: ${adminEmail}`)
       console.log(`📋 Property: ${propertyTitle} by ${ownerName}`)
@@ -72,8 +72,6 @@ export async function POST(req: Request) {
         ` : ''}
       </div>
     ` : ''
-
-    const adminEmail = process.env.OFFICIAL_VERIFICATION_EMAIL || "second.home2k25@gmail.com"
     
     const mailOptions = {
       from: `"Second Home" <${emailUser}>`,
@@ -143,7 +141,7 @@ export async function POST(req: Request) {
               </div>
               <div class="footer">
                 <p><strong>Second Home</strong> - Student Accommodation Platform</p>
-                <p>📧 second.home2k25@gmail.com | 🌐 ${baseUrl.replace(/^https?:\/\//, "")}</p>
+                <p>📧 ${adminEmail} | 🌐 ${baseUrl.replace(/^https?:\/\//, "")}</p>
                 <p style="font-size: 11px;">This is an automated notification for property listings requiring manual verification.</p>
               </div>
             </div>
@@ -155,24 +153,24 @@ export async function POST(req: Request) {
     // Send email
     await transporter.sendMail(mailOptions)
 
-    console.log("✅ Admin notification email sent to: second.home2k25@gmail.com")
+    console.log(`✅ Admin notification email sent to: ${adminEmail}`)
     console.log(`📧 Subject: New Property Listing - ${propertyTitle}`)
 
     return NextResponse.json({ 
-      message: "Admin notification sent successfully to second.home2k25@gmail.com",
-      adminEmail: "second.home2k25@gmail.com",
+      message: `Admin notification sent successfully to ${adminEmail}`,
+      adminEmail: adminEmail,
       propertyId
     })
   } catch (error) {
     console.error("❌ Error sending admin notification:", error)
-    console.log("📧 Failed to notify: second.home2k25@gmail.com")
+    console.log(`📧 Failed to notify: ${process.env.ADMIN_EMAIL}`)
     
     return NextResponse.json(
       { 
         error: "Failed to send email notification", 
         details: error instanceof Error ? error.message : "Unknown error",
         note: "Property was saved successfully. Only email notification failed.",
-        adminEmail: "second.home2k25@gmail.com"
+        adminEmail: process.env.ADMIN_EMAIL
       },
       { status: 500 }
     )

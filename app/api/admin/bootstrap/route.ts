@@ -6,8 +6,8 @@ import { User } from "@/models/user"
 /**
  * POST /api/admin/bootstrap
  * Creates or updates the default admin account:
- *   email: second.home2k25@gmail.com
- *   password: Secondhome@2028
+ *   email: ...
+ *   password: ...
  *
  * Secured by ADMIN_SEED_TOKEN env. Call with header:
  *   x-admin-seed-token: <ADMIN_SEED_TOKEN>
@@ -23,8 +23,16 @@ export async function POST(req: Request) {
 
   await connectToDatabase()
 
-  const email = "second.home2k25@gmail.com"
-  const plainPassword = "Secondhome@2028"
+  const email = process.env.ADMIN_EMAIL
+  const plainPassword = process.env.ADMIN_PASSWORD
+
+  if (!email || !plainPassword) {
+    return NextResponse.json(
+      { error: "ADMIN_EMAIL and ADMIN_PASSWORD must be set in environment variables" },
+      { status: 500 }
+    )
+  }
+
   const hashed = await bcrypt.hash(plainPassword, 10)
 
   const updated = await User.findOneAndUpdate(

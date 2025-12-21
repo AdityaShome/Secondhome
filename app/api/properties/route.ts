@@ -184,7 +184,7 @@ export async function POST(req: Request) {
 
     // Send AI verification report to SecondHome official inbox for audit
     try {
-      const officialEmail = process.env.OFFICIAL_VERIFICATION_EMAIL || "second.home2k25@gmail.com"
+      const officialEmail = process.env.ADMIN_EMAIL
 
       const normalizeBaseUrl = () => {
         const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim()
@@ -252,7 +252,7 @@ export async function POST(req: Request) {
         })
         console.log("✅ Verification email sent to official inbox")
       } else {
-        console.warn("⚠️ OFFICIAL_VERIFICATION_EMAIL not configured; skipping audit email")
+        console.warn("⚠️ ADMIN_EMAIL not configured; skipping audit email")
       }
     } catch (emailErr) {
       console.error("⚠️ Failed to send verification email:", emailErr)

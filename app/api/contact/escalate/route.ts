@@ -97,9 +97,15 @@ export async function POST(req: NextRequest) {
       </html>
     `
 
+    const adminEmail = process.env.ADMIN_EMAIL
+    if (!adminEmail) {
+      console.error("ADMIN_EMAIL not configured")
+      return NextResponse.json({ error: "Admin email not configured" }, { status: 500 })
+    }
+
     await transporter.sendMail({
       from: `SecondHome Contact <${emailUser}>`,
-      to: "second.home2k25@gmail.com",
+      to: adminEmail,
       subject: `🚨 Live support request from ${name || email}`,
       html,
       replyTo: email,
