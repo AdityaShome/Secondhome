@@ -1552,8 +1552,7 @@ export default function MapPage() {
                 </div>
                 SecondHome SmartMap
               </h1>
-              <p className="text-gray-600 text-sm mt-1 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-orange-500" />
+              <p className="text-gray-600 text-sm mt-1">
                 AI-powered location intelligence for students
               </p>
             </div>
@@ -1563,7 +1562,7 @@ export default function MapPage() {
                 size="sm"
                 onClick={requestCurrentLocation}
                 disabled={isGettingLocation}
-                className="border-orange-500 bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold"
+                className="border-orange-500 bg-orange-50 hover:bg-orange-100 text-orange-700 hover:text-orange-700 font-semibold transition-colors"
               >
                 {isGettingLocation ? (
                   <>
@@ -1582,7 +1581,7 @@ export default function MapPage() {
                 size="sm"
                 onClick={saveCurrentLocation}
                 disabled={!insights}
-                className="border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                className="border-gray-300 text-gray-700 hover:border-orange-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
               >
                 <BookmarkPlus className="w-4 h-4 mr-2" />
                 Save
@@ -1591,7 +1590,7 @@ export default function MapPage() {
                 variant="outline" 
                 size="sm"
                 onClick={shareCurrentLocation}
-                className="border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                className="border-gray-300 text-gray-700 hover:border-orange-500 hover:bg-orange-50 hover:text-orange-600 transition-colors"
               >
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
@@ -1603,11 +1602,10 @@ export default function MapPage() {
           <form onSubmit={handleSearch} className="relative mb-4">
             <div className="flex gap-3">
               <div ref={searchContainerRef} className="relative flex-grow">
-                <Search className="absolute left-3 top-3.5 h-5 w-5 text-gray-400 z-10" />
               <Input
                   ref={searchInputRef}
-                  placeholder="🔍 Search college, area, locality... (AI-powered suggestions)"
-                  className="pl-10 pr-12 h-12 bg-white border-gray-300 focus:border-orange-500 text-gray-900"
+                  placeholder="Search college, area, locality... (AI-powered suggestions)"
+                  className="pl-4 pr-12 h-12 bg-white border-gray-300 focus:border-orange-500 text-gray-900"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
@@ -1676,8 +1674,7 @@ export default function MapPage() {
           {/* Budget Filter */}
           <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <Label className="text-gray-900 font-semibold flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-orange-500" />
+              <Label className="text-gray-900 font-semibold">
                 Max Budget: ₹{maxBudget.toLocaleString()}/month
               </Label>
               <span className="text-sm text-gray-600">{properties.length} properties available</span>
@@ -2881,7 +2878,7 @@ export default function MapPage() {
                       
                       {aiInsight.bestFor && (
                         <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <div className="text-sm font-semibold mb-1 text-gray-900">✨ Best For</div>
+                          <div className="text-sm font-semibold mb-1 text-gray-900">Best For</div>
                           <div className="text-gray-700 text-sm">{aiInsight.bestFor}</div>
                           </div>
                       )}
@@ -2899,7 +2896,7 @@ export default function MapPage() {
                         )}
                         {aiInsight.cons.length > 0 && (
                           <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-                            <div className="text-xs font-semibold mb-1 text-red-700">⚠️ Cons</div>
+                            <div className="text-xs font-semibold mb-1 text-red-700">Cons</div>
                             <ul className="text-xs space-y-1 text-gray-700">
                               {aiInsight.cons.slice(0, 2).map((con, i) => (
                                 <li key={i}>• {con}</li>
@@ -2944,10 +2941,10 @@ export default function MapPage() {
                       <span className="text-3xl font-light text-gray-600">/100</span>
                       </div>
                     <p className="text-gray-700 text-lg mb-4 font-medium">
-                      {insights.scores.overall >= 80 ? '🎉 Perfect for bachelors!' : 
-                       insights.scores.overall >= 60 ? '👍 Great location!' : 
-                       insights.scores.overall >= 40 ? '😐 Average facilities' : 
-                       '⚠️ Limited amenities'}
+                      {insights.scores.overall >= 80 ? 'Perfect for bachelors!' : 
+                       insights.scores.overall >= 60 ? 'Great location!' : 
+                       insights.scores.overall >= 40 ? 'Average facilities' : 
+                       'Limited amenities'}
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
@@ -3011,14 +3008,14 @@ export default function MapPage() {
                           <div className="text-xs text-gray-600 mb-1">Properties Available</div>
                           <div className="text-2xl font-bold text-gray-900">{properties.length}</div>
                           <div className="text-xs text-gray-600 mt-1">
-                            {properties.length > 10 ? '✅ Excellent' : properties.length > 5 ? '👍 Good' : '⚠️ Limited'}
+                            {properties.length > 10 ? 'Excellent' : properties.length > 5 ? 'Good' : 'Limited'}
                           </div>
                         </div>
                         <div className="p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-blue-200">
                           <div className="text-xs text-gray-600 mb-1">Total Amenities</div>
                           <div className="text-2xl font-bold text-gray-900">{places.length}</div>
                           <div className="text-xs text-gray-600 mt-1">
-                            {places.length > 50 ? '✅ Excellent' : places.length > 20 ? '👍 Good' : '⚠️ Limited'}
+                            {places.length > 50 ? 'Excellent' : places.length > 20 ? 'Good' : 'Limited'}
                           </div>
                         </div>
                       </div>
@@ -3074,7 +3071,7 @@ export default function MapPage() {
                           <div className="flex items-start gap-3">
                             <Sparkles className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                             <div>
-                              <h5 className="font-semibold text-gray-900 mb-1">✨ Best Suited For</h5>
+                              <h5 className="font-semibold text-gray-900 mb-1">Best Suited For</h5>
                               <p className="text-gray-700 text-sm">
                                 {aiInsight?.bestFor || (
                                   insights.scores.overall >= 80

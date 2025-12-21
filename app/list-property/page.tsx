@@ -911,7 +911,7 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
               className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 gap-1"
             >
               <Sparkles className="w-4 h-4" />
-              {loadingAI ? "Beautifying..." : "✨ AI Beautify"}
+              {loadingAI ? "Beautifying..." : "AI Beautify"}
             </Button>
           </div>
           <Textarea
@@ -941,7 +941,7 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-purple-900 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-purple-600" />
-                  ✨ AI Beautified Version
+                  AI Beautified Version
                 </h4>
                 <Button
                   type="button"
@@ -958,7 +958,7 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
                 {aiSuggestions.suggestions}
               </p>
               <p className="text-xs text-purple-600">
-                💡 You can edit this further or use it as is!
+                You can edit this further or use it as is!
               </p>
             </div>
           )}
@@ -998,7 +998,7 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
           <Input
             id="contactEmail"
             type="email"
-            placeholder="your.email@example.com"
+            placeholder="Enter your email"
             value={propertyData.contactEmail}
             onChange={(e) => setPropertyData({ ...propertyData, contactEmail: e.target.value })}
           />
@@ -1010,7 +1010,7 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
             <Lightbulb className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
-                ✨ Pro Tips for Description
+                Pro Tips for Description
               </h4>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• <strong>Write in simple words</strong> - AI will make it professional!</li>

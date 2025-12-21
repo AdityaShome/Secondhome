@@ -180,12 +180,12 @@ export default function BlogPage() {
                       <span>Source: {article.source}</span>
                       {"upvotes" in article && article.upvotes !== undefined && (
                         <span className="flex items-center gap-1">
-                          ⬆️ {article.upvotes}
+                          {article.upvotes} upvotes
                         </span>
                       )}
                       {"comments" in article && article.comments !== undefined && (
                         <span className="flex items-center gap-1">
-                          💬 {article.comments}
+                          {article.comments} comments
                         </span>
                       )}
                     </CardDescription>
@@ -196,16 +196,16 @@ export default function BlogPage() {
                   <CardFooter className="flex gap-2">
                     <Button
                       variant="outline"
-                      className="flex-1 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+                      className="flex-1 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 hover:text-orange-600 transition-colors"
                       asChild
                     >
-                      <Link href={`/blog/${article.id}`}>Read More</Link>
+                      <Link href={`/blog/${encodeURIComponent(article.id)}?url=${encodeURIComponent(article.url || '')}`}>Read More</Link>
                     </Button>
                     {article.url && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-orange-600 hover:bg-orange-50"
+                        className="text-orange-600 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                         asChild
                       >
                         <a href={article.url} target="_blank" rel="noopener noreferrer" aria-label="Open original article">

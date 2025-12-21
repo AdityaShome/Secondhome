@@ -1,73 +1,12 @@
 "use client"
 
-import { CardFooter } from "@/components/ui/card"
-import { CardTitle } from "@/components/ui/card"
-import { CardHeader } from "@/components/ui/card"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Calendar, User, Tag, Facebook, Twitter, Linkedin, ExternalLink, Loader2 } from "lucide-react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-
-// Sample blog posts data (static content)
-const blogPosts = {
-  "1": {
-    id: "1",
-    title: "How to Find the Perfect PG Accommodation Near Your College",
-    content: `
-      <p>Finding the right PG accommodation as a student can be a daunting task, especially if you're moving to a new city. Your accommodation will be your home away from home for the next few years, so it's important to make the right choice. Here are some tips to help you find the perfect PG that feels like home:</p>
-      
-      <h2>1. Location is Key</h2>
-      <p>The proximity to your college should be your primary consideration. Look for accommodations that are within walking distance or have good public transport connectivity to your college. This will save you time and money on commuting.</p>
-      
-      <h2>2. Budget Considerations</h2>
-      <p>Determine your budget before starting your search. Remember to factor in additional costs like security deposit, maintenance charges, and utility bills. Be realistic about what you can afford on a monthly basis.</p>
-      
-      <h2>3. Facilities and Amenities</h2>
-      <p>Make a list of must-have amenities based on your lifestyle and preferences. Common amenities to consider include:</p>
-      <ul>
-        <li>Wi-Fi connectivity</li>
-        <li>Meals provided (frequency and quality)</li>
-        <li>Laundry services</li>
-        <li>Power backup</li>
-        <li>Security measures</li>
-        <li>Attached bathroom or shared</li>
-        <li>Furniture and appliances provided</li>
-        <li>Common areas for studying and socializing</li>
-      </ul>
-      
-      <h2>4. Visit Before Deciding</h2>
-      <p>Always visit the PG in person before making a decision. This gives you a chance to assess the cleanliness, meet other residents, check the condition of facilities, and get a feel for the neighborhood.</p>
-      
-      <h2>5. Check the House Rules</h2>
-      <p>Every PG has its own set of rules regarding visitors, curfew times, noise levels, etc. Make sure you're comfortable with these rules before committing.</p>
-      
-      <h2>6. Talk to Current Residents</h2>
-      <p>If possible, speak with current residents to get honest feedback about the PG, the owner/manager, and the overall living experience.</p>
-      
-      <h2>7. Check Reviews Online</h2>
-      <p>Look for reviews and ratings online to get a better understanding of the PG's reputation. Platforms like Second Home provide verified reviews from actual residents.</p>
-      
-      <h2>8. Understand the Agreement Terms</h2>
-      <p>Read the rental agreement carefully before signing. Pay attention to the notice period, deposit refund policy, and any hidden charges.</p>
-      
-      <h2>9. Consider the Neighborhood</h2>
-      <p>Evaluate the neighborhood for safety, convenience, and accessibility to essential services like grocery stores, medical facilities, and ATMs.</p>
-      
-      <h2>10. Trust Your Instincts</h2>
-      <p>Finally, trust your gut feeling. If something doesn't feel right about a place, it's better to keep looking rather than regret your decision later.</p>
-      
-      <p>Finding the perfect PG accommodation takes time and effort, but it's worth it for your comfort and peace of mind during your college years. Use platforms like Second Home to streamline your search and find verified accommodations that meet your requirements.</p>
-    `,
-    image: "/placeholder.svg?height=600&width=1200",
-    date: "April 2, 2025",
-    author: "Rahul Sharma",
-    category: "Accommodation Tips",
-    tags: ["PG Accommodation", "Student Housing", "College Life", "Rental Tips"],
-  },
-}
+import { useState, useEffect, use } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 interface NewsArticle {
   id: string
@@ -83,46 +22,87 @@ interface NewsArticle {
   content?: string
 }
 
-export default function BlogPostPage({ params }: { params: { id: string } }) {
+export default function BlogPostPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const [newsArticle, setNewsArticle] = useState<NewsArticle | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const staticPost = blogPosts[params.id as keyof typeof blogPosts]
-
-  // Check if it's a community article (starts with "reddit-" or "news-")
-  const isNewsArticle = params.id.startsWith("reddit-") || params.id.startsWith("news-")
+  const searchParams = useSearchParams()
+  const resolvedParams = use(params)
+  const [article, setArticle] = useState<NewsArticle | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const articleId = resolvedParams.id
+  const articleUrl = searchParams.get("url") || ""
 
   useEffect(() => {
-    if (isNewsArticle) {
-      // Fetch the article from the blog posts API (Reddit)
+    const fetchArticle = async () => {
       setIsLoading(true)
-      fetch("/api/blog-posts?pageSize=100")
-        .then((res) => res.json())
-        .then((data) => {
-          const article = data.articles?.find((a: NewsArticle) => a.id === params.id)
-          if (article) {
-            setNewsArticle(article)
+      try {
+        // Check if it's a database post (MongoDB ObjectId format)
+        if (articleId && articleId.length === 24 && /^[0-9a-fA-F]{24}$/.test(articleId)) {
+          // It's a database post, fetch from database
+          const response = await fetch(`/api/blog-posts/${articleId}`)
+          if (response.ok) {
+            const data = await response.json()
+            setArticle(data)
+            setIsLoading(false)
+            return
           }
-          setIsLoading(false)
-        })
-        .catch(() => {
-          setIsLoading(false)
-        })
-    }
-  }, [params.id, isNewsArticle])
+        }
 
-  // If it's a news article and we have the URL, redirect to the original source
-  if (isNewsArticle && newsArticle?.url) {
+        // If we have the article URL from query params, try to find by URL first
+        if (articleUrl && articleUrl.trim() !== "") {
+          const response = await fetch("/api/blog-posts?pageSize=500")
+          if (response.ok) {
+            const data = await response.json()
+            const foundArticle = data.articles?.find((a: NewsArticle) => 
+              a.url === decodeURIComponent(articleUrl) || a.id === articleId
+            )
+            if (foundArticle) {
+              setArticle(foundArticle)
+              setIsLoading(false)
+              return
+            }
+          }
+        }
+
+        // Try to find by ID
+        const findResponse = await fetch(`/api/blog-posts/find?id=${encodeURIComponent(articleId)}`)
+        if (findResponse.ok) {
+          const foundArticle = await findResponse.json()
+          setArticle(foundArticle)
+        } else {
+          // Fallback: try fetching with large page size and search by ID or URL
+          const response = await fetch("/api/blog-posts?pageSize=500")
+          if (response.ok) {
+            const data = await response.json()
+            const foundArticle = data.articles?.find((a: NewsArticle) => 
+              a.id === articleId || (articleUrl && a.url === decodeURIComponent(articleUrl))
+            )
+            if (foundArticle) {
+              setArticle(foundArticle)
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching article:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchArticle()
+  }, [articleId, articleUrl])
+
+  // If it's an external article and we have the URL, show redirect option
+  if (!isLoading && article?.url && (article.url.startsWith("http") || article.url.startsWith("https"))) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">Redirecting to Article</h2>
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">View Full Article</h2>
           <p className="text-gray-600 mb-6">
-            You're being redirected to the original article source to read the full content.
+            This article is from an external source. Click below to read the full content.
           </p>
           <div className="flex flex-col gap-3">
             <Button
-              onClick={() => window.open(newsArticle.url, "_blank")}
+              onClick={() => window.open(article.url, "_blank")}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               <ExternalLink className="w-4 h-4 mr-2" />
@@ -138,7 +118,7 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
     )
   }
 
-  const post = staticPost || newsArticle
+  const post = article
 
   if (isLoading) {
     return (
@@ -151,7 +131,7 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
     )
   }
 
-  if (!post) {
+  if (!post || !article) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -203,7 +183,7 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
             )}
             {"upvotes" in post && post.upvotes !== undefined && (
               <div className="text-xs bg-white/20 px-3 py-1 rounded-full">
-                ⬆️ {post.upvotes} upvotes
+                {post.upvotes} upvotes
               </div>
             )}
           </div>
@@ -234,19 +214,19 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
               <p className="text-gray-600 text-lg leading-relaxed">{post.excerpt}</p>
             </CardHeader>
             <CardContent>
-              {hasContent ? (
+              {post.content ? (
                 <div className="prose prose-lg max-w-none">
                   <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{post.content}</div>
-                  {"url" in post && post.url && post.url !== "#" && (
+                  {post.url && post.url.startsWith("http") && (
                     <div className="mt-8 bg-orange-50 border border-orange-200 rounded-lg p-6">
-                      <p className="text-gray-700 mb-4 font-semibold">Read the full discussion on Reddit:</p>
+                      <p className="text-gray-700 mb-4 font-semibold">Read the full article:</p>
                       <Button
                         asChild
                         className="bg-orange-500 hover:bg-orange-600 text-white"
                       >
                         <a href={post.url} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4 mr-2" />
-                          View on Reddit
+                          View Full Article
                         </a>
                       </Button>
                     </div>
@@ -255,16 +235,16 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
               ) : (
                 <div className="space-y-4">
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{post.excerpt}</p>
-                  {"url" in post && post.url && post.url !== "#" && (
+                  {post.url && post.url.startsWith("http") && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
-                      <p className="text-gray-700 mb-4">To read the full discussion, visit the original post:</p>
+                      <p className="text-gray-700 mb-4">To read the full article, visit the original source:</p>
                       <Button
                         asChild
                         className="bg-orange-500 hover:bg-orange-600 text-white"
                       >
                         <a href={post.url} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4 mr-2" />
-                          View on Reddit
+                          View Full Article
                         </a>
                       </Button>
                     </div>
@@ -275,18 +255,13 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
           </Card>
 
           {/* Tags */}
-          {"tags" in post && post.tags && (
+          {post.category && (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-3 text-gray-900">Tags</h3>
+              <h3 className="text-lg font-semibold mb-3 text-gray-900">Category</h3>
               <div className="flex flex-wrap gap-2">
-                {post.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-medium">
+                  {post.category}
+                </span>
               </div>
             </div>
           )}

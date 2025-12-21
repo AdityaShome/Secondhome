@@ -516,7 +516,7 @@ export default function RegisterPropertyPage() {
                         <p className="text-sm text-gray-400">Join Second Home and start listing your properties today.</p>
                         <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
                           <p className="text-xs text-orange-300">
-                            💡 <strong>Already have an account?</strong> Use your existing email to upgrade to property owner!
+                            <strong>Already have an account?</strong> Use your existing email to upgrade to property owner!
                           </p>
                         </div>
                       </div>

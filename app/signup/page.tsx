@@ -262,7 +262,7 @@ export default function SignupPage() {
             {[
               { icon: "🎓", text: "Made for students" },
               { icon: "🏠", text: "Thousands of properties" },
-              { icon: "✅", text: "Verified listings only" },
+              { icon: "", text: "Verified listings only" },
               { icon: "🚀", text: "Quick & easy booking" },
             ].map((item, index) => (
               <div key={index} className="flex items-center gap-3">
@@ -371,7 +371,7 @@ export default function SignupPage() {
                             <Input
                               {...field}
                               type="text"
-                              placeholder="John Doe"
+                              placeholder="Enter your full name"
                               disabled={isLoading}
                               className="pl-11 h-12 border-2 border-gray-300 focus:border-orange-500 bg-white text-gray-900"
                             />
@@ -394,7 +394,7 @@ export default function SignupPage() {
                             <Input
                               {...field}
                               type="email"
-                              placeholder="your.email@example.com"
+                              placeholder="Enter your email"
                               disabled={isLoading}
                               className="pl-11 h-12 border-2 border-gray-300 focus:border-orange-500 bg-white text-gray-900"
                             />

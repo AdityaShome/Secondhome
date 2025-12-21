@@ -239,10 +239,10 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant={filter === "all" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter("all")}
-                  className={`text-xs ${
+                  className={`text-xs transition-colors ${
                     filter === "all"
-                      ? "bg-orange-500 hover:bg-orange-600 text-white"
-                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white hover:text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300"
                   }`}
                 >
                   All
@@ -251,10 +251,10 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant={filter === "unread" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter("unread")}
-                  className={`text-xs ${
+                  className={`text-xs transition-colors ${
                     filter === "unread"
-                      ? "bg-orange-500 hover:bg-orange-600 text-white"
-                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white hover:text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300"
                   }`}
                 >
                   Unread
@@ -263,10 +263,10 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   variant={filter === "read" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setFilter("read")}
-                  className={`text-xs ${
+                  className={`text-xs transition-colors ${
                     filter === "read"
-                      ? "bg-orange-500 hover:bg-orange-600 text-white"
-                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                      ? "bg-orange-500 hover:bg-orange-600 text-white hover:text-white"
+                      : "border-gray-300 text-gray-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300"
                   }`}
                 >
                   Read
@@ -276,7 +276,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                     variant="outline"
                     size="sm"
                     onClick={markAllAsRead}
-                    className="text-xs ml-auto border-gray-300 text-gray-700 hover:bg-orange-50 hover:border-orange-300"
+                    className="text-xs ml-auto border-gray-300 text-gray-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-300 transition-colors"
                   >
                     <CheckCheck className="w-3 h-3 mr-1" />
                     Mark all read

@@ -485,7 +485,7 @@ export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName 
                       <Label htmlFor="cardName">Cardholder Name</Label>
                       <Input
                         id="cardName"
-                        placeholder="John Doe"
+                        placeholder="Enter cardholder name"
                         value={cardName}
                         onChange={(e) => setCardName(e.target.value)}
                       />

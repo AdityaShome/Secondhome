@@ -202,7 +202,7 @@ export function PaymentForm({ amount, bookingId, onSuccess, onCancel }: PaymentF
                     <FormItem>
                       <FormLabel>Cardholder Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="Enter cardholder name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
