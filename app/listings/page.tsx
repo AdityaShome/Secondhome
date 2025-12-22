@@ -718,6 +718,7 @@ function PropertyCard({
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-500"
               onError={() => setImageError(true)}
+              unoptimized
             />
           </Link>
 
@@ -772,7 +773,7 @@ function PropertyCard({
         {/* Content Section */}
         <CardContent className="p-6 flex-1">
           <Link href={`/listings/${property._id}`}>
-            <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
               {property.title || t("listings.property.untitled")}
             </h3>
           </Link>

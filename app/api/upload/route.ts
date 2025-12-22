@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server"
-import { writeFile } from "fs/promises"
-import { join } from "path"
 import { v4 as uuidv4 } from "uuid"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
+import { v2 as cloudinary } from "cloudinary"
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +20,12 @@ export async function POST(req: Request) {
     }
 
     const formData = await req.formData()
-    const files = formData.getAll("images") as File[]
+    
+    // Support both single file upload (field name: "file") and multiple files (field name: "images")
+    const singleFile = formData.get("file") as File | null
+    const multipleFiles = formData.getAll("images") as File[]
+    
+    const files = singleFile ? [singleFile] : multipleFiles
 
     if (files.length === 0) {
       return NextResponse.json({ error: "No files uploaded" }, { status: 400 })
@@ -30,17 +41,35 @@ export async function POST(req: Request) {
       const uniqueId = uuidv4()
       const originalName = file.name
       const extension = originalName.split(".").pop()
-      const filename = `${uniqueId}.${extension}`
+      const publicId = `secondhome/properties/${uniqueId}`
 
-      // Create path to public directory
-      const path = join(process.cwd(), "public/uploads", filename)
+      // Upload to Cloudinary
+      const result = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              public_id: publicId,
+              folder: "secondhome/properties",
+              resource_type: "auto",
+            },
+            (error, result) => {
+              if (error) reject(error)
+              else resolve(result)
+            }
+          )
+          .end(buffer)
+      })
 
-      // Write the file
-      await writeFile(path, buffer)
+      // Use the secure URL from Cloudinary
+      uploadedUrls.push(result.secure_url)
+    }
 
-      // Generate URL for the file
-      const url = `/uploads/${filename}`
-      uploadedUrls.push(url)
+    // Return single URL for single file upload, or array for multiple
+    if (singleFile) {
+      return NextResponse.json({
+        url: uploadedUrls[0],
+        message: "File uploaded successfully",
+      })
     }
 
     return NextResponse.json({

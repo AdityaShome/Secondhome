@@ -1077,11 +1077,18 @@ export default function MapPage() {
             ? property.location 
             : (property.location as any)?.address || 'Location not specified'
 
+          // Check if property is verified (status === 'approved')
+          const isVerified = property.status === 'approved'
+          const markerColor = isVerified ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-blue-500'
+          const markerBorder = isVerified ? 'border-green-200' : 'border-white'
+          const verifiedBadge = isVerified ? '<div class="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center"><svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></div>' : ''
+
           const propertyIcon = L.divIcon({
-            html: `<div class="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full border-4 border-white shadow-lg hover:scale-110 transition-transform cursor-pointer">
+            html: `<div class="relative flex items-center justify-center w-10 h-10 ${markerColor} rounded-full border-4 ${markerBorder} shadow-lg hover:scale-110 transition-transform cursor-pointer">
               <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
               </svg>
+              ${verifiedBadge}
             </div>`,
             className: "",
             iconSize: [40, 40],
@@ -1092,7 +1099,10 @@ export default function MapPage() {
             .addTo(map)
             .bindPopup(
               `<div class="p-3 min-w-[240px]">
-                <strong class="text-base font-bold text-gray-900">${property.title}</strong><br/>
+                <div class="flex items-start gap-2 mb-2">
+                  <strong class="text-base font-bold text-gray-900 flex-1">${property.title}</strong>
+                  ${isVerified ? '<span class="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Verified</span>' : ''}
+                </div>
                 <span class="text-gray-600 text-sm">${locationStr}</span><br/>
                 <span class="font-bold text-orange-600 text-lg">₹${property.price}/month</span>
                 <div class="mt-3 flex flex-col gap-2">
@@ -1877,6 +1887,21 @@ export default function MapPage() {
                         <div className="flex items-center gap-2">
                           <MapPinned className="w-4 h-4 text-orange-500" />
                           <span className="text-gray-900 font-semibold">{currentLocationName}</span>
+                        </div>
+                      </div>
+
+                      {/* Map Legend for Property Markers */}
+                      <div className={`absolute ${isLoading || isFetchingPlaces ? 'top-36' : 'top-20'} right-4 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg border border-gray-200 shadow-md`}>
+                        <div className="flex items-center gap-3 text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 bg-gradient-to-br from-green-400 to-green-600 rounded-full border border-green-200"></div>
+                            <span className="text-gray-700 font-medium">Verified</span>
+                          </div>
+                          <div className="w-px h-3 bg-gray-300"></div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full border border-white"></div>
+                            <span className="text-gray-700 font-medium">Properties</span>
+                          </div>
                         </div>
                       </div>
 

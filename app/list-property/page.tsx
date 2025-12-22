@@ -844,8 +844,17 @@ function PropertyTypeTab({ propertyData, setPropertyData }: any) {
               <div>
                 <h4 className="font-semibold text-purple-900 mb-1">AI Insight</h4>
                 <p className="text-sm text-purple-800">
-                  Great choice! {propertyData.propertySubtype === "girls-pg" ? "Girls PG" : propertyData.propertySubtype === "boys-pg" ? "Boys PG" : propertyTypes.find(t => t.id === propertyData.propertyType)?.subtypes.find(s => s.id === propertyData.propertySubtype)?.label} properties are in high demand. 
-                  Make sure to highlight safety features, nearby colleges, and amenities to attract more tenants.
+                  {(() => {
+                    const subtype = propertyData.propertySubtype
+                    if (subtype === '1bhk') return 'Great choice! 1 BHK apartments are perfect for single students or young professionals. Highlight proximity to colleges, public transport, and essential amenities to attract tenants.'
+                    if (subtype === '2bhk') return 'Excellent! 2 BHK apartments are highly sought after by students who want to share costs. Emphasize spacious rooms, study areas, and reliable WiFi to appeal to students.'
+                    if (subtype === '3bhk') return 'Perfect! 3 BHK apartments are ideal for groups of students looking to share. Highlight multiple bathrooms, common areas, and nearby educational institutions to maximize interest.'
+                    if (subtype === 'studio') return 'Smart choice! Studio apartments are trending among students seeking independence and modern living. Focus on compact design, modern amenities, and affordability to stand out.'
+                    if (subtype === 'boys-pg') return 'Great option! Boys PG accommodations are always in demand near colleges. Emphasize security, meal facilities, WiFi, and proximity to educational institutions for better reach.'
+                    if (subtype === 'girls-pg') return 'Excellent choice! Girls PG properties with strong safety features are highly valued. Highlight 24/7 security, CCTV, female staff, safe neighborhood, and proximity to colleges.'
+                    if (subtype === 'unisex-pg') return 'Modern choice! Co-living PG spaces are popular among students seeking community living. Showcase shared facilities, social spaces, professional management, and inclusive environment.'
+                    return 'Great choice! This property type is in high demand. Make sure to highlight safety features, nearby colleges, and amenities to attract more tenants.'
+                  })()}
                 </p>
               </div>
             </div>
@@ -1096,13 +1105,21 @@ function LocationTab({ propertyData, setPropertyData }: any) {
 
         {/* Map Coordinate Picker */}
         <div className="border-t pt-6">
+          <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-xs text-blue-800 flex items-start gap-2">
+              <span className="text-blue-600 font-semibold">💡 Tip:</span>
+              <span>Fill in your complete address, city, and state. Then click "Find on Map" - it will search for your full address first! You can drag the marker to fine-tune the exact location.</span>
+            </p>
+          </div>
           <MapCoordinatePicker
             coordinates={propertyData.coordinates}
+            address={propertyData.address}
             city={propertyData.city}
             state={propertyData.state}
-            onCoordinatesChange={(coords) => 
-              setPropertyData({ ...propertyData, coordinates: coords })
-            }
+            onCoordinatesChange={(coords) => {
+              // Only update coordinates, preserve all other fields including address, city, state
+              setPropertyData((prev: any) => ({ ...prev, coordinates: coords }))
+            }}
           />
         </div>
       </CardContent>
@@ -1433,19 +1450,40 @@ function MediaTab({ propertyData, setPropertyData }: any) {
           continue
         }
 
-        // Create a preview URL
-        const imageUrl = URL.createObjectURL(file)
-        newImages.push({
-          id: Date.now() + i,
-          url: imageUrl,
-          file: file,
-          name: file.name
-        })
+        // Upload via our API route (which handles Cloudinary)
+        const formData = new FormData()
+        formData.append('file', file)
+
+        try {
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Upload failed')
+          }
+
+          const data = await response.json()
+          
+          newImages.push({
+            id: Date.now() + i,
+            url: data.url,
+            file: file,
+            name: file.name
+          })
+        } catch (uploadError) {
+          console.error(`Error uploading ${file.name}:`, uploadError)
+          alert(`Failed to upload ${file.name}. Please try again.`)
+        }
       }
 
-      const updatedImages = [...images, ...newImages]
-      setImages(updatedImages)
-      setPropertyData({ ...propertyData, images: updatedImages })
+      if (newImages.length > 0) {
+        const updatedImages = [...images, ...newImages]
+        setImages(updatedImages)
+        setPropertyData({ ...propertyData, images: updatedImages })
+      }
       
     } catch (error) {
       alert('Error uploading images. Please try again.')

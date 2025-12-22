@@ -16,7 +16,14 @@ import {
   Eye, 
   MapPin, 
   Home,
-  Loader2 
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  Shield,
+  DollarSign,
+  FileCheck,
+  Star
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -46,6 +53,14 @@ interface Property {
     score: number
     recommendation: string
     reason: string
+    analysis?: {
+      legitimacy?: string
+      pricing?: string
+      safety?: string
+      completeness?: string
+      quality?: string
+    }
+    redFlags?: string[]
   }
 }
 
@@ -57,6 +72,7 @@ export default function AdminPropertiesPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("pending")
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!user) {
@@ -231,6 +247,7 @@ export default function AdminPropertiesPage() {
                         alt={property.title}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                       <Badge className="absolute top-3 left-3">{property.type}</Badge>
                       <Badge variant="secondary" className="absolute top-3 right-3">
@@ -239,7 +256,7 @@ export default function AdminPropertiesPage() {
                     </div>
 
                     <CardContent className="p-5">
-                      <h3 className="font-bold text-lg text-foreground mb-2 line-clamp-2">
+                      <h3 className="font-bold text-lg text-white mb-2 line-clamp-2">
                         {property.title}
                       </h3>
 
@@ -264,16 +281,144 @@ export default function AdminPropertiesPage() {
 
                       {property.aiReview?.reviewed && (
                         <div className="mb-4 p-3 bg-slate-700 rounded-lg">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Sparkles className="w-4 h-4 text-purple-400" />
-                            <span className="text-sm font-semibold text-purple-400">AI Review</span>
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedReviews)
+                              if (newExpanded.has(property._id)) {
+                                newExpanded.delete(property._id)
+                              } else {
+                                newExpanded.add(property._id)
+                              }
+                              setExpandedReviews(newExpanded)
+                            }}
+                            className="w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-purple-400" />
+                              <span className="text-sm font-semibold text-purple-400">AI Review</span>
+                              <Badge variant="outline" className="text-xs border-purple-400 text-white font-semibold">
+                                {property.aiReview.score}/100
+                              </Badge>
+                            </div>
+                            {expandedReviews.has(property._id) ? (
+                              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-300">Recommendation:</span>
+                              <Badge 
+                                variant={property.aiReview.recommendation === 'APPROVE' ? 'default' : property.aiReview.recommendation === 'REJECT' ? 'destructive' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {property.aiReview.recommendation}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-300">Confidence:</span>
+                              <span className="font-bold text-white">{property.aiReview.confidence}%</span>
+                            </div>
+                            
+                            {expandedReviews.has(property._id) && (
+                              <div className="mt-3 pt-3 border-t border-slate-600 space-y-3">
+                                {/* Analysis Section */}
+                                {property.aiReview.analysis && (
+                                  <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-purple-300 mb-2">Detailed Analysis:</p>
+                                    
+                                    {property.aiReview.analysis.legitimacy && (
+                                      <div className="bg-slate-800/50 rounded p-2">
+                                        <div className="flex items-start gap-2">
+                                          <Shield className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
+                                          <div>
+                                            <p className="text-xs font-medium text-blue-400">Legitimacy</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{property.aiReview.analysis.legitimacy}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {property.aiReview.analysis.pricing && (
+                                      <div className="bg-slate-800/50 rounded p-2">
+                                        <div className="flex items-start gap-2">
+                                          <DollarSign className="w-3 h-3 text-green-400 mt-0.5 flex-shrink-0" />
+                                          <div>
+                                            <p className="text-xs font-medium text-green-400">Pricing</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{property.aiReview.analysis.pricing}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {property.aiReview.analysis.safety && (
+                                      <div className="bg-slate-800/50 rounded p-2">
+                                        <div className="flex items-start gap-2">
+                                          <AlertTriangle className="w-3 h-3 text-yellow-400 mt-0.5 flex-shrink-0" />
+                                          <div>
+                                            <p className="text-xs font-medium text-yellow-400">Safety</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{property.aiReview.analysis.safety}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {property.aiReview.analysis.completeness && (
+                                      <div className="bg-slate-800/50 rounded p-2">
+                                        <div className="flex items-start gap-2">
+                                          <FileCheck className="w-3 h-3 text-cyan-400 mt-0.5 flex-shrink-0" />
+                                          <div>
+                                            <p className="text-xs font-medium text-cyan-400">Completeness</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{property.aiReview.analysis.completeness}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {property.aiReview.analysis.quality && (
+                                      <div className="bg-slate-800/50 rounded p-2">
+                                        <div className="flex items-start gap-2">
+                                          <Star className="w-3 h-3 text-purple-400 mt-0.5 flex-shrink-0" />
+                                          <div>
+                                            <p className="text-xs font-medium text-purple-400">Quality</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">{property.aiReview.analysis.quality}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {/* Red Flags Section */}
+                                {property.aiReview.redFlags && property.aiReview.redFlags.length > 0 && (
+                                  <div className="bg-red-950/30 border border-red-900/50 rounded p-2">
+                                    <div className="flex items-start gap-2">
+                                      <AlertTriangle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1">
+                                        <p className="text-xs font-semibold text-red-400 mb-1">Red Flags:</p>
+                                        <ul className="space-y-0.5">
+                                          {property.aiReview.redFlags.map((flag, idx) => (
+                                            <li key={idx} className="text-xs text-red-300 flex items-start gap-1">
+                                              <span className="text-red-500 mt-0.5">•</span>
+                                              <span>{flag}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Reason */}
+                                <div className="bg-slate-800/50 rounded p-2">
+                                  <p className="text-xs font-medium text-purple-300 mb-1">Recommendation Reason:</p>
+                                  <p className="text-xs text-muted-foreground">{property.aiReview.reason}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {property.aiReview.recommendation} ({property.aiReview.confidence}% confidence)
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {property.aiReview.reason}
-                          </p>
                         </div>
                       )}
 

@@ -7,6 +7,7 @@ import { MapPin, Navigation } from "lucide-react"
 interface MapCoordinatePickerProps {
   coordinates: [number, number] // [lng, lat]
   onCoordinatesChange: (coords: [number, number]) => void
+  address?: string
   city?: string
   state?: string
 }
@@ -14,6 +15,7 @@ interface MapCoordinatePickerProps {
 export default function MapCoordinatePicker({
   coordinates,
   onCoordinatesChange,
+  address,
   city,
   state
 }: MapCoordinatePickerProps) {
@@ -90,6 +92,7 @@ export default function MapCoordinatePicker({
 
     newMarker.on('dragend', (e: any) => {
       const latlng = e.target.getLatLng()
+      // Only update coordinates, don't trigger address reset
       onCoordinatesChange([latlng.lng, latlng.lat])
     })
 
@@ -97,6 +100,7 @@ export default function MapCoordinatePicker({
     newMap.on('click', (e: any) => {
       const latlng = e.latlng
       newMarker.setLatLng(latlng)
+      // Only update coordinates, don't trigger address reset
       onCoordinatesChange([latlng.lng, latlng.lat])
     })
 
@@ -108,7 +112,7 @@ export default function MapCoordinatePicker({
     }
   }, [L, mapContainer.current])
 
-  // Geocode city/state to get approximate coordinates
+  // Geocode address/city/state to get approximate coordinates
   const geocodeLocation = async () => {
     if (!city || !state) {
       alert("Please enter city and state first")
@@ -117,7 +121,20 @@ export default function MapCoordinatePicker({
 
     setIsGeocoding(true)
     try {
-      const query = `${city}, ${state}, India`
+      let query = ''
+      let zoom = 14
+      
+      // Try full address first if available
+      if (address && address.trim().length > 10) {
+        query = `${address}, ${city}, ${state}, India`
+        zoom = 16 // More zoomed in for specific address
+      } else {
+        query = `${city}, ${state}, India`
+        zoom = 13
+      }
+      
+      console.log('Geocoding query:', query)
+      
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
       )
@@ -129,12 +146,37 @@ export default function MapCoordinatePicker({
         const lngNum = parseFloat(lon)
 
         if (map && marker) {
-          map.setView([latNum, lngNum], 14)
+          map.setView([latNum, lngNum], zoom)
           marker.setLatLng([latNum, lngNum])
           onCoordinatesChange([lngNum, latNum])
         }
       } else {
-        alert("Location not found. Please try a different city/state or place the marker manually.")
+        // If full address search failed, try just city/state
+        if (address && address.trim().length > 10) {
+          console.log('Full address not found, trying city/state only')
+          const fallbackQuery = `${city}, ${state}, India`
+          const fallbackResponse = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}&limit=1`
+          )
+          const fallbackData = await fallbackResponse.json()
+          
+          if (fallbackData && fallbackData.length > 0) {
+            const { lat, lon } = fallbackData[0]
+            const latNum = parseFloat(lat)
+            const lngNum = parseFloat(lon)
+
+            if (map && marker) {
+              map.setView([latNum, lngNum], 13)
+              marker.setLatLng([latNum, lngNum])
+              onCoordinatesChange([lngNum, latNum])
+            }
+            alert("Exact address not found. Map centered at city. Please drag marker to your exact location.")
+          } else {
+            alert("Location not found. Please try a different city/state or place the marker manually.")
+          }
+        } else {
+          alert("Location not found. Please try a different city/state or place the marker manually.")
+        }
       }
     } catch (error) {
       console.error("Geocoding error:", error)
@@ -152,7 +194,7 @@ export default function MapCoordinatePicker({
             📍 Pin Exact Location on Map
           </p>
           <p className="text-xs text-gray-500">
-            Click &quot;Find on Map&quot; to center map at your city, then drag the marker or click on the map to set exact coordinates
+            Enter your full address above, then click &quot;Find on Map&quot;. The map will search for your address. Drag the marker to fine-tune the exact location.
           </p>
         </div>
         <Button 

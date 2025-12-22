@@ -523,6 +523,7 @@ export default function Page() {
                         alt={property.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        unoptimized
                       />
                       {property.isVerified && (
                         <div className="absolute top-3 left-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
@@ -532,7 +533,7 @@ export default function Page() {
                       )}
                     </div>
                     <CardContent className="p-5">
-                      <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">{property.title}</h3>
+                      <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-1">{property.title}</h3>
                       <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
                         <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <span className="line-clamp-2">{typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}</span>
