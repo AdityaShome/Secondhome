@@ -750,7 +750,7 @@ export default function ProfilePage() {
                               <CardDescription className="flex items-start gap-2">
                                 <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
                                 <span className="line-clamp-2">
-                                  {property.location?.address || property.location || property.city || "Location not specified"}
+                                  {typeof property.location === 'string' ? property.location : property.location?.address || property.city || property.address || "Location not specified"}
                                 </span>
                               </CardDescription>
                             </CardHeader>
@@ -809,7 +809,7 @@ export default function ProfilePage() {
                             <Card key={property._id} className="overflow-hidden">
                               <CardHeader>
                                 <CardTitle className="text-lg">{property.title}</CardTitle>
-                                <CardDescription>{property.location}</CardDescription>
+                                <CardDescription>{typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}</CardDescription>
                               </CardHeader>
                               <CardContent>
                                 <div className="space-y-2">

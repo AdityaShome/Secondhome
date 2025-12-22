@@ -190,7 +190,7 @@ export default function AdminVerificationsPage() {
                     <CardTitle>{property.title}</CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-1">
                       <MapPin className="h-4 w-4" />
-                      {property.location}
+                      {typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}
                     </CardDescription>
                   </div>
                   <Badge className="bg-yellow-500">

@@ -62,7 +62,7 @@ export function QuickViewModal({ isOpen, onClose, property }: QuickViewModalProp
             <h2 className="text-2xl font-bold mb-1">{property.title}</h2>
             <div className="flex items-center gap-2 text-white/90">
               <MapPin className="w-4 h-4" />
-              <span>{property.location}</span>
+              <span>{typeof property.location === 'string' ? property.location : (property.location as any)?.address || "Location not specified"}</span>
             </div>
           </div>
         </div>

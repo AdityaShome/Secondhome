@@ -535,7 +535,7 @@ export default function Page() {
                       <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">{property.title}</h3>
                       <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
                         <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-2">{property.location}</span>
+                        <span className="line-clamp-2">{typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}</span>
                       </div>
                       
                       {/* Amenities */}

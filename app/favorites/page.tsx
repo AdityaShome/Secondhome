@@ -324,7 +324,7 @@ function PropertyCard({
           <div className="flex items-center text-gray-600 mb-4">
             <MapPin className="w-4 h-4 mr-2 text-orange-500" />
             <span className="text-sm line-clamp-1">
-              {property.location?.address || property.city || "Location not specified"}
+              {typeof property.location === 'string' ? property.location : property.location?.address || property.city || property.address || "Location not specified"}
             </span>
           </div>
 

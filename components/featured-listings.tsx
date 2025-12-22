@@ -147,7 +147,7 @@ export default function FeaturedListings() {
                     <h3 className="font-bold text-lg">{property.title}</h3>
                     <div className="flex items-center mt-2 text-muted-foreground">
                       <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-                      <span className="text-sm">{property.location}</span>
+                      <span className="text-sm">{typeof property.location === 'string' ? property.location : (property.location as any)?.address || "Location not specified"}</span>
                     </div>
                     <div className="flex items-center mt-2">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />

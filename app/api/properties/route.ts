@@ -187,9 +187,12 @@ export async function POST(req: Request) {
       const officialEmail = process.env.ADMIN_EMAIL
 
       const normalizeBaseUrl = () => {
+        const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
         const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim()
         const vercelBase = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
-        const fallbackProd = "https://secondhome-zeta.vercel.app"
+        const fallbackProd = "https://secondhome-eight.vercel.app"
+        // Prefer NEXT_PUBLIC_SITE_URL for production
+        if (envSiteUrl && !envSiteUrl.includes("localhost")) return envSiteUrl.replace(/\/$/, "")
         if (envBase && !envBase.includes("localhost")) return envBase.replace(/\/$/, "")
         if (vercelBase) return vercelBase.replace(/\/$/, "")
         return fallbackProd

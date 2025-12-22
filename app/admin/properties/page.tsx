@@ -242,7 +242,12 @@ export default function AdminPropertiesPage() {
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <MapPin className="w-4 h-4" />
-                        <span className="line-clamp-1">{property.location}</span>
+                        <span className="line-clamp-1">
+                          {typeof property.location === 'string' 
+                            ? property.location 
+                            : ((property.location as any)?.address || (property as any).address || "Location not specified")
+                          }
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">

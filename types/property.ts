@@ -15,3 +15,13 @@ export interface PropertyListing {
     metro: number
   }
 }
+
+export interface Property {
+  _id: string
+  title: string
+  location: string | { address?: string; type?: string; coordinates?: any }
+  price: number
+  type: string
+  coordinates: [number, number]  // Sanitized to simple array [lng, lat]
+  _rawGeoJSON?: any  // Optional: stores original GeoJSON if needed
+}

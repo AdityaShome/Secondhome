@@ -779,7 +779,7 @@ function PropertyCard({
 
           <div className="flex items-center text-gray-600 mb-4">
             <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-            <span className="text-sm line-clamp-1">{property.location || property.address || t("listings.property.locationNotSpecified")}</span>
+            <span className="text-sm line-clamp-1">{typeof property.location === 'string' ? property.location : (property.location as any)?.address || (property as any).address || t("listings.property.locationNotSpecified")}</span>
           </div>
 
           {/* Rating */}

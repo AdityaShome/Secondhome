@@ -372,7 +372,7 @@ export default function ListingDetailPage() {
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{property.title}</h1>
                   <div className="flex items-center gap-2 text-gray-600 mb-3">
                     <MapPin className="w-5 h-5 text-purple-600" />
-                    <span className="text-base">{property.location}</span>
+                    <span className="text-base">{typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}</span>
                   </div>
                   {/* Verification Details */}
                   {property.verificationStatus === "verified" && property.executiveVisit?.checks && (

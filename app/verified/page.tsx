@@ -210,7 +210,7 @@ export default function VerifiedPropertiesPage() {
                       <h3 className="font-semibold text-lg mb-1 line-clamp-1">{property.title}</h3>
                       <div className="flex items-center gap-1 text-muted-foreground text-sm mb-3">
                         <MapPin className="h-3 w-3" />
-                        <span className="line-clamp-1">{property.location}</span>
+                        <span className="line-clamp-1">{typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}</span>
                       </div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-1">

@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useCallback, useRef } from "react"
+import { Property } from "@/types/property"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,18 +45,6 @@ const Map3DWorld = dynamic(() => import("@/components/Map3DWorld"), {
     </div>
   )
 })
-
-interface Property {
-  _id: string
-  title: string
-  location: string
-  price: number
-  type: string
-  coordinates: {
-    type: string
-    coordinates: [number, number]
-  }
-}
 
 interface Place {
   id: string
@@ -406,7 +395,7 @@ export default function MapPage() {
                     iconSize: [16, 16],
                     iconAnchor: [8, 8],
                   })
-                  L.marker(userLocation, { icon: userIcon, isUserMarker: true }).addTo(mapInstance).bindPopup("📍 You are here")
+                  L.marker(userLocation, { icon: userIcon }).addTo(mapInstance).bindPopup("📍 You are here")
                   
                   // Get location name
                   reverseGeocode(userLocation)
@@ -565,6 +554,8 @@ export default function MapPage() {
   }
 
   // Load properties and places for a location
+  // Inside your component, replace the loadDataForLocation function:
+
   const loadDataForLocation = useCallback(async (location: [number, number]) => {
     setIsLoading(true)
     try {
@@ -573,13 +564,65 @@ export default function MapPage() {
       
       if (response.ok) {
         const data = await response.json()
+        let propertiesData: any[] = []
+        
         if (Array.isArray(data)) {
-          setProperties(data)
+          propertiesData = data
         } else if (data.properties && Array.isArray(data.properties)) {
-          setProperties(data.properties)
-        } else {
-          setProperties([])
+          propertiesData = data.properties
         }
+        
+        // --- AGGRESSIVE SANITIZATION START ---
+        const sanitizedProperties = propertiesData.map(prop => {
+          // 1. Create a shallow copy
+          const cleaned = { ...prop };
+
+          // 2. Explicitly fix the known 'coordinates' field
+          let coords = [0, 0];
+          if (prop.coordinates && Array.isArray(prop.coordinates.coordinates)) {
+            coords = prop.coordinates.coordinates; // Handle GeoJSON
+          } else if (Array.isArray(prop.coordinates)) {
+            coords = prop.coordinates; // Handle Array
+          }
+          cleaned.coordinates = coords; // Force it to be an array
+
+          // 3. Explicitly fix 'location' field
+          cleaned.location = typeof prop.location === 'string' 
+            ? prop.location 
+            : (prop.location?.address || prop.address || "Location not specified");
+
+          // 4. scan ALL keys for hidden GeoJSON objects
+          Object.keys(cleaned).forEach(key => {
+            const val = cleaned[key];
+            
+            // Check if value is an object, not null, and not an array
+            if (val && typeof val === 'object' && !Array.isArray(val)) {
+              
+              // Skip special fields we want to keep or safe dates
+              if (key === '_rawGeoJSON' || val instanceof Date) return;
+
+              // If it looks like GeoJSON (has type & coordinates), destroy it
+              if ('type' in val && 'coordinates' in val) {
+                console.warn(`⚠️ Sanitizing GeoJSON found in field: "${key}"`);
+                // If it has coordinates, keep those as an array, otherwise stringify
+                cleaned[key] = Array.isArray(val.coordinates) ? val.coordinates : JSON.stringify(val);
+              } 
+              // If it's just a random object being rendered (like property.owner), stringify it to be safe
+              else {
+                 // Optional: Only stringify if you suspect it's causing the crash
+                 // cleaned[key] = JSON.stringify(val);
+              }
+            }
+          });
+
+          // Store raw data safely if needed
+          cleaned._rawGeoJSON = prop.coordinates;
+
+          return cleaned;
+        })
+        // --- AGGRESSIVE SANITIZATION END ---
+        
+        setProperties(sanitizedProperties)
       } else {
         setProperties([])
       }
@@ -671,11 +714,15 @@ export default function MapPage() {
     if (!nearestCollege) return
     
     const property = properties.find(p => p._id === propertyId)
-    if (!property || !property.coordinates?.coordinates) return
+    
+    // Updated check: look for array length instead of nested object
+    if (!property || !property.coordinates || property.coordinates.length < 2) return
     
     setIsLoadingRoute(true)
     try {
-      const [lng, lat] = property.coordinates.coordinates
+      // FIX: Access coordinates directly (it is now an array [lng, lat])
+      const [lng, lat] = property.coordinates
+      
       const response = await fetch(
         `/api/route-planner?originLat=${lat}&originLon=${lng}&destLat=${nearestCollege.lat}&destLon=${nearestCollege.lon}&mode=${mode}`
       )
@@ -1011,7 +1058,7 @@ export default function MapPage() {
         if (map) {
           map.eachLayer((layer: any) => {
             // Remove only marker layers (not tile layers or other controls)
-            if (layer instanceof L.Marker && !layer.options?.isUserMarker) {
+            if (layer instanceof L.Marker && !(layer.options as any)?.permanent) {
               map.removeLayer(layer)
             }
           })
@@ -1020,9 +1067,15 @@ export default function MapPage() {
         const newMarkers: any[] = []
 
       properties.forEach((property) => {
-          if (!property.coordinates?.coordinates) return
+          // Updated check: coordinates is now a direct array [lng, lat]
+          if (!property.coordinates || property.coordinates.length < 2) return
 
-        const [lng, lat] = property.coordinates.coordinates
+        const [lng, lat] = property.coordinates
+          
+          // Safely extract location string
+          const locationStr = typeof property.location === 'string' 
+            ? property.location 
+            : (property.location as any)?.address || 'Location not specified'
 
           const propertyIcon = L.divIcon({
             html: `<div class="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full border-4 border-white shadow-lg hover:scale-110 transition-transform cursor-pointer">
@@ -1040,11 +1093,11 @@ export default function MapPage() {
             .bindPopup(
               `<div class="p-3 min-w-[240px]">
                 <strong class="text-base font-bold text-gray-900">${property.title}</strong><br/>
-                <span class="text-gray-600 text-sm">${property.location}</span><br/>
+                <span class="text-gray-600 text-sm">${locationStr}</span><br/>
                 <span class="font-bold text-orange-600 text-lg">₹${property.price}/month</span>
                 <div class="mt-3 flex flex-col gap-2">
                   <button 
-                    onclick="window.dispatchEvent(new CustomEvent('openCommunityReviews', {detail: {locationName: '${property.title.replace(/'/g, "\\'")}', address: '${property.location.replace(/'/g, "\\'")}', type: '${property.type}'}}))" 
+                    onclick="window.dispatchEvent(new CustomEvent('openCommunityReviews', {detail: {locationName: '${property.title.replace(/'/g, "\\'")}', address: '${locationStr.replace(/'/g, "\\'")}', type: '${property.type}'}}))" 
                     class="w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1189,6 +1242,19 @@ export default function MapPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories])
+
+  // Update markers when properties or places change
+  useEffect(() => {
+    if (map && mapInitialized.current && !isLoading && !isFetchingPlaces) {
+      // Filter places by enabled categories
+      const enabledCategoryIds = categories.filter(c => c.enabled).map(c => c.id)
+      const filteredPlaces = places.filter(p => enabledCategoryIds.includes(p.type))
+      
+      // Update markers on the map
+      addMarkersToMap(properties, filteredPlaces)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [properties, places, map, isLoading, isFetchingPlaces])
 
   // Toggle between standard and satellite view
   const toggleMapView = () => {
@@ -1345,7 +1411,7 @@ export default function MapPage() {
   }
 
   // Request current location - improved with retry logic
-  const requestCurrentLocation = () => {
+  const requestCurrentLocation = async () => {
     if (!navigator.geolocation) {
       toast({
         title: "⚠️ Geolocation not supported",
@@ -1363,7 +1429,7 @@ export default function MapPage() {
 
     // Use watchPosition for better accuracy, then clear after first position
     const watchId = navigator.geolocation.watchPosition(
-      (position) => {
+      async (position) => {
         console.log("✅ Location obtained:", position.coords.latitude, position.coords.longitude)
         const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
         setMapCenter(userLocation)
@@ -1373,19 +1439,20 @@ export default function MapPage() {
           
           // Remove existing user marker if any
           map.eachLayer((layer: any) => {
-            if (layer.options && layer.options.isUserMarker) {
+            if (layer.options && (layer.options as any).isUserMarker) {
               map.removeLayer(layer)
             }
           })
           
           // Add user marker
+          const L = (await import('leaflet')).default
           const userIcon = L.divIcon({
             html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
             className: "",
             iconSize: [16, 16],
             iconAnchor: [8, 8],
           })
-          const marker = L.marker(userLocation, { icon: userIcon, isUserMarker: true }).addTo(map)
+          const marker = L.marker(userLocation, { icon: userIcon }).addTo(map)
           marker.bindPopup("📍 You are here").openPopup()
         }
         
@@ -1845,7 +1912,7 @@ export default function MapPage() {
                             <h3 className="font-bold text-gray-900 text-lg">{selectedProperty.title}</h3>
                             <div className="flex items-center mt-2 text-sm text-gray-600">
                       <MapPin className="w-3 h-3 mr-1" />
-                      <span>{selectedProperty.location}</span>
+                      <span>{typeof selectedProperty.location === 'string' ? selectedProperty.location : (selectedProperty.location as any)?.address || "Location not specified"}</span>
                     </div>
                     <Badge className="mt-2">{selectedProperty.type}</Badge>
                             <p className="mt-3 font-bold text-orange-500 text-2xl">₹{selectedProperty.price}/month</p>
@@ -2032,8 +2099,9 @@ export default function MapPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {properties.slice(0, 3).map((property) => {
-                        if (!property.coordinates?.coordinates) return null
-                        const [lng, lat] = property.coordinates.coordinates
+                        // Updated check: coordinates is now a direct array
+                        if (!property.coordinates || property.coordinates.length < 2) return null
+                        const [lng, lat] = property.coordinates
                         const distance = Math.sqrt(
                           Math.pow(lat - nearestCollege.lat, 2) + 
                           Math.pow(lng - nearestCollege.lon, 2)
@@ -2333,8 +2401,8 @@ export default function MapPage() {
                           className="p-2 bg-gray-50 border border-gray-200 rounded cursor-pointer hover:bg-white hover:border-orange-300 hover:shadow-sm transition-all"
                           onClick={() => {
                             setSelectedProperty(property)
-                            if (map && property.coordinates?.coordinates) {
-                              const [lng, lat] = property.coordinates.coordinates
+                            if (map && property.coordinates && property.coordinates.length >= 2) {
+                              const [lng, lat] = property.coordinates
                               map.setView([lat, lng], 16)
                             }
                           }}
@@ -2342,7 +2410,7 @@ export default function MapPage() {
                           <h4 className="font-semibold text-gray-900 text-xs">{property.title}</h4>
                           <p className="text-[10px] text-gray-600 mt-0.5 flex items-center gap-1">
                             <MapPin className="w-2 h-2 text-orange-500" />
-                            {property.location}
+                            {typeof property.location === 'string' ? property.location : (property.location as any)?.address || "Location not specified"}
                           </p>
                           <div className="flex items-center justify-between mt-1">
                             <Badge variant="outline" className="text-[10px] border-gray-300">{property.type}</Badge>
@@ -2663,8 +2731,9 @@ export default function MapPage() {
                           </thead>
                           <tbody>
                             {properties.slice(0, 3).map((property) => {
-                              if (!property.coordinates?.coordinates) return null
-                              const [lng, lat] = property.coordinates.coordinates
+                              // Updated check: coordinates is now a direct array
+                              if (!property.coordinates || property.coordinates.length < 2) return null
+                              const [lng, lat] = property.coordinates
                               const distance = Math.sqrt(
                                 Math.pow(lat - nearestCollege.lat, 2) + 
                                 Math.pow(lng - nearestCollege.lon, 2)
