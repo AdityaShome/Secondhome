@@ -160,9 +160,12 @@ export default function AdminPropertiesPage() {
       })
       const data = await res.json()
       if (res.ok) {
+        const recommendation = data.result.recommendation
+        const emoji = recommendation === "APPROVE" ? "✅" : recommendation === "REJECT" ? "❌" : "⚠️"
         toast({
-          title: "🤖 AI Review Complete",
-          description: `Recommendation: ${data.result.recommendation} (${data.result.confidence}% confidence)`,
+          title: `${emoji} AI Review Complete`,
+          description: `Recommendation: ${recommendation === "APPROVE" ? "APPROVE" : recommendation === "REJECT" ? "REJECT" : "MANUAL REVIEW"} (${data.result.confidence}% confidence)`,
+          variant: recommendation === "REJECT" ? "destructive" : "default"
         })
         fetchProperties()
       } else {

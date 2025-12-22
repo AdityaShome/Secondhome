@@ -505,26 +505,39 @@ export default function ListingDetailPage() {
             >
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Location</h2>
               <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
-                {property.coordinates?.coordinates && 
-                 Array.isArray(property.coordinates.coordinates) && 
-                 property.coordinates.coordinates.length >= 2 ? (
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    scrolling="no"
-                    marginHeight={0}
-                    marginWidth={0}
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${property.coordinates.coordinates[0] - 0.01},${property.coordinates.coordinates[1] - 0.01},${property.coordinates.coordinates[0] + 0.01},${property.coordinates.coordinates[1] + 0.01}&layer=mapnik&marker=${property.coordinates.coordinates[1]},${property.coordinates.coordinates[0]}`}
-                    className="border-0"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    <MapPin className="w-8 h-8 mr-2" />
-                    <span className="text-sm">Map location not available</span>
-                      </div>
-                    )}
-                  </div>
+                {(() => {
+                  // Handle both old nested structure and new flat array structure
+                  let coords: [number, number] | null = null
+                  
+                  if (property.coordinates) {
+                    if (Array.isArray(property.coordinates) && property.coordinates.length >= 2) {
+                      // New flat structure: [lng, lat]
+                      coords = property.coordinates as [number, number]
+                    } else if (property.coordinates.coordinates && Array.isArray(property.coordinates.coordinates) && property.coordinates.coordinates.length >= 2) {
+                      // Old nested structure: {type: 'Point', coordinates: [lng, lat]}
+                      coords = property.coordinates.coordinates as [number, number]
+                    }
+                  }
+                  
+                  return coords && coords[0] !== 0 && coords[1] !== 0 ? (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      scrolling="no"
+                      marginHeight={0}
+                      marginWidth={0}
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${coords[0] - 0.01},${coords[1] - 0.01},${coords[0] + 0.01},${coords[1] + 0.01}&layer=mapnik&marker=${coords[1]},${coords[0]}`}
+                      className="border-0"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                      <MapPin className="w-8 h-8 mr-2" />
+                      <span className="text-sm">Map location not available - coordinates not set</span>
+                    </div>
+                  )
+                })()}
+              </div>
             </motion.div>
 
             {/* Reviews */}
@@ -702,40 +715,48 @@ export default function ListingDetailPage() {
               </div>
 
               {/* Quick Info */}
-              {property.distance && (
+              {property.distance && (property.distance.college > 0 || property.distance.hospital > 0 || property.distance.busStop > 0 || property.distance.metro > 0) && (
                 <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
                   <h3 className="font-bold text-gray-900 mb-4">Nearby</h3>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50">
-                      <div className="flex items-center gap-2">
-                        <Home className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm text-gray-700">College</span>
-                    </div>
-                      <span className="font-semibold text-gray-900">{property.distance.college} km</span>
-                  </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50">
-                      <div className="flex items-center gap-2">
-                        <Hospital className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm text-gray-700">Hospital</span>
-                    </div>
-                      <span className="font-semibold text-gray-900">{property.distance.hospital} km</span>
-                  </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-50">
-                      <div className="flex items-center gap-2">
-                        <Bus className="w-4 h-4 text-green-600" />
-                        <span className="text-sm text-gray-700">Bus Stop</span>
-                    </div>
-                      <span className="font-semibold text-gray-900">{property.distance.busStop} km</span>
-                  </div>
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50">
-                      <div className="flex items-center gap-2">
-                        <Train className="w-4 h-4 text-orange-600" />
-                        <span className="text-sm text-gray-700">Metro</span>
-                    </div>
-                      <span className="font-semibold text-gray-900">{property.distance.metro} km</span>
+                    {property.distance.college > 0 && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50">
+                        <div className="flex items-center gap-2">
+                          <Home className="w-4 h-4 text-purple-600" />
+                          <span className="text-sm text-gray-700">College</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">{property.distance.college} km</span>
+                      </div>
+                    )}
+                    {property.distance.hospital > 0 && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50">
+                        <div className="flex items-center gap-2">
+                          <Hospital className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm text-gray-700">Hospital</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">{property.distance.hospital} km</span>
+                      </div>
+                    )}
+                    {property.distance.busStop > 0 && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-green-50">
+                        <div className="flex items-center gap-2">
+                          <Bus className="w-4 h-4 text-green-600" />
+                          <span className="text-sm text-gray-700">Bus Stop</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">{property.distance.busStop} km</span>
+                      </div>
+                    )}
+                    {property.distance.metro > 0 && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50">
+                        <div className="flex items-center gap-2">
+                          <Train className="w-4 h-4 text-orange-600" />
+                          <span className="text-sm text-gray-700">Metro</span>
+                        </div>
+                        <span className="font-semibold text-gray-900">{property.distance.metro} km</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
               )}
             </motion.div>
                 </div>

@@ -27,6 +27,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import MapCoordinatePicker from "@/components/map-coordinate-picker"
 
 // Property type options
 const propertyTypes = [
@@ -111,6 +112,7 @@ export default function ListPropertyPage() {
     amenities: [],
     rooms: [],
     images: [],
+    coordinates: [0, 0], // Initialize as flat array [lng, lat]
     furnishing: "",
     propertyAge: "",
     carpetArea: "",
@@ -477,7 +479,7 @@ export default function ListPropertyPage() {
         location: `${propertyData.city}, ${propertyData.state}`,
         coordinates: {
           type: "Point",
-          coordinates: [0, 0] // Default coordinates (can be updated with geocoding)
+          coordinates: propertyData.coordinates || [0, 0] // Use picked coordinates from map
         },
         
         // Pricing
@@ -1089,6 +1091,18 @@ function LocationTab({ propertyData, setPropertyData }: any) {
             placeholder="e.g., Hauz Khas, South Campus"
             value={propertyData.locality}
             onChange={(e) => setPropertyData({ ...propertyData, locality: e.target.value })}
+          />
+        </div>
+
+        {/* Map Coordinate Picker */}
+        <div className="border-t pt-6">
+          <MapCoordinatePicker
+            coordinates={propertyData.coordinates}
+            city={propertyData.city}
+            state={propertyData.state}
+            onCoordinatesChange={(coords) => 
+              setPropertyData({ ...propertyData, coordinates: coords })
+            }
           />
         </div>
       </CardContent>

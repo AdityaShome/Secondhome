@@ -3,7 +3,7 @@ import nodemailer from "nodemailer"
 
 export async function POST(req: Request) {
   try {
-    const { propertyId, propertyTitle, ownerName, ownerEmail, aiReview } = await req.json()
+    const { propertyId, propertyTitle, ownerName, ownerEmail, aiReview, propertyImages } = await req.json()
 
     const normalizeBaseUrl = () => {
       const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim()
@@ -122,6 +122,26 @@ export async function POST(req: Request) {
                     <span class="label">Submitted:</span> ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                   </div>
                 </div>
+
+                ${propertyImages && propertyImages.length > 0 ? `
+                <div class="property-details" style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <h3 style="margin-top: 0;">📸 Property Images</h3>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                    ${propertyImages.slice(0, 6).map((img: string, idx: number) => {
+                      // Convert relative URLs to absolute URLs
+                      const imageUrl = img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? img : '/' + img}`
+                      return `
+                        <div style="position: relative; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb;">
+                          <img src="${imageUrl}" alt="Property ${idx + 1}" style="width: 100%; height: 150px; object-fit: cover; display: block;" />
+                          <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; font-size: 11px; padding: 3px 8px; border-radius: 4px;">#${idx + 1}</div>
+                          ${idx === 0 ? '<div style="position: absolute; bottom: 5px; left: 5px; background: #FF6B35; color: white; font-size: 11px; padding: 3px 8px; border-radius: 4px;">Cover</div>' : ''}
+                        </div>
+                      `
+                    }).join('')}
+                  </div>
+                  ${propertyImages.length > 6 ? `<p style="text-align: center; margin-top: 10px; color: #888; font-size: 13px;">+ ${propertyImages.length - 6} more images</p>` : ''}
+                </div>
+                ` : ''}
 
                 <p><strong>Action Required:</strong> This property listing requires your manual approval before it can go live on Second Home.</p>
 

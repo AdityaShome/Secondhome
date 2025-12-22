@@ -71,6 +71,24 @@ Format as HTML with inline CSS (email-safe).`
     let failCount = 0
 
     const propertyLink = `${process.env.NEXT_PUBLIC_BASE_URL}/listings/${propertyData._id}`
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://secondhome-zeta.vercel.app'
+
+    // Prepare property images HTML
+    const propertyImagesHTML = propertyData.images && propertyData.images.length > 0 ? `
+      <div style="margin: 30px 0;">
+        <h3 style="color: #333; margin-bottom: 15px; font-size: 18px;">🏠 Property Photos</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+          ${propertyData.images.slice(0, 4).map((img: string, idx: number) => {
+            const imageUrl = img.startsWith('http') ? img : `${baseUrl}${img.startsWith('/') ? img : '/' + img}`
+            return `
+              <div style="border-radius: 8px; overflow: hidden; border: 2px solid #f3f4f6;">
+                <img src="${imageUrl}" alt="Property ${idx + 1}" style="width: 100%; height: 140px; object-fit: cover; display: block;" />
+              </div>
+            `
+          }).join('')}
+        </div>
+      </div>
+    ` : ''
 
     for (const subscriber of subscribers) {
       try {
@@ -82,6 +100,7 @@ Format as HTML with inline CSS (email-safe).`
           subject: `🔥 NEW! ${propertyData.title} - ${propertyData.location}`,
           html: `
             ${emailContent}
+            ${propertyImagesHTML}
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${propertyLink}" 

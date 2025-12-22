@@ -274,6 +274,7 @@ export async function POST(req: Request) {
             ownerName: session.user.name,
             ownerEmail: session.user.email,
             aiReview: aiVerification,
+            propertyImages: newProperty.images || [],
           }),
         })
         console.log("✅ Admin notification sent successfully")

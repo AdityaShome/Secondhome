@@ -184,27 +184,16 @@ Only approve if confidence is above 80% and no major red flags exist.`
       reason: aiResult.reason,
     }
 
-    // Auto-approve if AI recommends and confidence is high
-    if (aiResult.recommendation === "APPROVE" && aiResult.confidence >= 80) {
-      property.isApproved = true
-      property.isRejected = false
-      property.approvedAt = new Date()
-      property.approvedBy = session.user.id
-      property.approvalMethod = "AI"
-    } else if (aiResult.recommendation === "REJECT") {
-      property.isRejected = true
-      property.isApproved = false
-      property.rejectedAt = new Date()
-      property.rejectedBy = session.user.id
-      property.rejectionReason = aiResult.reason
-      property.approvalMethod = "AI"
-    }
+    // Store AI recommendation but DON'T auto-approve or auto-reject
+    // Let admin make the final decision after reviewing AI results
+    // Only update approvalMethod to indicate AI has reviewed it
+    property.approvalMethod = "AI"
 
     await property.save()
 
     return NextResponse.json({
-      message: "AI review completed",
-      approved: property.isApproved,
+      message: "AI review completed - awaiting admin decision",
+      aiRecommendation: aiResult.recommendation,
       confidence: aiResult.confidence,
       score: aiResult.score,
       recommendation: aiResult.recommendation,
