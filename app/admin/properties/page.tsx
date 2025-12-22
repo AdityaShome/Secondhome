@@ -247,7 +247,7 @@ export default function AdminPropertiesPage() {
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                         <Home className="w-4 h-4" />
-                        <span>Owner: {property.owner.name}</span>
+                        <span>Owner: {property.owner?.name || 'Unknown'}</span>
                       </div>
 
                       <div className="text-2xl font-bold text-secondary mb-4">
