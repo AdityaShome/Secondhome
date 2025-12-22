@@ -4,7 +4,7 @@ import { Property } from "@/models/property"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -13,9 +13,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     await connectToDatabase()
+    const { id } = await params
 
     const property = await Property.findByIdAndUpdate(
-      params.id,
+      id,
       {
         isApproved: true,
         isRejected: false,

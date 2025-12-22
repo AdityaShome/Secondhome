@@ -8,7 +8,7 @@ import mongoose from "mongoose"
 // Admin/Executive endpoint to complete verification after physical visit
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -25,7 +25,7 @@ export async function POST(
       )
     }
 
-    const propertyId = params.id
+    const { id: propertyId } = await params
     const body = await req.json()
 
     // Executive visit details
