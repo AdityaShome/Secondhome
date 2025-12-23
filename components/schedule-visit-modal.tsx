@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
@@ -11,14 +11,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Calendar, Clock } from "lucide-react"
+import { Loader2, Calendar, Clock, User, Phone, Mail } from "lucide-react"
 import { motion } from "framer-motion"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
+import { useAuth } from "@/hooks/use-auth"
 
 interface ScheduleVisitModalProps {
   isOpen: boolean
@@ -30,16 +32,80 @@ interface ScheduleVisitModalProps {
 export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }: ScheduleVisitModalProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
   const [date, setDate] = useState<Date | undefined>(undefined)
   const [time, setTime] = useState("")
   const [notes, setNotes] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  // Pre-fill user data if logged in
+  useEffect(() => {
+    if (user) {
+      if (user.name) setName(user.name)
+      if (user.email) setEmail(user.email)
+      if (user.phone) setPhone(user.phone)
+    }
+  }, [user])
+
   const handleSchedule = async () => {
+    // Validate required fields
+    if (!name.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter your name",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!phone.trim()) {
+      toast({
+        title: "Phone required",
+        description: "Please enter your phone number",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate phone format
+    const phoneRegex = /^[6-9]\d{9}$/
+    const cleanPhone = phone.replace(/\D/g, "")
+    if (cleanPhone.length !== 10 || !phoneRegex.test(cleanPhone)) {
+      toast({
+        title: "Invalid phone number",
+        description: "Please enter a valid 10-digit Indian phone number",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!email.trim()) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (!date || !time) {
       toast({
-        title: "Missing information",
+        title: "Date and time required",
         description: "Please select both date and time for your visit",
         variant: "destructive",
       })
@@ -49,34 +115,100 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
     setIsProcessing(true)
 
     try {
-      const response = await fetch("/api/schedule-visit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          propertyId,
-          date: format(date, "yyyy-MM-dd"),
-          time,
-          notes,
-        }),
-      })
+      // Format the WhatsApp message
+      const formattedDate = format(date, "EEEE, MMMM dd, yyyy")
+      const visitMessage = `🏠 *Property Visit Request - SecondHome*
 
-      if (!response.ok) {
-        throw new Error("Failed to schedule visit")
+*Property Details:*
+📍 Property: ${propertyName}
+🆔 Property ID: ${propertyId}
+
+*Visitor Information:*
+👤 Name: ${name}
+📱 Phone: ${phone}
+📧 Email: ${email}
+
+*Visit Schedule:*
+📅 Date: ${formattedDate}
+⏰ Time: ${time}
+
+${notes ? `*Additional Notes:*\n${notes}\n` : ""}
+---
+This is an automated message from SecondHome platform.
+Please confirm the visit schedule with the visitor.`
+
+      // Send to business number 7384662005 (917384662005 in international format)
+      const businessNumber = "917384662005"
+      
+      // Try to send via WhatsApp API first
+      try {
+        const response = await fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phoneNumber: businessNumber,
+            message: visitMessage,
+            propertyId: propertyId,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.warn("WhatsApp API failed, using direct link:", errorData)
+          // Fall through to direct WhatsApp link
+        } else {
+          const result = await response.json()
+          if (result.success) {
+            // API succeeded, continue
+          } else {
+            throw new Error(result.error || "API returned failure")
+          }
+        }
+      } catch (apiError) {
+        console.warn("WhatsApp API error, using direct link:", apiError)
+        // Fall through to direct WhatsApp link
       }
 
-      const data = await response.json()
+      // Always open WhatsApp with the message (fallback or primary method)
+      const whatsappUrl = `https://wa.me/${businessNumber}?text=${encodeURIComponent(visitMessage)}`
+      window.open(whatsappUrl, "_blank")
+
+      // Also save to database
+      try {
+        await fetch("/api/schedule-visit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            propertyId,
+            name,
+            phone,
+            email,
+            date: format(date, "yyyy-MM-dd"),
+            time,
+            notes,
+          }),
+        })
+      } catch (dbError) {
+        console.error("Failed to save to database:", dbError)
+        // Don't fail the whole process if DB save fails
+      }
 
       setIsSuccess(true)
 
       toast({
-        title: "Visit scheduled",
-        description: "A property representative will contact you to confirm your visit",
+        title: "Visit request sent! ✅",
+        description: "Your visit request has been sent to our team. We'll contact you shortly to confirm.",
       })
 
       // Reset form and close modal after 3 seconds
       setTimeout(() => {
+        setName("")
+        setPhone("")
+        setEmail("")
         setDate(undefined)
         setTime("")
         setNotes("")
@@ -86,8 +218,8 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
     } catch (error) {
       console.error("Schedule visit error:", error)
       toast({
-        title: "Failed to schedule visit",
-        description: "There was an error scheduling your visit. Please try again.",
+        title: "Failed to send visit request",
+        description: error instanceof Error ? error.message : "There was an error sending your visit request. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -97,7 +229,7 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Schedule a Visit</DialogTitle>
           <DialogDescription>Choose a date and time to visit {propertyName}</DialogDescription>
@@ -131,22 +263,89 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
           </motion.div>
         ) : (
           <>
-            <div className="py-4 space-y-4">
+            <div className="py-4 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="space-y-2">
-                <Label htmlFor="date">Preferred Date</Label>
+                <Label htmlFor="name">
+                  Your Name <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">
+                  Phone Number <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="10-digit mobile number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className="pl-10"
+                    maxLength={10}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Enter your 10-digit mobile number</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  Email Address <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date">
+                  Preferred Date <span className="text-red-500">*</span>
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start text-left font-normal"
+                      type="button"
+                    >
                       <Calendar className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Select a date</span>}
+                      {date ? format(date, "PPP") : <span className="text-muted-foreground">Select a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={5}>
                     <CalendarComponent
                       mode="single"
                       selected={date}
-                      onSelect={setDate}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      onSelect={(selectedDate) => {
+                        setDate(selectedDate)
+                      }}
+                      disabled={(date) => {
+                        const today = new Date()
+                        today.setHours(0, 0, 0, 0)
+                        return date < today
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
@@ -154,14 +353,17 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="time">Preferred Time</Label>
+                <Label htmlFor="time">
+                  Preferred Time <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
                   <select
                     id="time"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-8 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none cursor-pointer hover:bg-accent"
+                    required
                   >
                     <option value="">Select a time</option>
                     <option value="09:00 AM">09:00 AM</option>
@@ -173,7 +375,13 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
                     <option value="03:00 PM">03:00 PM</option>
                     <option value="04:00 PM">04:00 PM</option>
                     <option value="05:00 PM">05:00 PM</option>
+                    <option value="06:00 PM">06:00 PM</option>
                   </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
 
@@ -181,22 +389,29 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
                 <Label htmlFor="notes">Additional Notes (Optional)</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Any specific requirements or questions..."
+                  placeholder="Any specific requirements, questions, or special requests..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
                 />
               </div>
             </div>
 
             <DialogFooter>
-              <Button onClick={handleSchedule} disabled={isProcessing}>
+              <Button variant="outline" onClick={onClose} disabled={isProcessing}>
+                Cancel
+              </Button>
+              <Button onClick={handleSchedule} disabled={isProcessing} className="bg-green-600 hover:bg-green-700">
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    Sending...
                   </>
                 ) : (
-                  "Schedule Visit"
+                  <>
+                    <Phone className="mr-2 h-4 w-4" />
+                    Send via WhatsApp
+                  </>
                 )}
               </Button>
             </DialogFooter>
