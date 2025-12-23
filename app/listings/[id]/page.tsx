@@ -39,7 +39,7 @@ import { LikeButton } from "@/components/like-button"
 import { ShareModal } from "@/components/share-modal"
 import { ReviewForm } from "@/components/review-form"
 import { ReviewsList } from "@/components/reviews-list"
-import { WhatsAppChatButton, WhatsAppScheduleButton } from "@/components/whatsapp-chat-button"
+import { WhatsAppChatButton } from "@/components/whatsapp-chat-button"
 import { SettlingInKits, type SettlingInKit } from "@/components/settling-in-kits"
 
 interface Property {
@@ -271,7 +271,7 @@ export default function ListingDetailPage() {
   const deliveryPromiseCopy = getDeliveryPromiseCopy(checkInDateTime)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
       {/* Hero Image Gallery */}
       <div className="relative h-[60vh] md:h-[70vh] w-full bg-gradient-to-b from-black/20 to-black/5">
         <div className="absolute inset-0">
@@ -285,39 +285,30 @@ export default function ListingDetailPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
         </div>
 
-        {/* Back Button & Actions */}
-        <div className="absolute top-6 left-0 right-0 z-10 px-6 flex justify-between items-center">
+        {/* Actions */}
+        <div className="absolute top-6 right-0 z-10 px-4 sm:px-6 flex items-center gap-2 flex-shrink-0">
           <Button
             variant="secondary"
             size="icon"
-            className="rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg"
-            onClick={() => router.back()}
+            className="rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg flex-shrink-0"
+            onClick={() => setIsShareModalOpen(true)}
           >
-            <ArrowLeft className="h-5 w-5" />
+            <Share className="h-5 w-5" />
           </Button>
-          
-          <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-              className="rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-lg"
-                    onClick={() => setIsShareModalOpen(true)}
-                  >
-                    <Share className="h-5 w-5" />
-            </Button>
+          <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm shadow-lg rounded-full px-2 py-1">
             <LikeButton 
               itemType="property" 
               itemId={property._id} 
               size="md"
-              className="bg-white/90 backdrop-blur-sm shadow-lg rounded-full"
+              className="p-0 bg-transparent shadow-none backdrop-blur-none"
             />
-                </div>
-              </div>
+          </div>
+        </div>
 
         {/* Property Badges */}
-        <div className="absolute top-6 left-6 z-10 flex gap-2 flex-wrap">
+        <div className="absolute top-6 left-4 sm:left-6 z-10 flex gap-2 flex-wrap max-w-[calc(100%-8rem)]">
           {property.verificationStatus === "verified" && (
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <Image
                 src="/sechome_verification.png"
                 alt="Verified by Second Home"
@@ -328,8 +319,7 @@ export default function ListingDetailPage() {
               />
             </div>
           )}
-          <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 text-sm font-semibold shadow-lg">
-            <Sparkles className="w-4 h-4 mr-1" />
+          <Badge className="bg-gradient-to-r from-primary to-orange-600 text-white px-4 py-2 text-sm font-semibold shadow-lg flex-shrink-0">
             {property.type}
           </Badge>
         </div>
@@ -367,11 +357,11 @@ export default function ListingDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-gray-100"
             >
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
                 <div className="flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{property.title}</h1>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3">{property.title}</h1>
                   <div className="flex items-center gap-2 text-gray-600 mb-3">
-                    <MapPin className="w-5 h-5 text-purple-600" />
+                    <MapPin className="w-5 h-5 text-primary" />
                     <span className="text-base">{typeof property.location === 'string' ? property.location : property.location?.address || property.address || "Location not specified"}</span>
                   </div>
                   {/* Verification Details */}
@@ -397,17 +387,17 @@ export default function ListingDetailPage() {
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex items-center gap-1">
                       <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
                       <span className="font-semibold text-gray-900">{property.rating || 0}</span>
                       <span className="text-gray-500 text-sm">({property.reviews || 0} reviews)</span>
                     </div>
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                       {property.gender}
                     </Badge>
-                      </div>
                   </div>
+                </div>
                 </div>
 
               <div className="border-t pt-6">
@@ -425,15 +415,15 @@ export default function ListingDetailPage() {
             >
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Amenities</h2>
               {property.amenities && property.amenities.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {property.amenities.map((amenity, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 border border-purple-100">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                    <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-orange-50 border border-orange-100">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
                         <Check className="w-5 h-5 text-white" />
-                        </div>
+                      </div>
                       <span className="text-gray-800 font-medium">{amenity}</span>
-                            </div>
-                          ))}
+                    </div>
+                  ))}
                         </div>
               ) : (
                 <p className="text-gray-500">No amenities listed</p>
@@ -453,23 +443,23 @@ export default function ListingDetailPage() {
                   {property.roomTypes.map((room, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 hover:shadow-md transition-shadow"
+                      className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
                           <Bed className="w-6 h-6 text-white" />
-                      </div>
-                            <div>
+                        </div>
+                        <div>
                           <h3 className="font-bold text-gray-900">{room.type}</h3>
                           <p className="text-sm text-gray-600">{room.available} rooms available</p>
-                              </div>
-                            </div>
+                        </div>
+                      </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-purple-600">₹{room.price}</p>
+                        <p className="text-2xl font-bold text-primary">₹{room.price}</p>
                         <p className="text-sm text-gray-500">/month</p>
-                            </div>
-                          </div>
-                        ))}
+                      </div>
+                    </div>
+                  ))}
                       </div>
               </motion.div>
             )}
@@ -486,12 +476,12 @@ export default function ListingDetailPage() {
                 <div className="space-y-3">
                   {property.rules.map((rule, idx) => (
                     <div key={idx} className="flex items-start gap-3">
-                      <div className="mt-1 w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                        <Check className="w-4 h-4 text-purple-600" />
+                      <div className="mt-1 w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-4 h-4 text-primary" />
                       </div>
                       <p className="text-gray-700">{rule}</p>
-                          </div>
-                        ))}
+                    </div>
+                  ))}
                       </div>
               </motion.div>
             )}
@@ -562,23 +552,23 @@ export default function ListingDetailPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="sticky top-24 space-y-6"
+              className="sticky top-20 lg:top-24 space-y-6"
             >
               {/* Price Card */}
               <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
                 <div className="text-center mb-6">
-                  <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 mb-2">
-                    <span className="text-sm font-semibold text-purple-700">Starting from</span>
-                </div>
+                  <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-orange-100 to-amber-100 mb-2">
+                    <span className="text-sm font-semibold text-orange-700">Starting from</span>
+                  </div>
                   <div className="text-4xl font-bold text-gray-900 mb-2">₹{property.price}</div>
                   <p className="text-gray-500">per month</p>
                   <p className="text-sm text-gray-500 mt-2">+ ₹{property.deposit} security deposit</p>
-              </div>
+                </div>
 
                 <div className="space-y-3 mb-6">
                   <Button
                     size="lg"
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                    className="w-full bg-gradient-to-r from-primary to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
                     onClick={handleBookNow}
                     disabled={isCreatingBooking}
                   >
@@ -599,12 +589,15 @@ export default function ListingDetailPage() {
                     )}
                   </Button>
                   
-                  <WhatsAppScheduleButton
-                    propertyId={property._id}
-                    propertyTitle={property.title}
-                    ownerPhone={property.owner?.phone}
-                    ownerName={property.owner?.name}
-                  />
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setIsScheduleVisitModalOpen(true)}
+                    className="w-full border-2 border-green-600 text-green-600 hover:bg-green-50"
+                  >
+                    <Calendar className="mr-2 h-5 w-5" />
+                    Schedule Visit via WhatsApp
+                  </Button>
                   </div>
 
                 {property.owner && (
@@ -612,14 +605,14 @@ export default function ListingDetailPage() {
                     <h3 className="font-bold text-gray-900 mb-4">Contact Owner</h3>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white font-bold">
                           {property.owner.name?.charAt(0) || "O"}
-                    </div>
-                    <div>
+                        </div>
+                        <div>
                           <p className="font-semibold text-gray-900">{property.owner.name || "Property Owner"}</p>
                           <p className="text-sm text-gray-500">Property Owner</p>
-                </div>
-              </div>
+                        </div>
+                      </div>
 
                       {property.owner.phone && (
                         <>
@@ -709,7 +702,7 @@ export default function ListingDetailPage() {
                   </div>
                   <div className="pt-2 border-t border-gray-200 flex items-center justify-between font-semibold">
                     <span>Estimated total (excl. deposit)</span>
-                    <span className="text-purple-700">₹{estimatedTotal.toLocaleString()}</span>
+                    <span className="text-primary font-semibold">₹{estimatedTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -720,9 +713,9 @@ export default function ListingDetailPage() {
                   <h3 className="font-bold text-gray-900 mb-4">Nearby</h3>
                   <div className="space-y-3">
                     {property.distance.college > 0 && (
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50">
                         <div className="flex items-center gap-2">
-                          <Home className="w-4 h-4 text-purple-600" />
+                          <Home className="w-4 h-4 text-primary" />
                           <span className="text-sm text-gray-700">College</span>
                         </div>
                         <span className="font-semibold text-gray-900">{property.distance.college} km</span>
@@ -772,6 +765,7 @@ export default function ListingDetailPage() {
             bookingId={currentBookingId || ""}
             amount={bookingTotal ?? estimatedTotal}
             propertyName={property.title}
+            propertyOwnerId={property.owner?._id || property.owner}
           />
           <ScheduleVisitModal
             isOpen={isScheduleVisitModalOpen}

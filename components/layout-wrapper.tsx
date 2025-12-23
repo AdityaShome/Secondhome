@@ -4,9 +4,12 @@ import { useEffect, useState } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import { SmartChatbot } from "@/components/smart-chatbot"
+import { usePathname } from "next/navigation"
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [isNotFound, setIsNotFound] = useState(false)
+  const pathname = usePathname()
+  const isListingPage = pathname?.startsWith("/listings/") && pathname !== "/listings"
 
   useEffect(() => {
     // Check if we're on a 404 page by looking for the data attribute
@@ -41,7 +44,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
         <main className="flex-grow">{children}</main>
         {!isNotFound && <Footer />}
       </div>
-      {!isNotFound && <SmartChatbot />}
+      {!isNotFound && !isListingPage && <SmartChatbot />}
     </>
   )
 }
