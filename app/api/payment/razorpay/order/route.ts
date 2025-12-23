@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { connectToDatabase } from "@/lib/mongodb"
 import { Booking } from "@/models/booking"
-import Razorpay from "razorpay"
 import mongoose from "mongoose"
+// Use require for Razorpay (CommonJS module)
+const Razorpay = require("razorpay")
 
 /**
  * Create Razorpay order for UPI payment

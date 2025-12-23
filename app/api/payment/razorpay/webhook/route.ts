@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { Booking } from "@/models/booking"
-import Razorpay from "razorpay"
+// Use require for Razorpay (CommonJS module)
+const Razorpay = require("razorpay")
 import crypto from "crypto"
 
 const razorpay = new Razorpay({
