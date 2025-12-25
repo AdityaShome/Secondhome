@@ -7,7 +7,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     await connectToDatabase()
 
     const { id } = await params
-    const property = await Property.findById(id)
+    const property = await Property.findById(id).populate("owner", "name email phone")
 
     if (!property) {
       return NextResponse.json(

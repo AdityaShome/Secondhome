@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     if (lat && lng && radius) {
       properties = await Property.find(query)
         .limit(limit)
-        .populate("owner", "name email")
+        .populate("owner", "name email phone")
       total = properties.length
       
       // Return array directly for map view
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
           })
           .skip(skip)
           .limit(limit)
-          .populate("owner", "name email"),
+          .populate("owner", "name email phone"),
         Property.countDocuments(query),
       ])
 

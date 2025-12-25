@@ -14,7 +14,7 @@ import {
   Bed, Bath, Ruler, Calendar, IndianRupee, Shield, FileText,
   Wifi, Car, Utensils, Tv, AirVent, Dumbbell, Check, X,
   Clock, Phone, Mail, Camera, Video, Image as ImageIcon,
-  TrendingUp, Award, Zap, Target, Lightbulb, Plus
+  TrendingUp, Award, Zap, Target, Lightbulb, Plus, User
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -93,6 +93,7 @@ export default function ListPropertyPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<any>(null)
   const [loadingAI, setLoadingAI] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   // Form data state
   const [propertyData, setPropertyData] = useState<any>({
@@ -100,9 +101,6 @@ export default function ListPropertyPage() {
     propertySubtype: "",
     title: "",
     description: "",
-    contactName: "",
-    contactPhone: "",
-    contactEmail: "",
     address: "",
     city: "",
     state: "",
@@ -144,9 +142,27 @@ export default function ListPropertyPage() {
           variant: "destructive",
         })
         router.push("/register-property")
+      } else {
+        // Fetch user profile data
+        fetchUserProfile()
       }
     }
   }, [status, session, router])
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch("/api/user/profile")
+      if (response.ok) {
+        const data = await response.json()
+        console.log("👤 User profile fetched:", data)
+        setUserProfile(data.user) // Extract the user object from response
+      } else {
+        console.error("Failed to fetch profile:", response.status)
+      }
+    } catch (error) {
+      console.error("Failed to fetch user profile:", error)
+    }
+  }
 
   // AI-powered suggestions
   const getAISuggestions = async (context: string, data: any) => {
@@ -221,34 +237,6 @@ export default function ListPropertyPage() {
           toast({
             title: "⚠️ Description Required",
             description: "Please enter a detailed description (minimum 50 characters)",
-            variant: "destructive",
-          })
-          return false
-        }
-        
-        // Contact details validation
-        if (!propertyData.contactName || propertyData.contactName.trim().length < 2) {
-          toast({
-            title: "⚠️ Contact Name Required",
-            description: "Please enter the contact person's full name",
-            variant: "destructive",
-          })
-          return false
-        }
-        
-        if (!propertyData.contactPhone || propertyData.contactPhone.length < 10) {
-          toast({
-            title: "⚠️ Phone Number Required",
-            description: "Please enter a valid 10-digit phone number",
-            variant: "destructive",
-          })
-          return false
-        }
-        
-        if (!propertyData.contactEmail || !propertyData.contactEmail.includes('@')) {
-          toast({
-            title: "⚠️ Email Required",
-            description: "Please enter a valid email address",
             variant: "destructive",
           })
           return false
@@ -532,12 +520,8 @@ export default function ListPropertyPage() {
         // Nearby Colleges
         nearbyColleges: propertyData.nearbyColleges || [],
         
-        // Contact Info (stored but not in schema, can be added to user profile)
-        contactInfo: {
-          name: propertyData.contactName,
-          phone: propertyData.contactPhone,
-          email: propertyData.contactEmail
-        }
+        // Owner is automatically set from session in the API
+        // Contact info comes from user's profile
       }
 
       console.log("📤 Submitting transformed property data:", transformedData)
@@ -682,7 +666,7 @@ export default function ListPropertyPage() {
             >
               {/* Tab Content */}
               {currentTab === 0 && <PropertyTypeTab propertyData={propertyData} setPropertyData={setPropertyData} />}
-              {currentTab === 1 && <BasicInfoTab propertyData={propertyData} setPropertyData={setPropertyData} loadingAI={loadingAI} getAISuggestions={getAISuggestions} aiSuggestions={aiSuggestions} />}
+              {currentTab === 1 && <BasicInfoTab propertyData={propertyData} setPropertyData={setPropertyData} loadingAI={loadingAI} getAISuggestions={getAISuggestions} aiSuggestions={aiSuggestions} userProfile={userProfile} />}
               {currentTab === 2 && <LocationTab propertyData={propertyData} setPropertyData={setPropertyData} />}
               {currentTab === 3 && <PropertyDetailsTab propertyData={propertyData} setPropertyData={setPropertyData} />}
               {currentTab === 4 && <AmenitiesTab propertyData={propertyData} setPropertyData={setPropertyData} />}
@@ -866,7 +850,7 @@ function PropertyTypeTab({ propertyData, setPropertyData }: any) {
 }
 
 // Basic Info Tab
-function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestions, aiSuggestions }: any) {
+function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestions, aiSuggestions, userProfile }: any) {
   const [showAIHelper, setShowAIHelper] = useState(false)
 
   const beautifyDescription = async () => {
@@ -942,7 +926,7 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
               "font-medium",
               propertyData.description?.length >= 100 ? "text-green-600" : "text-gray-400"
             )}>
-              {propertyData.description?.length || 0}/500
+              {propertyData.description?.length || 0}/1000
             </span>
           </div>
 
@@ -975,44 +959,56 @@ function BasicInfoTab({ propertyData, setPropertyData, loadingAI, getAISuggestio
           )}
         </div>
 
-        {/* Contact Details */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="contactName" className="text-base font-semibold">
-              Contact Person Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="contactName"
-              placeholder="Enter full name"
-              value={propertyData.contactName}
-              onChange={(e) => setPropertyData({ ...propertyData, contactName: e.target.value })}
-            />
+        {/* Contact Details - Auto-filled from Profile */}
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-green-200">
+          <div className="flex items-start gap-3 mb-3">
+            <User className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-green-900 mb-1">Contact Information</h4>
+              <p className="text-sm text-green-800">
+                This information is automatically taken from your profile. Students will use this to contact you.
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-4 mt-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Contact Person Name
+              </Label>
+              <div className="bg-white rounded-md border border-gray-200 px-3 py-2 text-gray-700">
+                {userProfile?.name || "Loading..."}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Contact Phone
+              </Label>
+              <div className="bg-white rounded-md border border-gray-200 px-3 py-2 text-gray-700">
+                {userProfile?.phone || "Not set in profile"}
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contactPhone" className="text-base font-semibold">
-              Contact Phone <span className="text-red-500">*</span>
+          <div className="space-y-2 mt-4">
+            <Label className="text-sm font-medium text-gray-700">
+              Contact Email
             </Label>
-            <Input
-              id="contactPhone"
-              placeholder="+91 XXXXX XXXXX"
-              value={propertyData.contactPhone}
-              onChange={(e) => setPropertyData({ ...propertyData, contactPhone: e.target.value })}
-            />
+            <div className="bg-white rounded-md border border-gray-200 px-3 py-2 text-gray-700">
+              {userProfile?.email || "Loading..."}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="contactEmail" className="text-base font-semibold">
-            Contact Email <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="contactEmail"
-            type="email"
-            placeholder="Enter your email"
-            value={propertyData.contactEmail}
-            onChange={(e) => setPropertyData({ ...propertyData, contactEmail: e.target.value })}
-          />
+          {(!userProfile?.phone) && (
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                Phone number not set in profile. 
+                <a href="/profile" className="underline font-medium hover:text-yellow-900">Update your profile</a> to add it.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* AI Tips */}

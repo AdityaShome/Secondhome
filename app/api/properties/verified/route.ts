@@ -12,7 +12,7 @@ export async function GET() {
       isApproved: true,
       isRejected: false,
     })
-      .populate("owner", "name email")
+      .populate("owner", "name email phone")
       .sort({ verifiedAt: -1, createdAt: -1 })
       .lean()
 
