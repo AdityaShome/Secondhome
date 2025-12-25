@@ -188,12 +188,12 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
   }
 
   return (
-    <div className={`flex items-center relative ${className}`}>
+    <div className={`flex items-center gap-1.5 relative ${className}`}>
       <Button
         ref={buttonRef}
         variant="ghost"
         size="sm"
-        className={`relative rounded-full ${sizeMap[size].button} ${liked ? "bg-red-50 hover:bg-red-100" : "bg-white/90 hover:bg-white"} shadow-lg`}
+        className={`relative rounded-full ${sizeMap[size].button} flex-shrink-0 p-0 ${liked ? "bg-red-50 hover:bg-red-100" : "bg-transparent hover:bg-gray-100"} shadow-none`}
         onClick={handleLike}
         disabled={isLoading}
         onMouseEnter={handleMouseEnter}
@@ -202,7 +202,7 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
       >
         <Heart
           className={`${sizeMap[size].icon} ${
-            liked ? "fill-red-500 text-red-500" : "text-muted-foreground"
+            liked ? "fill-red-500 text-red-500" : "text-gray-600"
           } transition-colors duration-300`}
         />
         <AnimatePresence>
@@ -237,7 +237,7 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
         key={likeCount}
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className={`${sizeMap[size].text} font-medium ml-1.5`}
+        className={`${sizeMap[size].text} font-medium text-gray-700 whitespace-nowrap`}
       >
         {likeCount}
       </motion.span>

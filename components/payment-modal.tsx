@@ -15,8 +15,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, CreditCard, Wallet, BanknoteIcon as Bank } from "lucide-react"
+import { Loader2, CreditCard, Wallet, BanknoteIcon as Bank, ArrowLeft } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { UPIQRPayment } from "@/components/upi-qr-payment"
 
 declare global {
   interface Window {
@@ -30,9 +31,10 @@ interface PaymentModalProps {
   bookingId: string
   amount: number
   propertyName: string
+  propertyOwnerId?: string // Property owner's user ID to fetch their UPI ID
 }
 
-export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName, propertyOwnerId }: PaymentModalProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [paymentMethod, setPaymentMethod] = useState("paypal")
@@ -44,8 +46,51 @@ export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName 
   const [currentStep, setCurrentStep] = useState(1)
   const [paypalLoaded, setPaypalLoaded] = useState(false)
   const [paypalButtonsRendered, setPaypalButtonsRendered] = useState(false)
+  const [merchantUPIId, setMerchantUPIId] = useState("")
+  const [merchantName, setMerchantName] = useState("Second Home")
+  const [isFetchingMerchantUPI, setIsFetchingMerchantUPI] = useState(false)
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
   const paypalCurrency = process.env.NEXT_PUBLIC_PAYPAL_CURRENCY || "USD"
+
+  // Fetch merchant UPI ID when UPI is selected
+  useEffect(() => {
+    if (isOpen && paymentMethod === "upi" && !merchantUPIId) {
+      fetchMerchantUPI()
+    }
+  }, [isOpen, paymentMethod, merchantUPIId])
+
+  const fetchMerchantUPI = async () => {
+    setIsFetchingMerchantUPI(true)
+    try {
+      const url = propertyOwnerId 
+        ? `/api/user/bank-account?userId=${propertyOwnerId}`
+        : `/api/user/bank-account`
+      
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.bankAccount?.upiId) {
+          setMerchantUPIId(data.bankAccount.upiId)
+          setMerchantName(data.bankAccount.accountHolderName || "Second Home")
+        } else {
+          // Fallback to environment variable
+          setMerchantUPIId(process.env.NEXT_PUBLIC_MERCHANT_UPI_ID || "")
+          setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_ACCOUNT_NAME || "Second Home")
+        }
+      } else {
+        // Fallback to environment variable
+        setMerchantUPIId(process.env.NEXT_PUBLIC_MERCHANT_UPI_ID || "")
+        setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_ACCOUNT_NAME || "Second Home")
+      }
+    } catch (error) {
+      console.error("Error fetching merchant UPI:", error)
+      // Fallback to environment variable
+      setMerchantUPIId(process.env.NEXT_PUBLIC_MERCHANT_UPI_ID || "")
+      setMerchantName(process.env.NEXT_PUBLIC_MERCHANT_ACCOUNT_NAME || "Second Home")
+    } finally {
+      setIsFetchingMerchantUPI(false)
+    }
+  }
 
   // Reset PayPal state when modal closes
   useEffect(() => {
@@ -370,10 +415,20 @@ export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Complete Payment</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="relative">
+          {currentStep > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-0 top-0"
+              onClick={() => setCurrentStep(1)}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <DialogTitle className={currentStep > 1 ? "text-center" : ""}>Complete Payment</DialogTitle>
+          <DialogDescription className={currentStep > 1 ? "text-center" : ""}>
             Pay ₹{amount} to confirm your booking at {propertyName}
           </DialogDescription>
         </DialogHeader>
@@ -410,9 +465,45 @@ export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName 
                   </div>
                   <div className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-gray-50 transition-colors">
                     <RadioGroupItem value="upi" id="upi" />
-                    <Label htmlFor="upi" className="flex items-center cursor-pointer">
-                      <Wallet className="mr-2 h-5 w-5 text-primary" />
-                      UPI
+                    <Label htmlFor="upi" className="flex items-center cursor-pointer flex-1">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-6 w-6 text-orange-500" />
+                          <span className="font-semibold">UPI</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <div className="w-7 h-7 rounded-lg bg-white p-0.5 shadow-md border border-gray-200 flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 24 24" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                            </svg>
+                          </div>
+                          <div className="w-7 h-7 rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 24 24" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                              <rect width="24" height="24" rx="5" fill="#5F259F"/>
+                              <circle cx="12" cy="12" r="7" fill="none" stroke="white" strokeWidth="1.2" opacity="0.9"/>
+                              <circle cx="12" cy="12" r="4.5" fill="none" stroke="white" strokeWidth="1.2" opacity="0.9"/>
+                              <circle cx="12" cy="12" r="2" fill="white"/>
+                            </svg>
+                          </div>
+                          <div className="w-7 h-7 rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 24 24" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                              <rect width="24" height="24" rx="5" fill="#00BAF2"/>
+                              <path d="M8 8h8v8H8V8zm1.5 1.5v5h5v-5h-5z" fill="white"/>
+                              <path d="M10.5 10.5h3v3h-3v-3z" fill="#00BAF2"/>
+                            </svg>
+                          </div>
+                          <div className="w-7 h-7 rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden">
+                            <svg viewBox="0 0 24 24" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                              <rect width="24" height="24" rx="5" fill="#1A237E"/>
+                              <path d="M7 7h10v2H7V7zm0 3h10v2H7v-2zm0 3h8v2H7v-2z" fill="white"/>
+                              <path d="M11 9h4v6h-4V9z" fill="#00BCD4"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-gray-50 transition-colors">
@@ -517,9 +608,39 @@ export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName 
                 )}
 
                 {paymentMethod === "upi" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="upiId">UPI ID</Label>
-                    <Input id="upiId" placeholder="yourname@upi" />
+                  <div className="space-y-4">
+                    {isFetchingMerchantUPI ? (
+                      <div className="flex flex-col items-center gap-3 py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Loading UPI details...</p>
+                      </div>
+                    ) : merchantUPIId ? (
+                      <UPIQRPayment
+                        amount={amount}
+                        merchantUPIId={merchantUPIId}
+                        merchantName={merchantName}
+                        bookingId={bookingId}
+                        onPaymentComplete={(upiId) => {
+                          // Move to success step
+                          setCurrentStep(3)
+                          toast({
+                            title: "Payment successful",
+                            description: "Your booking has been confirmed",
+                          })
+                          // Redirect to bookings page after 3 seconds
+                          setTimeout(() => {
+                            router.push(`/bookings/${bookingId}`)
+                            onClose()
+                          }, 3000)
+                        }}
+                      />
+                    ) : (
+                      <div className="p-4 border border-destructive rounded-lg bg-destructive/10">
+                        <p className="text-sm text-destructive">
+                          UPI payment is not available. Please contact support or use another payment method.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -545,7 +666,7 @@ export function PaymentModal({ isOpen, onClose, bookingId, amount, propertyName 
                 <Button variant="outline" onClick={() => setCurrentStep(1)}>
                   Back
                 </Button>
-                {paymentMethod !== "paypal" && (
+                {paymentMethod !== "paypal" && paymentMethod !== "upi" && (
                   <Button onClick={handlePayment} disabled={isProcessing}>
                     {isProcessing ? (
                       <>
