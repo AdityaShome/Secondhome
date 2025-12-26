@@ -1,4 +1,5 @@
 import NextAuth from "next-auth"
+import type { AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import FacebookProvider from "next-auth/providers/facebook"
@@ -10,7 +11,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 // This allows the build to succeed without environment variables
 
 // Build providers array conditionally
-const providers = [
+const providers: AuthOptions['providers'] = [
   // Email/Password Login (always available)
   CredentialsProvider({
       name: "Credentials",
@@ -213,7 +214,6 @@ const handler = NextAuth({
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
-  trustHost: true, // Trust the host header in production
 })
 
 export { handler as GET, handler as POST }
