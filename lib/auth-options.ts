@@ -135,6 +135,64 @@ export const authOptions: NextAuthOptions = {
       : []),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      try {
+        // Allow credentials provider (regular email/password login)
+        if (account?.provider === "credentials") {
+          return true
+        }
+
+        // Handle OAuth providers (Google, Facebook, etc.)
+        if (account?.provider === "google" || account?.provider === "facebook") {
+          await connectToDatabase()
+          const User = await getUserModel()
+          
+          const email = user.email?.toLowerCase().trim()
+          if (!email) {
+            console.error("No email provided by OAuth provider")
+            return false
+          }
+
+          // Check if user exists
+          let existingUser = await User.findOne({ email }).lean()
+
+          if (!existingUser) {
+            // Create new user for OAuth sign-in
+            console.log(`Creating new user from ${account.provider} OAuth:`, email)
+            const newUser = await User.create({
+              name: user.name || profile?.name || "User",
+              email: email,
+              image: user.image || profile?.picture || null,
+              emailVerified: new Date(), // OAuth emails are pre-verified
+              role: "user",
+              // No password for OAuth users
+            })
+            existingUser = newUser.toObject()
+            console.log("New OAuth user created:", existingUser._id)
+          } else {
+            console.log("Existing user found for OAuth login:", existingUser._id)
+            // Update user image if not set
+            if (!existingUser.image && user.image) {
+              await User.updateOne(
+                { _id: existingUser._id },
+                { $set: { image: user.image, emailVerified: new Date() } }
+              )
+            }
+          }
+
+          // Update the user object with database info
+          user.id = existingUser._id.toString()
+          user.role = existingUser.role || "user"
+          
+          return true
+        }
+
+        return true
+      } catch (error) {
+        console.error("SignIn callback error:", error)
+        return false
+      }
+    },
     async jwt({ token, user }) {
       try {
         if (user) {

@@ -38,6 +38,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { LikeButton } from "@/components/like-button"
+import { PhoneVerification } from "@/components/phone-verification"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -58,6 +59,7 @@ export default function ProfilePage() {
     lastName: "",
     email: "",
     phone: "",
+    phoneVerified: false,
     dateOfBirth: "",
     gender: "",
     nationality: "",
@@ -126,6 +128,7 @@ export default function ProfilePage() {
           firstName: firstName || "",
           lastName: lastName || "",
           email: userData.email || "",
+          phoneVerified: userData.phoneVerified || false,
           phone: userData.phone || "",
           dateOfBirth: userData.dateOfBirth || "",
           gender: userData.gender || "",
@@ -1187,27 +1190,21 @@ export default function ProfilePage() {
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={profileData.phone ?? ""}
-                            onChange={(e) => {
-                              setProfileData((prev) => ({
-                                ...prev,
-                                phone: e.target.value,
-                              }))
-                            }}
-                            placeholder="Enter your phone number"
-                            disabled={!isEditing}
-                            className="pl-10 bg-white text-gray-900"
-                            autoComplete="tel"
-                          />
-                          </div>
-                        </div>
+                        <PhoneVerification
+                          phone={profileData.phone}
+                          onPhoneChange={(newPhone) => {
+                            setProfileData((prev) => ({
+                              ...prev,
+                              phone: newPhone,
+                            }))
+                          }}
+                          isEditing={isEditing}
+                          phoneVerified={profileData.phoneVerified}
+                          onVerificationComplete={() => {
+                            // Refresh profile data to get updated verification status
+                            fetchProfileData()
+                          }}
+                        />
                         <div className="space-y-2 md:col-span-2">
                           <Label htmlFor="address">
                             <MapPin className="w-4 h-4 inline mr-1" />

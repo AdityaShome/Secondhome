@@ -8,6 +8,8 @@ export interface IUser {
   image?: string
   role: "user" | "owner" | "admin"
   phone?: string
+  phoneVerified?: boolean
+  emailVerified?: Date
   dateOfBirth?: string
   gender?: string
   nationality?: string
@@ -32,6 +34,8 @@ const UserSchema = new Schema<IUser>({
   image: { type: String },
   role: { type: String, enum: ["user", "owner", "admin"], default: "user" },
   phone: { type: String },
+  phoneVerified: { type: Boolean, default: false },
+  emailVerified: { type: Date },
   dateOfBirth: { type: String },
   gender: { type: String },
   nationality: { type: String },
