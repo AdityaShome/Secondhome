@@ -136,12 +136,33 @@ export default function ListPropertyPage() {
     } else if (status === "authenticated") {
       const userRole = (session?.user as any)?.role
       if (userRole !== "owner" && userRole !== "admin") {
-        toast({
-          title: "Access Denied",
-          description: "You need to register as a property owner first.",
-          variant: "destructive",
-        })
-        router.push("/register-property")
+        // Double-check with the API to ensure role is correct
+        fetch("/api/user/profile")
+          .then(res => res.json())
+          .then(data => {
+            const actualRole = data.user?.role || "user"
+            if (actualRole === "owner" || actualRole === "admin") {
+              // Role mismatch - user is actually an owner, refresh session
+              setUserProfile(data.user)
+              // Continue to allow access
+            } else {
+              // User is really not an owner
+              toast({
+                title: "Access Denied",
+                description: "You need to register as a property owner first.",
+                variant: "destructive",
+              })
+              router.push("/register-property")
+            }
+          })
+          .catch(() => {
+            toast({
+              title: "Access Denied",
+              description: "You need to register as a property owner first.",
+              variant: "destructive",
+            })
+            router.push("/register-property")
+          })
       } else {
         // Fetch user profile data
         fetchUserProfile()

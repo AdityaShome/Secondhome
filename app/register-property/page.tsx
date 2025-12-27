@@ -111,8 +111,8 @@ export default function RegisterPropertyPage() {
       // Wait for session to update
       await update()
       
-      // Small delay to ensure session is refreshed
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Add delay to ensure session is refreshed with current role
+      await new Promise(resolve => setTimeout(resolve, 800))
 
       // Fetch user data to check role
       try {
@@ -288,8 +288,11 @@ export default function RegisterPropertyPage() {
         throw new Error("Auto sign-in failed. Please try logging in manually.")
       }
 
-      // Refresh the session to get updated role
+      // Refresh the session to get updated role and wait for it to complete
       await update()
+      
+      // Add a longer delay to ensure session is fully refreshed with new role
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       // Show appropriate success message
       if (result.upgraded) {

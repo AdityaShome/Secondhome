@@ -47,6 +47,32 @@ export default function LoginPage() {
 
   const callbackUrl = redirectParam || searchParams.get("callbackUrl") || "/"
 
+  // Check for OAuth error in URL
+  useEffect(() => {
+    const error = searchParams.get("error")
+    if (error) {
+      let errorMessage = "An error occurred during sign in."
+      
+      // Parse NextAuth error messages
+      if (error.includes("already exists with this email")) {
+        errorMessage = "An account with this email already exists. Please sign in with your email and password instead of using Google/Facebook."
+      } else if (error === "OAuthAccountNotLinked") {
+        errorMessage = "This email is already associated with another account. Please sign in with your original method."
+      } else if (error === "OAuthSignin" || error === "OAuthCallback") {
+        errorMessage = "There was a problem with the OAuth sign-in. Please try again."
+      }
+      
+      toast({
+        title: "Sign In Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      
+      // Clean up URL
+      router.replace("/login", { scroll: false })
+    }
+  }, [searchParams, toast, router])
+
   // Redirect if already logged in
   useEffect(() => {
     try {

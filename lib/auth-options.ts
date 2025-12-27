@@ -165,13 +165,22 @@ export const authOptions: NextAuthOptions = {
               image: user.image || profile?.picture || null,
               emailVerified: new Date(), // OAuth emails are pre-verified
               role: "user",
+              provider: account.provider, // Store which OAuth provider was used
               // No password for OAuth users
             })
             existingUser = newUser.toObject()
             console.log("New OAuth user created:", existingUser._id)
           } else {
             console.log("Existing user found for OAuth login:", existingUser._id)
-            // Update user image if not set
+            
+            // Check if existing user has a password (was created via email/password)
+            if (existingUser.password) {
+              console.error(`❌ Account with email ${email} already exists with password authentication`)
+              // Prevent OAuth login - user must use their password
+              throw new Error("An account already exists with this email. Please sign in with your email and password instead.")
+            }
+            
+            // If no password, it's an OAuth account - allow login and update image
             if (!existingUser.image && user.image) {
               await User.updateOne(
                 { _id: existingUser._id },
@@ -193,12 +202,27 @@ export const authOptions: NextAuthOptions = {
         return false
       }
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       try {
         if (user) {
           token.id = user.id
           token.role = user.role || "user"
         }
+        
+        // If session is being updated (e.g., via update()), refresh role from database
+        if (trigger === "update" && token.id) {
+          try {
+            await connectToDatabase()
+            const User = await getUserModel()
+            const dbUser = await User.findById(token.id).select("role").lean()
+            if (dbUser) {
+              token.role = dbUser.role || "user"
+            }
+          } catch (error) {
+            console.error("Failed to refresh user role:", error)
+          }
+        }
+        
         return token
       } catch (error) {
         console.error("JWT callback error:", error)

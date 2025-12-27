@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
@@ -41,6 +41,7 @@ const formSchema = z
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { register } = useAuth()
   const { data: session, status } = useSession()
@@ -52,6 +53,32 @@ export default function SignupPage() {
   const [otp, setOtp] = useState("")
   const [otpLoading, setOtpLoading] = useState(false)
   const [formData, setFormData] = useState<any>(null)
+
+  // Check for OAuth error in URL
+  useEffect(() => {
+    const error = searchParams.get("error")
+    if (error) {
+      let errorMessage = "An error occurred during sign up."
+      
+      // Parse NextAuth error messages
+      if (error.includes("already exists with this email")) {
+        errorMessage = "An account with this email already exists. Please sign in with your email and password instead of using Google/Facebook."
+      } else if (error === "OAuthAccountNotLinked") {
+        errorMessage = "This email is already associated with another account. Please sign in with your original method."
+      } else if (error === "OAuthSignin" || error === "OAuthCallback") {
+        errorMessage = "There was a problem with the OAuth sign-in. Please try again."
+      }
+      
+      toast({
+        title: "Sign Up Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      
+      // Clean up URL
+      router.replace("/signup", { scroll: false })
+    }
+  }, [searchParams, toast, router])
 
   // Redirect if already logged in
   useEffect(() => {

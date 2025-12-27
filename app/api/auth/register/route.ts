@@ -31,6 +31,13 @@ export async function POST(req: Request) {
       const existingUser = await User.findOne({ email })
       
       if (existingUser) {
+        // Check if existing user was created via OAuth (no password)
+        if (!existingUser.password) {
+          return NextResponse.json({ 
+            error: "An account with this email already exists via Google/Facebook sign-in. Please use that method to sign in instead." 
+          }, { status: 409 })
+        }
+        
         // If registering as property owner and user exists
         if (body.isPropertyOwner) {
           // Check if already an owner
@@ -53,7 +60,7 @@ export async function POST(req: Request) {
         
         // Regular user registration with existing email
         return NextResponse.json({ 
-          error: "User with this email already exists" 
+          error: "User with this email already exists. Please sign in instead." 
         }, { status: 409 })
       }
 
