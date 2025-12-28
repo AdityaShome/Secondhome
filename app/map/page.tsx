@@ -468,9 +468,9 @@ export default function MapPage() {
                 }
               },
               {
-                enableHighAccuracy: true,
-                timeout: 15000 * attempts, // Increase timeout with each attempt
-                maximumAge: 0
+                enableHighAccuracy: attempts === 1 ? false : true, // Fast first, accurate on retry
+                timeout: 5000 + (attempts * 3000), // 5s, 8s, 11s instead of 15s, 30s, 45s
+                maximumAge: attempts === 1 ? 60000 : 0 // Allow cached on first attempt
               }
             )
           }
@@ -1445,7 +1445,7 @@ export default function MapPage() {
     recognition.start()
   }
 
-  // Request current location - improved with retry logic
+  // Request current location - optimized for speed
   const requestCurrentLocation = async () => {
     if (!navigator.geolocation) {
       toast({
@@ -1462,104 +1462,156 @@ export default function MapPage() {
       description: "Please allow location access when prompted",
     })
 
-    // Use watchPosition to keep location updated and marker visible
-    const watchId = navigator.geolocation.watchPosition(
-      async (position) => {
-        console.log("✅ Location obtained:", position.coords.latitude, position.coords.longitude)
-        const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
-        setMapCenter(userLocation)
+    // First try: Fast getCurrentPosition with cached location allowed
+    const fastOptions = {
+      enableHighAccuracy: false, // Faster, less accurate
+      timeout: 5000, // 5 second timeout
+      maximumAge: 60000 // Accept cached location up to 1 minute old
+    }
+
+    // Second try: High accuracy if fast fails
+    const accurateOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000, // 10 second timeout
+      maximumAge: 0
+    }
+
+    let locationObtained = false
+
+    const addUserMarker = async (userLocation: [number, number], isFirst: boolean) => {
+      if (map) {
+        map.setView(userLocation, 14)
         
-        if (map) {
-          map.setView(userLocation, 14)
-          
-          // Remove existing user marker if any
-          if (userLocationMarkerRef.current) {
-            map.removeLayer(userLocationMarkerRef.current)
-            userLocationMarkerRef.current = null
-          }
-          
-          // Add user marker with persistent reference
-          const L = (await import('leaflet')).default
-          const userIcon = L.divIcon({
-            html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
-            className: "",
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
-          })
-          const marker = L.marker(userLocation, { 
-            icon: userIcon,
-            isUserMarker: true, // Mark as user marker
-            zIndexOffset: 1000 // Keep it on top
-          } as any).addTo(map)
-          
-          marker.bindPopup("📍 You are here")
-          
-          // Store marker reference to keep it persistent
-          userLocationMarkerRef.current = marker
-          
-          // Open popup only on first location
-          if (!watchPositionIdRef.current) {
-            marker.openPopup()
-          }
+        // Remove existing user marker if any
+        if (userLocationMarkerRef.current) {
+          map.removeLayer(userLocationMarkerRef.current)
+          userLocationMarkerRef.current = null
         }
         
-        // Only reverse geocode and load data on first position
-        if (!watchPositionIdRef.current) {
+        // Add user marker with persistent reference
+        const L = (await import('leaflet')).default
+        const userIcon = L.divIcon({
+          html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
+          className: "",
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        })
+        const marker = L.marker(userLocation, { 
+          icon: userIcon,
+          isUserMarker: true,
+          zIndexOffset: 1000
+        } as any).addTo(map)
+        
+        marker.bindPopup("📍 You are here")
+        userLocationMarkerRef.current = marker
+        
+        if (isFirst) {
+          marker.openPopup()
           reverseGeocode(userLocation)
           loadDataForLocation(userLocation)
           setIsGettingLocation(false)
-          
           toast({
             title: "✅ Location detected!",
             description: "Showing nearby properties and amenities",
           })
         }
+      }
+    }
+
+    // Try fast location first
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        if (locationObtained) return
+        locationObtained = true
         
-        // Store watch ID to keep it active
+        console.log("✅ Fast location obtained:", position.coords.latitude, position.coords.longitude)
+        const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
+        setMapCenter(userLocation)
+        await addUserMarker(userLocation, true)
+        
+        // Now start watchPosition for continuous updates
+        const watchId = navigator.geolocation.watchPosition(
+          async (pos) => {
+            const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+            setMapCenter(loc)
+            await addUserMarker(loc, false)
+          },
+          (err) => console.error("Watch position error:", err),
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 5000 // Update every 5 seconds
+          }
+        )
         watchPositionIdRef.current = watchId
       },
       (error) => {
-        console.error("Geolocation error:", error)
-        let errorMessage = "Could not get your location"
+        // Fast method failed, try accurate method
+        console.log("Fast location failed, trying accurate method...")
         
-        if (error.code === 1) {
-          errorMessage = "Location permission denied. Please enable it in your browser settings and try again."
-        } else if (error.code === 2) {
-          errorMessage = "Location unavailable. Please check your GPS/WiFi and try again."
-        } else if (error.code === 3) {
-          errorMessage = "Location request timed out. Please try again."
-        }
-        
-        // Clear watch on error
-        if (watchPositionIdRef.current) {
-          navigator.geolocation.clearWatch(watchPositionIdRef.current)
-          watchPositionIdRef.current = null
-        }
-        setIsGettingLocation(false)
-        
-        toast({
-          title: "❌ Location error",
-          description: errorMessage,
-          variant: "destructive",
-          action: (
-            <ToastAction altText="Try again" onClick={requestCurrentLocation}>
-              Retry
-            </ToastAction>
-          ),
-        })
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            if (locationObtained) return
+            locationObtained = true
+            
+            console.log("✅ Accurate location obtained:", position.coords.latitude, position.coords.longitude)
+            const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude]
+            setMapCenter(userLocation)
+            await addUserMarker(userLocation, true)
+            
+            // Start watchPosition for continuous updates
+            const watchId = navigator.geolocation.watchPosition(
+              async (pos) => {
+                const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+                setMapCenter(loc)
+                await addUserMarker(loc, false)
+              },
+              (err) => console.error("Watch position error:", err),
+              {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 5000
+              }
+            )
+            watchPositionIdRef.current = watchId
+          },
+          (error2) => {
+            console.error("Geolocation error:", error2)
+            let errorMessage = "Could not get your location"
+            
+            if (error2.code === 1) {
+              errorMessage = "Location permission denied. Please enable it in your browser settings."
+            } else if (error2.code === 2) {
+              errorMessage = "Location unavailable. Please check your GPS/WiFi."
+            } else if (error2.code === 3) {
+              errorMessage = "Location request timed out. Please try again."
+            }
+            
+            setIsGettingLocation(false)
+            
+            toast({
+              title: "❌ Location error",
+              description: errorMessage,
+              variant: "destructive",
+              action: (
+                <ToastAction altText="Try again" onClick={requestCurrentLocation}>
+                  Retry
+                </ToastAction>
+              ),
+            })
+          },
+          accurateOptions
+        )
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 20000, // Increased timeout
-        maximumAge: 0
-      }
+      fastOptions
     )
-    
-    // Store watch ID
-    watchPositionIdRef.current = watchId
-    
-    // Note: We keep the watch active to maintain the marker visibility
-    // The watch will continue to update the marker position as user moves
+
+    // Fallback timeout - clear loading state after 15 seconds
+    setTimeout(() => {
+      if (!locationObtained) {
+        setIsGettingLocation(false)
+      }
+    }, 15000)
   }
 
   // Save location
