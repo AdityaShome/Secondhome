@@ -159,70 +159,86 @@ const handler = NextAuth({
 
         // Handle OAuth providers (Google, Facebook, etc.)
         if (account?.provider === "google" || account?.provider === "facebook") {
-          await connectToDatabase()
-          const User = await getUserModel()
-          
-          const email = user.email?.toLowerCase().trim()
-          if (!email) {
-            console.error("No email provided by OAuth provider")
-            return false
-          }
-
-          // Check if user exists
-          let existingUser = await User.findOne({ email }).lean()
-
-          if (!existingUser) {
-            // Create new user for OAuth sign-in
-            console.log(`Creating new user from ${account.provider} OAuth:`, email)
-            const newUser = await User.create({
-              name: user.name || (profile as any)?.name || "User",
-              email: email,
-              image: user.image || (profile as any)?.picture || null,
-              emailVerified: new Date(), // OAuth emails are pre-verified
-              role: "user",
-              provider: account.provider, // Store which OAuth provider was used
-              // No password for OAuth users
-            })
-            existingUser = newUser.toObject()
-            console.log("New OAuth user created:", existingUser._id)
-          } else {
-            console.log("Existing user found for OAuth login:", existingUser._id)
+          try {
+            await connectToDatabase()
+            const User = await getUserModel()
             
-            // Check if existing user has a password (was created via email/password)
-            if (existingUser.password) {
-              console.error(`❌ Account with email ${email} already exists with password authentication`)
-              // Prevent OAuth login - user must use their password
-              throw new Error("An account already exists with this email. Please sign in with your email and password instead.")
+            const email = user.email?.toLowerCase().trim()
+            if (!email) {
+              console.error("No email provided by OAuth provider")
+              return false
             }
-            
-            // If no password, it's an OAuth account - update image if Google/Facebook provides one
-            const oauthImage = user.image || (profile as any)?.picture
-            if (oauthImage) {
-              // Update image if it's different or if user doesn't have one
-              if (!existingUser.image || existingUser.image !== oauthImage) {
-                await User.updateOne(
-                  { _id: existingUser._id },
-                  { $set: { image: oauthImage, emailVerified: new Date() } }
-                )
-                console.log("Updated OAuth user image:", oauthImage)
-                // Update existingUser object with new image
-                existingUser.image = oauthImage
+
+            // Check if user exists
+            let existingUser = await User.findOne({ email }).lean()
+
+            if (!existingUser) {
+              // Create new user for OAuth sign-in
+              console.log(`Creating new user from ${account.provider} OAuth:`, email)
+              try {
+                const newUser = await User.create({
+                  name: user.name || (profile as any)?.name || "User",
+                  email: email,
+                  image: user.image || (profile as any)?.picture || null,
+                  emailVerified: new Date(), // OAuth emails are pre-verified
+                  role: "user",
+                  provider: account.provider, // Store which OAuth provider was used
+                  // No password for OAuth users - password field is optional
+                })
+                existingUser = newUser.toObject()
+                console.log("✅ New OAuth user created:", existingUser._id)
+              } catch (createError: any) {
+                console.error("❌ Error creating OAuth user:", createError)
+                // If user creation fails, try to find user again (race condition)
+                existingUser = await User.findOne({ email }).lean()
+                if (!existingUser) {
+                  throw createError
+                }
+              }
+            } else {
+              console.log("✅ Existing user found for OAuth login:", existingUser._id)
+              
+              // Check if existing user has a password (was created via email/password)
+              if (existingUser.password) {
+                console.error(`❌ Account with email ${email} already exists with password authentication`)
+                // Prevent OAuth login - user must use their password
+                throw new Error("An account already exists with this email. Please sign in with your email and password instead.")
+              }
+              
+              // If no password, it's an OAuth account - update image if Google/Facebook provides one
+              const oauthImage = user.image || (profile as any)?.picture
+              if (oauthImage) {
+                // Update image if it's different or if user doesn't have one
+                if (!existingUser.image || existingUser.image !== oauthImage) {
+                  await User.updateOne(
+                    { _id: existingUser._id },
+                    { $set: { image: oauthImage, emailVerified: new Date() } }
+                  )
+                  console.log("✅ Updated OAuth user image:", oauthImage)
+                  // Update existingUser object with new image
+                  existingUser.image = oauthImage
+                }
               }
             }
-          }
 
-          // Update the user object with database info (use database image if available, otherwise OAuth image)
-          user.id = existingUser._id.toString()
-          user.role = existingUser.role || "user"
-          // Prioritize database image (which may have been just updated), then OAuth image
-          user.image = existingUser.image || user.image || (profile as any)?.picture || null
-          
-          return true
+            // Update the user object with database info (use database image if available, otherwise OAuth image)
+            user.id = existingUser._id.toString()
+            user.role = existingUser.role || "user"
+            // Prioritize database image (which may have been just updated), then OAuth image
+            user.image = existingUser.image || user.image || (profile as any)?.picture || null
+            
+            return true
+          } catch (dbError: any) {
+            console.error("❌ Database error in signIn callback:", dbError)
+            // Re-throw the error so it can be handled by the outer catch
+            throw dbError
+          }
         }
 
         return true
-      } catch (error) {
-        console.error("SignIn callback error:", error)
+      } catch (error: any) {
+        console.error("❌ SignIn callback error:", error)
+        // Return false to deny access, but log the error for debugging
         return false
       }
     },

@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 export interface IUser {
   name: string
   email: string
-  password: string
+  password?: string
   image?: string
   role: "user" | "owner" | "admin"
   phone?: string
@@ -30,7 +30,7 @@ export interface IUser {
 const UserSchema = new Schema<IUser>({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String, required: false }, // Optional for OAuth users
   image: { type: String },
   role: { type: String, enum: ["user", "owner", "admin"], default: "user" },
   phone: { type: String },
