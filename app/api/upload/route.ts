@@ -79,15 +79,32 @@ export async function POST(req: Request) {
       const folder = uploadType === "profile" ? "secondhome/profiles" : "secondhome/properties"
       const publicId = `${folder}/${uniqueId}`
 
-      // Upload to Cloudinary using base64 string instead of stream
-      // This sometimes works better with signature validation
-      const base64String = buffer.toString('base64')
-      const dataUri = `data:${file.type || 'image/jpeg'};base64,${base64String}`
-
-      const result = await cloudinary.uploader.upload(dataUri, {
-        public_id: publicId,
-        resource_type: "auto",
-        overwrite: true,
+      // Upload to Cloudinary using the upload_stream method with proper error handling
+      const result = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            public_id: publicId,
+            resource_type: "auto",
+            // Don't use overwrite - let Cloudinary handle duplicates
+          },
+          (error, result) => {
+            if (error) {
+              console.error("❌ Cloudinary upload error details:", {
+                message: error.message,
+                http_code: error.http_code,
+                name: error.name,
+                cloud_name: cloudName,
+                api_key: apiKey,
+              })
+              reject(error)
+            } else {
+              console.log("✅ Upload successful:", result?.public_id)
+              resolve(result)
+            }
+          }
+        )
+        
+        uploadStream.end(buffer)
       })
 
       // Use the secure URL from Cloudinary
