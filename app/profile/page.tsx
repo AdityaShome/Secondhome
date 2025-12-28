@@ -72,6 +72,7 @@ export default function ProfilePage() {
   })
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [isDeletingImage, setIsDeletingImage] = useState(false)
   const [profileCompletion, setProfileCompletion] = useState(0)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
@@ -508,6 +509,50 @@ export default function ProfilePage() {
     }
   }
 
+  const handleDeleteImage = async () => {
+    if (!profileImage) return
+
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete your profile picture?")) {
+      return
+    }
+
+    setIsDeletingImage(true)
+    try {
+      // Update user profile to remove image
+      const updateResponse = await fetch("/api/user/update-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: "" }),
+      })
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to delete profile picture")
+      }
+
+      // Update local state
+      setProfileImage(null)
+      setProfileData((prev) => ({ ...prev, image: "" }))
+
+      toast({
+        title: "Profile picture deleted",
+        description: "Your profile picture has been successfully removed.",
+      })
+
+      // Refresh the page to update session
+      window.location.reload()
+    } catch (error: any) {
+      console.error("Error deleting image:", error)
+      toast({
+        title: "Delete failed",
+        description: error.message || "Failed to delete profile picture. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeletingImage(false)
+    }
+  }
+
   const removeFavorite = async (propertyId: string) => {
     setRemovingId(propertyId)
     try {
@@ -588,7 +633,7 @@ export default function ProfilePage() {
             </Link>
 
             {/* Profile Picture */}
-            <div className="relative">
+            <div className="relative group">
               {profileImage ? (
                 <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden shadow-2xl border-4 border-white relative">
                   <Image
@@ -604,13 +649,13 @@ export default function ProfilePage() {
                   {user.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
                 </div>
               )}
-              <label className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-200 cursor-pointer">
+              <label className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-200 cursor-pointer z-10">
                 <input
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={handleImageUpload}
-                  disabled={isUploadingImage}
+                  disabled={isUploadingImage || isDeletingImage}
                 />
                 {isUploadingImage ? (
                   <Loader2 className="w-5 h-5 text-gray-700 animate-spin" />
@@ -618,6 +663,21 @@ export default function ProfilePage() {
                   <Camera className="w-5 h-5 text-gray-700" />
                 )}
               </label>
+              {/* Delete button - only show when profile image exists */}
+              {profileImage && (
+                <button
+                  onClick={handleDeleteImage}
+                  disabled={isDeletingImage || isUploadingImage}
+                  className="absolute top-2 left-2 w-10 h-10 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all border-2 border-white text-white z-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete profile picture"
+                >
+                  {isDeletingImage ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
+                </button>
+              )}
               {/* Online indicator */}
               <div className="absolute top-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-md" />
             </div>

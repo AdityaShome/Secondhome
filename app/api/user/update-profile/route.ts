@@ -10,6 +10,7 @@ const updateProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  image: z.string().optional(),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
   nationality: z.string().optional(),
@@ -70,9 +71,9 @@ export async function PUT(req: Request) {
       updateData.phone = body.phone
     }
 
-    // Update image if provided
+    // Update image if provided (can be empty string to delete)
     if (body.image !== undefined) {
-      updateData.image = body.image
+      updateData.image = body.image || null
     }
 
     // Update other profile fields
