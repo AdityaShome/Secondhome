@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Home, Mail, Phone, MapPin, Instagram, Facebook, Twitter, Linkedin, Youtube, ArrowRight, Check, Loader2, Globe2 } from "lucide-react"
+import { Home, Mail, Phone, MapPin, Instagram, Twitter, Linkedin, Youtube, ArrowRight, Check, Loader2, Globe2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
@@ -20,7 +20,6 @@ export default function Footer() {
     return [
       { Icon: Instagram, label: "Instagram", href: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://www.instagram.com/secondhome2k25?igsh=eG1waXpiZDZtZjRv" },
       { Icon: Youtube, label: "YouTube", href: process.env.NEXT_PUBLIC_YOUTUBE_URL || "#" },
-      { Icon: Facebook, label: "Facebook", href: process.env.NEXT_PUBLIC_FACEBOOK_URL || "#" },
       { Icon: Twitter, label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL || "#" },
       { Icon: Linkedin, label: "LinkedIn", href: process.env.NEXT_PUBLIC_LINKEDIN_URL || "#" },
     ]
@@ -193,7 +192,7 @@ export default function Footer() {
         </div>
 
         {/* Grid */}
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2 group">
               <Home className="h-7 w-7 text-orange-400 group-hover:scale-110 transition-transform duration-300" />
@@ -245,37 +244,12 @@ export default function Footer() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold text-white text-lg">{t("popularColleges")}</h3>
-            <ul className="space-y-3">
-              {[
-                "Dayananda Sagar College",
-                "RV College of Engineering",
-                "PES University",
-                "BMS College of Engineering",
-                "Christ University",
-              ].map((college) => (
-                <li key={college}>
-                  <Link
-                    href={`/colleges/${college.toLowerCase().replace(/\s+/g, "-")}`}
-                    className="text-slate-300 hover:text-orange-400 transition-all duration-300 flex items-center gap-2 group"
-                  >
-                    <ArrowRight className="h-3 w-3 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300 text-orange-400" />
-                    {college}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="space-y-4">
             <h3 className="font-semibold text-white text-lg">{t("contact")}</h3>
             <ul className="space-y-4 text-slate-300">
               <li className="flex items-start gap-3 group cursor-pointer">
                 <MapPin className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform duration-300" />
                 <span className="group-hover:text-white transition-colors">
-                  {t("addressLine1")}
-                  <br />
-                  {t("addressLine2")}
+                  Kumaraswamy Layout, Bengaluru
                 </span>
               </li>
               <li className="flex items-center gap-3 group cursor-pointer hover:text-orange-300 transition-colors">

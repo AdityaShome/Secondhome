@@ -204,63 +204,87 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center">
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: 'url(/secondhome_login.png)',
+          backgroundPosition: 'center center',
+          backgroundSize: 'cover',
+        }}
+      />
+      
+      {/* Gradient Overlay for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/50" />
+      
+      {/* Additional subtle overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+      
+      {/* Decorative Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-orange-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+      </div>
+
+      <div className="relative w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center z-10">
         {/* Left Side - Branding */}
-        <div className="hidden md:flex flex-col justify-center space-y-6 px-8">
-          <Link href="/" className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
+        <div className="hidden md:flex flex-col justify-center space-y-6 px-8 text-white">
+          <Link href="/" className="flex items-center gap-3 mb-8 group">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30 group-hover:bg-white/30 transition-all">
               <Home className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Second <span className="text-orange-500">Home</span>
+              <h1 className="text-3xl font-bold text-white drop-shadow-lg">
+                Second <span className="text-orange-400">Home</span>
               </h1>
-              <p className="text-sm text-gray-600">Student Accommodation Platform</p>
+              <p className="text-sm text-white/90 drop-shadow-md">Student Accommodation Platform</p>
             </div>
           </Link>
 
           <div className="space-y-4">
-            <h2 className="text-4xl font-bold text-gray-900 leading-tight">
+            <h2 className="text-5xl md:text-6xl font-extrabold text-white leading-tight drop-shadow-2xl">
               {t("login.welcomeTitle")}
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="text-xl text-white/95 drop-shadow-lg font-medium">
               {t("login.welcomeSubtitle")}
             </p>
           </div>
 
           <div className="space-y-4 pt-8">
             {[
-              { Icon: Building2, text: t("login.benefit.inventory"), color: "text-orange-500" },
-              { Icon: ShieldCheck, text: t("login.benefit.verified"), color: "text-green-600" },
-              { Icon: BadgePercent, text: t("login.benefit.brokerage"), color: "text-blue-600" },
-              { Icon: Zap, text: t("login.benefit.booking"), color: "text-amber-500" },
+              { Icon: Building2, text: t("login.benefit.inventory"), color: "text-orange-400" },
+              { Icon: ShieldCheck, text: t("login.benefit.verified"), color: "text-green-400" },
+              { Icon: BadgePercent, text: t("login.benefit.brokerage"), color: "text-blue-400" },
+              { Icon: Zap, text: t("login.benefit.booking"), color: "text-amber-400" },
             ].map((item, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <item.Icon className={`w-5 h-5 ${item.color}`} />
-                <span className="text-gray-700 font-medium">{item.text}</span>
+              <div key={index} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+                <item.Icon className={`w-6 h-6 ${item.color} drop-shadow-md`} />
+                <span className="text-white font-semibold drop-shadow-md">{item.text}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Right Side - Login Form */}
-        <Card className="border-2 border-gray-200 shadow-xl">
-          <CardContent className="p-8">
+        <Card className="border-2 border-white/30 shadow-2xl bg-white/95 backdrop-blur-xl">
+          <CardContent className="p-8 md:p-10">
             <div className="space-y-6">
               {/* Mobile Logo */}
-              <Link href="/" className="md:hidden flex items-center justify-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                  <Home className="w-5 h-5 text-white" />
+              <Link href="/" className="md:hidden flex items-center justify-center gap-2 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Home className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-2xl font-bold text-gray-900">
                   Second <span className="text-orange-500">Home</span>
                 </span>
               </Link>
 
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-gray-900">{t("login.signIn")}</h2>
-                <p className="text-gray-600">
+              <div className="space-y-3 text-center md:text-left">
+                <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  {t("login.signIn")}
+                </h2>
+                <p className="text-gray-600 text-base font-medium">
                   {isAdminAuto
                     ? t("login.adminAccess")
                     : t("login.enterCredentials")}
@@ -269,26 +293,26 @@ export default function LoginPage() {
 
               {/* Login Form */}
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-900 font-semibold">{t("login.email")}</FormLabel>
+                        <FormLabel className="text-gray-900 font-bold text-sm">{t("login.email")}</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
                             <Input
                               {...field}
                               type="email"
                               placeholder={t("login.emailPlaceholder")}
                               disabled={isLoading || isAdminAuto}
-                              className="pl-11 h-12 border-2 border-gray-300 focus:border-orange-500 bg-white text-gray-900"
+                              className="pl-12 h-14 border-2 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 bg-white text-gray-900 text-base rounded-xl transition-all shadow-sm hover:shadow-md"
                             />
                           </div>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-sm" />
                       </FormItem>
                     )}
                   />
@@ -298,35 +322,35 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center justify-between">
-                          <FormLabel className="text-gray-900 font-semibold">{t("login.password")}</FormLabel>
+                        <div className="flex items-center justify-between mb-1">
+                          <FormLabel className="text-gray-900 font-bold text-sm">{t("login.password")}</FormLabel>
                           <Link
                             href="/forgot-password"
-                            className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                            className="text-sm text-orange-600 hover:text-orange-700 font-semibold transition-colors"
                           >
                             {t("login.forgotPassword")}
                           </Link>
                         </div>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
                             <Input
                               {...field}
                               type={showPassword ? "text" : "password"}
                               placeholder={t("login.passwordPlaceholder")}
                               disabled={isLoading || isAdminAuto}
-                              className="pl-11 pr-11 h-12 border-2 border-gray-300 focus:border-orange-500 bg-white text-gray-900"
+                              className="pl-12 pr-12 h-14 border-2 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 bg-white text-gray-900 text-base rounded-xl transition-all shadow-sm hover:shadow-md"
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10"
                             >
                               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                           </div>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-sm" />
                       </FormItem>
                     )}
                   />
@@ -334,7 +358,7 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold text-base shadow-md"
+                    className="w-full h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-base shadow-lg hover:shadow-xl transition-all rounded-xl"
                   >
                     {isLoading ? (
                       <>
@@ -352,12 +376,12 @@ export default function LoginPage() {
               </Form>
 
               {/* Divider */}
-              <div className="relative">
+              <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500 font-medium">Or continue with</span>
+                  <span className="px-4 bg-white text-gray-500 font-semibold">Or continue with</span>
                 </div>
               </div>
 
@@ -367,7 +391,7 @@ export default function LoginPage() {
                 variant="outline"
                 onClick={handleGoogleSignIn}
                 disabled={isGoogleLoading || isLoading}
-                className="w-full h-12 border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold"
+                className="w-full h-14 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 text-gray-700 font-semibold rounded-xl shadow-sm hover:shadow-md transition-all"
               >
                 {isGoogleLoading ? (
                   <>
@@ -382,16 +406,16 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              <div className="text-center space-y-2">
-                <p className="text-sm text-gray-600">
+              <div className="text-center space-y-3 pt-2">
+                <p className="text-sm text-gray-600 font-medium">
                   {t("login.noAccount")}{" "}
-                  <Link href="/signup" className="text-orange-600 hover:text-orange-700 font-bold">
+                  <Link href="/signup" className="text-orange-600 hover:text-orange-700 font-bold transition-colors">
                     {t("login.signUpNow")}
                   </Link>
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 font-medium">
                   {t("login.ownerPrompt")}{" "}
-                  <Link href="/register-property" className="text-orange-600 hover:text-orange-700 font-bold">
+                  <Link href="/register-property" className="text-orange-600 hover:text-orange-700 font-bold transition-colors">
                     {t("login.registerHere")}
                   </Link>
                 </p>
