@@ -391,7 +391,7 @@ export default function LoginPage() {
                 variant="outline"
                 onClick={handleGoogleSignIn}
                 disabled={isGoogleLoading || isLoading}
-                className="w-full h-14 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 text-gray-700 font-semibold rounded-xl shadow-sm hover:shadow-md transition-all"
+                className="w-full h-14 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 text-gray-700 hover:text-gray-700 font-semibold rounded-xl shadow-sm hover:shadow-md transition-all opacity-100 hover:opacity-100 disabled:opacity-50 [&_svg]:opacity-100 [&_span]:opacity-100"
               >
                 {isGoogleLoading ? (
                   <>
@@ -401,7 +401,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <GoogleIcon />
-                    <span className="ml-2">Sign in with Google</span>
+                    <span className="ml-2 opacity-100">Sign in with Google</span>
                   </>
                 )}
               </Button>
