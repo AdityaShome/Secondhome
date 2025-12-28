@@ -77,66 +77,170 @@ export default function VerifiedPropertiesPage() {
 
   return (
     <div className="min-h-screen bg-background" key={`${lang}-${forceUpdate}`}>
-      {/* Header Section */}
-      <section className="bg-gradient-to-r from-primary to-primary/80 text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Shield className="h-8 w-8" />
-            <h1 className="text-4xl font-bold">{t("verified.title")}</h1>
-          </div>
-          <p className="text-lg text-white/90 max-w-2xl">
-            {t("verified.description")}
-          </p>
-          <div className="mt-6 flex items-center gap-4 flex-wrap">
-            <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-              <CheckCircle2 className="h-4 w-4 mr-1" />
-              {t("verified.badge.trusted")}
-            </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-              <TrendingUp className="h-4 w-4 mr-1" />
-              {t("verified.badge.leads")}
-            </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-              <Award className="h-4 w-4 mr-1" />
-              {t("verified.badge.premium")}
-            </Badge>
-          </div>
+      {/* Header Section with Background Image */}
+      <section className="relative text-white overflow-hidden min-h-[500px] md:min-h-[600px]">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/verified_secondhome.png)',
+            backgroundPosition: 'center center',
+            backgroundSize: 'cover',
+          }}
+        />
+        {/* Gradient Overlay for better text readability and blend - careful opacity */}
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/35 via-orange-500/30 to-green-600/35" />
+        {/* Additional subtle overlay for depth */}
+        <div className="absolute inset-0 bg-black/10" />
+        
+        {/* Decorative Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Floating circles */}
+          <div className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-40 h-40 bg-green-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+        </div>
+        
+        <div className="relative container mx-auto px-4 py-12 md:py-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-5xl mx-auto"
+          >
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 mb-6"
+            >
+              <Shield className="w-4 h-4" />
+              <span className="text-sm font-medium">Trusted. Checked. Guaranteed.</span>
+            </motion.div>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30">
+                <Shield className="h-7 w-7 text-white" />
+              </div>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight drop-shadow-2xl">
+                <span className="bg-gradient-to-r from-white via-orange-50 to-white bg-clip-text text-transparent">
+                  {t("verified.title")}
+                </span>
+              </h1>
+            </div>
+            
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-xl md:text-2xl text-white/95 mb-6 font-medium drop-shadow-lg max-w-3xl"
+            >
+              {t("verified.description")}
+            </motion.p>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex items-center gap-4 flex-wrap mt-8"
+            >
+              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2">
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                {t("verified.badge.trusted")}
+              </Badge>
+              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                {t("verified.badge.leads")}
+              </Badge>
+              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-4 py-2">
+                <Award className="h-4 w-4 mr-2" />
+                {t("verified.badge.premium")}
+              </Badge>
+            </motion.div>
+
+            {/* Stats Section in Hero */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl"
+            >
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+                <div className="text-3xl font-bold mb-1">{filteredProperties.length}</div>
+                <div className="text-sm text-white/80">Verified Properties</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+                <div className="text-3xl font-bold mb-1">3x</div>
+                <div className="text-sm text-white/80">More Leads</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+                <div className="text-3xl font-bold mb-1">100%</div>
+                <div className="text-sm text-white/80">Trusted</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+                <div className="text-3xl font-bold mb-1">{properties.filter(p => p.type === "PG").length}</div>
+                <div className="text-sm text-white/80">PGs</div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       {/* Search and Filter Section */}
-      <section className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder={t("verified.search.placeholder")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+      <section className="container mx-auto px-4 py-8 -mt-8 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/20"
+        >
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-orange-500 h-5 w-5" />
+              <Input
+                placeholder={t("verified.search.placeholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-14 text-base border-2 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 rounded-xl shadow-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={selectedType === "all" ? "default" : "outline"}
+                onClick={() => setSelectedType("all")}
+                className={`h-14 px-6 rounded-xl font-semibold transition-all ${
+                  selectedType === "all"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
+                    : "border-2 border-gray-300 hover:border-orange-300"
+                }`}
+              >
+                {t("verified.filter.all")}
+              </Button>
+              <Button
+                variant={selectedType === "PG" ? "default" : "outline"}
+                onClick={() => setSelectedType("PG")}
+                className={`h-14 px-6 rounded-xl font-semibold transition-all ${
+                  selectedType === "PG"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
+                    : "border-2 border-gray-300 hover:border-orange-300"
+                }`}
+              >
+                {t("home.service.pgs")}
+              </Button>
+              <Button
+                variant={selectedType === "Flat" ? "default" : "outline"}
+                onClick={() => setSelectedType("Flat")}
+                className={`h-14 px-6 rounded-xl font-semibold transition-all ${
+                  selectedType === "Flat"
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
+                    : "border-2 border-gray-300 hover:border-orange-300"
+                }`}
+              >
+                {t("home.service.flats")}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant={selectedType === "all" ? "default" : "outline"}
-              onClick={() => setSelectedType("all")}
-            >
-              {t("verified.filter.all")}
-            </Button>
-            <Button
-              variant={selectedType === "PG" ? "default" : "outline"}
-              onClick={() => setSelectedType("PG")}
-            >
-              {t("home.service.pgs")}
-            </Button>
-            <Button
-              variant={selectedType === "Flat" ? "default" : "outline"}
-              onClick={() => setSelectedType("Flat")}
-            >
-              {t("home.service.flats")}
-            </Button>
-          </div>
-        </div>
+        </motion.div>
 
         {/* Properties Grid */}
         {loading ? (
