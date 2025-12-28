@@ -36,6 +36,15 @@ export async function POST(req: Request) {
     const apiKey = cloudinaryConfig.api_key?.trim() || ""
     const apiSecret = cloudinaryConfig.api_secret?.trim() || ""
 
+    // Verify credentials format
+    if (apiSecret.length !== 27) {
+      console.error("❌ API Secret length is incorrect. Expected 27 characters, got:", apiSecret.length)
+      return NextResponse.json({ 
+        error: "Cloudinary API Secret has incorrect length. Please verify your credentials.",
+        details: `Expected 27 characters, but got ${apiSecret.length}. Please check your .env.local file.`
+      }, { status: 400 })
+    }
+
     cloudinary.config({
       cloud_name: cloudName,
       api_key: apiKey,
