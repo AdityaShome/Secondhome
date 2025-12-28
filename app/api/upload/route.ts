@@ -31,11 +31,18 @@ export async function POST(req: Request) {
       }, { status: 503 })
     }
 
-    // Configure Cloudinary with credentials
+    // Configure Cloudinary with credentials - do this fresh each time
     cloudinary.config({
+      cloud_name: cloudinaryConfig.cloud_name.trim(),
+      api_key: cloudinaryConfig.api_key.trim(),
+      api_secret: cloudinaryConfig.api_secret.trim(),
+    })
+
+    // Log configuration (without exposing secret)
+    console.log("✅ Cloudinary configured:", {
       cloud_name: cloudinaryConfig.cloud_name,
       api_key: cloudinaryConfig.api_key,
-      api_secret: cloudinaryConfig.api_secret,
+      has_secret: !!cloudinaryConfig.api_secret,
     })
 
     const formData = await req.formData()
@@ -61,25 +68,26 @@ export async function POST(req: Request) {
 
       // Generate a unique filename
       const uniqueId = uuidv4()
-      const originalName = file.name
-      const extension = originalName.split(".").pop()
       
       // Use different folder based on upload type
       const folder = uploadType === "profile" ? "secondhome/profiles" : "secondhome/properties"
       const publicId = `${folder}/${uniqueId}`
 
-      // Upload to Cloudinary
+      // Upload to Cloudinary - don't pass folder twice, only in public_id
       const result = await new Promise<any>((resolve, reject) => {
         cloudinary.uploader
           .upload_stream(
             {
               public_id: publicId,
-              folder: folder,
               resource_type: "auto",
             },
             (error, result) => {
-              if (error) reject(error)
-              else resolve(result)
+              if (error) {
+                console.error("❌ Cloudinary upload error:", error)
+                reject(error)
+              } else {
+                resolve(result)
+              }
             }
           )
           .end(buffer)
