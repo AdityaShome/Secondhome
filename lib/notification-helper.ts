@@ -15,24 +15,44 @@ export async function createNotification(data: {
   metadata?: any
 }) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://secondhome-eight.vercel.app'
-    const response = await fetch(`${baseUrl}/api/notifications/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      console.error("Failed to create notification:", error)
-      return { success: false, error }
+    // Use server-side import for better reliability
+    const { connectToDatabase } = await import("@/lib/mongodb")
+    const { Notification } = await import("@/models/notification")
+    const { getUserModel } = await import("@/models/user")
+    
+    await connectToDatabase()
+    const User = await getUserModel()
+    
+    // Get user by ID or email
+    let user
+    if (data.userId) {
+      user = await User.findById(data.userId)
+    } else if (data.userEmail) {
+      user = await User.findOne({ email: data.userEmail })
     }
-
-    const result = await response.json()
-    return { success: true, notification: result.notification }
-  } catch (error) {
+    
+    if (!user) {
+      console.error("User not found for notification:", data.userId || data.userEmail)
+      return { success: false, error: "User not found" }
+    }
+    
+    // Create notification directly in database
+    const notification = await Notification.create({
+      user: user._id,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      link: data.link,
+      image: data.image,
+      priority: data.priority || "medium",
+      metadata: data.metadata,
+      read: false,
+    })
+    
+    return { success: true, notification }
+  } catch (error: any) {
     console.error("Error creating notification:", error)
-    return { success: false, error }
+    return { success: false, error: error.message || "Unknown error" }
   }
 }
 

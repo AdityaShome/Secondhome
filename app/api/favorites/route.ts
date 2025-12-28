@@ -74,6 +74,33 @@ export async function POST(req: Request) {
 
     console.log(`✅ User ${session.user.email} added property ${propertyId} to favorites`)
 
+    // Create notification for saved property (silently, don't block on error)
+    try {
+      const Property = (await import("@/models/property")).default
+      const property = await Property.findById(propertyId).select("title location images").lean()
+      
+      if (property) {
+        const Notification = (await import("@/models/notification")).default
+        await Notification.create({
+          user: session.user.id,
+          type: "property",
+          title: "Property Saved",
+          message: `You saved ${property.title || "a property"} in ${property.location || "an area"} to your favorites.`,
+          link: `/listings/${propertyId}`,
+          image: property.images?.[0] || null,
+          priority: "low",
+          read: false,
+          metadata: {
+            propertyId: propertyId,
+            action: "saved",
+          },
+        })
+      }
+    } catch (notifError) {
+      // Silently fail - notification creation shouldn't block favorite creation
+      console.log("Failed to create notification for saved property:", notifError)
+    }
+
     return NextResponse.json({
       success: true,
       message: "Added to favorites",

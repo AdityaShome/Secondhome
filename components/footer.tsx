@@ -20,7 +20,7 @@ export default function Footer() {
     return [
       { Icon: Instagram, label: "Instagram", href: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://www.instagram.com/secondhome2k25?igsh=eG1waXpiZDZtZjRv" },
       { Icon: Youtube, label: "YouTube", href: process.env.NEXT_PUBLIC_YOUTUBE_URL || "#" },
-      { Icon: Twitter, label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL || "#" },
+      { Icon: Twitter, label: "Twitter", href: process.env.NEXT_PUBLIC_TWITTER_URL || "https://x.com/secondhome01" },
       { Icon: Linkedin, label: "LinkedIn", href: process.env.NEXT_PUBLIC_LINKEDIN_URL || "#" },
     ]
   }, [])

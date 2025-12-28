@@ -219,6 +219,17 @@ export default function ListingDetailPage() {
         const data = await res.json()
         // API returns { success: true, property: {...} }
         setProperty(data.property || data)
+        
+        // Track property view and create notification (silently, don't block on error)
+        if (user?.id && params.id) {
+          fetch(`/api/properties/${params.id}/view`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          }).catch((err) => {
+            // Silently fail - notification tracking shouldn't block page load
+            console.log("Failed to track property view:", err)
+          })
+        }
       } catch (error) {
         console.error("Error fetching property:", error)
         toast({
@@ -235,7 +246,7 @@ export default function ListingDetailPage() {
     if (params.id) {
       fetchProperty()
     }
-  }, [params.id, router, toast])
+  }, [params.id, router, toast, user?.id])
 
   if (isLoading) {
     return (
