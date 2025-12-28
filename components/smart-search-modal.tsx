@@ -277,7 +277,7 @@ export function SmartSearchModal({ isOpen, onClose }: SmartSearchModalProps) {
                 setSelectedIndex(-1)
               }}
               onKeyDown={handleKeyDown}
-              className="pl-10 md:pl-12 pr-20 md:pr-24 h-12 md:h-14 text-base md:text-lg border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 rounded-xl bg-white shadow-sm"
+              className="pl-10 md:pl-12 pr-28 md:pr-32 h-12 md:h-14 text-base md:text-lg border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 rounded-xl bg-white shadow-sm"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 md:gap-2">
               {query && (
@@ -286,6 +286,7 @@ export function SmartSearchModal({ isOpen, onClose }: SmartSearchModalProps) {
                   size="icon"
                   onClick={() => setQuery("")}
                   className="h-9 w-9 md:h-10 md:w-10 rounded-full hover:bg-orange-100 hover:text-orange-600 text-gray-700"
+                  aria-label="Clear search"
                 >
                   <X className="w-4 h-4 text-gray-700" />
                 </Button>
@@ -299,12 +300,23 @@ export function SmartSearchModal({ isOpen, onClose }: SmartSearchModalProps) {
                     ? "bg-red-100 text-red-600 animate-pulse" 
                     : "hover:bg-orange-100 hover:text-orange-600"
                 }`}
+                aria-label="Voice search"
               >
                 {isListening ? (
                   <MicOff className="w-4 h-4 md:w-5 md:h-5" />
                 ) : (
                   <Mic className="w-4 h-4 md:w-5 md:h-5" />
                 )}
+              </Button>
+              {/* Close Modal Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-9 w-9 md:h-10 md:w-10 rounded-full hover:bg-red-100 hover:text-red-600 text-gray-700 transition-all"
+                aria-label="Close search"
+              >
+                <X className="w-4 h-4 md:w-5 md:h-5" />
               </Button>
             </div>
           </div>
