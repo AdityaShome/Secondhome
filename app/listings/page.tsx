@@ -326,7 +326,7 @@ export default function ListingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-gray-50" key={`listings-${lang}-${forceUpdate}`}>
       {/* Hero Search Section */}
-      <div className="relative text-white overflow-hidden min-h-[500px] md:min-h-[600px]">
+      <div className="relative text-white overflow-hidden min-h-[600px] md:min-h-[700px]">
         {/* Background Image */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -341,45 +341,86 @@ export default function ListingsPage() {
         {/* Additional subtle overlay for depth */}
         <div className="absolute inset-0 bg-black/10" />
         
-        <div className="relative container mx-auto px-4 py-12 md:py-16">
+        {/* Decorative Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Floating circles */}
+          <div className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-40 h-40 bg-orange-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+        </div>
+        
+        <div className="relative container mx-auto px-4 py-12 md:py-20">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto text-center mb-8"
+            className="max-w-5xl mx-auto text-center mb-10"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              {t("home.heroTitle")}
-            </h1>
-            <p className="text-lg md:text-xl text-orange-100 mb-8">
-              {filteredAndSortedListings.length} {filteredAndSortedListings.length === 1 ? t("listings.property.singular") : t("listings.property.plural")} {t("listings.available")}
-            </p>
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 mb-6"
+            >
+              <Home className="w-4 h-4" />
+              <span className="text-sm font-medium">Premium Accommodations</span>
+            </motion.div>
 
-            {/* Enhanced Search Bar */}
-            <div className="bg-white rounded-2xl shadow-2xl p-2 flex gap-2">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight drop-shadow-2xl">
+              <span className="bg-gradient-to-r from-white via-orange-50 to-white bg-clip-text text-transparent">
+                {t("home.heroTitle")}
+              </span>
+            </h1>
+            
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-xl md:text-2xl text-white/95 mb-4 font-medium drop-shadow-lg"
+            >
+              {filteredAndSortedListings.length} {filteredAndSortedListings.length === 1 ? t("listings.property.singular") : t("listings.property.plural")} {t("listings.available")}
+            </motion.p>
+            
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-base md:text-lg text-white/80 mb-10 max-w-2xl mx-auto"
+            >
+              Discover your perfect home away from home with verified listings and trusted hosts
+            </motion.p>
+
+            {/* Enhanced Search Bar with Glassmorphism */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20 max-w-3xl mx-auto"
+            >
               <div className="flex-1 flex items-center gap-3 px-4">
-                <Search className="w-5 h-5 text-gray-400" />
+                <Search className="w-5 h-5 text-orange-500" />
                 <Input
                   placeholder={t("listings.search.placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-none focus-visible:ring-0 text-gray-900 placeholder:text-gray-500"
+                  className="border-none focus-visible:ring-0 text-gray-900 placeholder:text-gray-500 text-base"
                 />
               </div>
               <Button 
                 onClick={() => {/* Search logic */}}
-                className="bg-orange-500 hover:bg-orange-600 px-8"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 px-8 py-6 text-base font-semibold shadow-lg"
               >
                 {t("nav.search")}
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* Quick Filters - ALL property types from schema */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-wrap items-center justify-center gap-3"
+            transition={{ delay: 0.6 }}
+            className="flex flex-wrap items-center justify-center gap-3 max-w-4xl mx-auto"
           >
             {propertyTypes.map((type) => {
               const count = listings.filter(p => p.type === type).length
@@ -397,8 +438,8 @@ export default function ListingsPage() {
                     }))
                   }}
                   className={filters.propertyTypes.includes(type) 
-                    ? "bg-white text-orange-600 hover:bg-white/90" 
-                    : "bg-white/20 text-white hover:bg-white/30"
+                    ? "bg-white text-orange-600 hover:bg-white/90 shadow-lg backdrop-blur-sm border-2 border-white" 
+                    : "bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border border-white/30 shadow-md"
                   }
                 >
                   {type === "PG" && <Home className="w-4 h-4 mr-2" />}
@@ -410,6 +451,31 @@ export default function ListingsPage() {
                 </Button>
               )
             })}
+          </motion.div>
+
+          {/* Stats Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+          >
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{listings.length}</div>
+              <div className="text-sm text-white/80">Total Properties</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{listings.filter(p => p.verificationStatus === "verified").length}</div>
+              <div className="text-sm text-white/80">Verified</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{listings.filter(p => p.type === "PG").length}</div>
+              <div className="text-sm text-white/80">PGs</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{listings.filter(p => p.type === "Flat").length}</div>
+              <div className="text-sm text-white/80">Flats</div>
+            </div>
           </motion.div>
         </div>
       </div>
