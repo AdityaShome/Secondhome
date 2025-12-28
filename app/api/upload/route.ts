@@ -119,14 +119,15 @@ export async function POST(req: Request) {
         uploadError = error
         console.log("⚠️ Method 1 (stream) failed, trying method 2...", error.message)
 
-        // Method 2: Try base64 upload
+        // Method 2: Try base64 upload with folder only
         try {
           const base64String = buffer.toString('base64')
           const dataUri = `data:${file.type || 'image/jpeg'};base64,${base64String}`
           
           result = await cloudinary.uploader.upload(dataUri, {
-            public_id: publicId,
+            folder: folder,
             resource_type: "auto",
+            // Don't include public_id - it causes signature issues
           })
           console.log("✅ Upload successful (method 2 - base64):", result?.public_id)
         } catch (error2: any) {
