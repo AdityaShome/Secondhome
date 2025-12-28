@@ -349,26 +349,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* Stats Bar - Only show for authenticated users */}
-      {isAuthenticated && <section className="bg-orange-50 border-b border-orange-100 py-8">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto grid grid-cols-2 gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-1">
-                {stats.properties || "500+"}
-              </div>
-              <div className="text-sm text-gray-700 font-medium">{t("home.stats.propertiesListed")}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-1">
-                {stats.cities || "25+"}
-              </div>
-              <div className="text-sm text-gray-700 font-medium">{t("home.stats.cities")}</div>
-            </div>
-          </div>
-        </div>
-      </section>}
-
       {/* Browse by Category - With Real Images - Only show for authenticated users */}
       {isAuthenticated && <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
