@@ -160,8 +160,23 @@ export async function POST(req: Request) {
       message: "Files uploaded successfully",
       imageUrls: uploadedUrls,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error uploading files:", error)
-    return NextResponse.json({ error: "Failed to upload files" }, { status: 500 })
+    
+    // Provide specific error messages
+    const errorMessage = error?.message || "Failed to upload files"
+    
+    // Check for signature errors
+    if (errorMessage.includes("Invalid Signature") || errorMessage.includes("signature")) {
+      return NextResponse.json({ 
+        error: "Cloudinary authentication failed. Please verify your API credentials (Cloud Name, API Key, and API Secret) match in your Cloudinary dashboard.",
+        details: "The API secret doesn't match your Cloud Name and API Key. Please check https://console.cloudinary.com/settings/api-keys"
+      }, { status: 401 })
+    }
+    
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: error?.details || "Please check your Cloudinary configuration and try again."
+    }, { status: 500 })
   }
 }
