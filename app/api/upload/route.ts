@@ -95,14 +95,14 @@ export async function POST(req: Request) {
       let result: any = null
       let uploadError: any = null
 
-      // Method 1: Try upload_stream first with minimal parameters
+      // Method 1: Try upload_stream with folder only (no public_id to avoid signature issues)
       try {
         result = await new Promise<any>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
-              // Don't specify public_id in options - let it be in the stream
+              folder: folder,
               resource_type: "auto",
-              // Remove any parameters that might cause signature issues
+              // Don't include public_id here - it causes signature issues
             },
             (error, result) => {
               if (error) {
@@ -114,17 +114,6 @@ export async function POST(req: Request) {
           )
           uploadStream.end(buffer)
         })
-        
-        // Set public_id after upload if needed
-        if (result && publicId) {
-          // Rename to desired public_id
-          try {
-            result = await cloudinary.uploader.rename(result.public_id, publicId)
-          } catch (renameError) {
-            // If rename fails, use the original result
-            console.log("⚠️ Could not rename, using original public_id")
-          }
-        }
         console.log("✅ Upload successful (method 1 - stream):", result?.public_id)
       } catch (error: any) {
         uploadError = error
