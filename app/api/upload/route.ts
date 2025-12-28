@@ -139,15 +139,21 @@ export async function POST(req: Request) {
             })
             console.log("✅ Upload successful (method 3 - no public_id):", result?.public_id)
           } catch (error3: any) {
-            // All methods failed
-            console.error("❌ All upload methods failed:", {
+            // All methods failed - this means the API secret is definitely wrong
+            console.error("❌ All upload methods failed - API Secret is incorrect:", {
               method1: uploadError?.message,
               method2: error2?.message,
               method3: error3?.message,
+              cloud_name: cloudName,
+              api_key: apiKey,
             })
+            
+            // Provide very specific error message
             throw new Error(
-              `Upload failed: ${error3?.message || uploadError?.message || 'Unknown error'}. ` +
-              `Please verify your Cloudinary API credentials are correct.`
+              `CLOUDINARY_API_SECRET is incorrect. ` +
+              `The secret '${apiSecret.substring(0, 5)}...${apiSecret.substring(apiSecret.length - 3)}' ` +
+              `does not match Cloud Name '${cloudName}' and API Key '${apiKey}'. ` +
+              `Please go to https://console.cloudinary.com/settings/api-keys and copy the EXACT API Secret for this account.`
             )
           }
         }
