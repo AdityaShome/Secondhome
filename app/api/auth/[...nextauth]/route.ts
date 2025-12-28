@@ -150,12 +150,105 @@ if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
 const handler = NextAuth({
   providers,
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      try {
+        // Allow credentials provider (regular email/password login)
+        if (account?.provider === "credentials") {
+          return true
+        }
+
+        // Handle OAuth providers (Google, Facebook, etc.)
+        if (account?.provider === "google" || account?.provider === "facebook") {
+          await connectToDatabase()
+          const User = await getUserModel()
+          
+          const email = user.email?.toLowerCase().trim()
+          if (!email) {
+            console.error("No email provided by OAuth provider")
+            return false
+          }
+
+          // Check if user exists
+          let existingUser = await User.findOne({ email }).lean()
+
+          if (!existingUser) {
+            // Create new user for OAuth sign-in
+            console.log(`Creating new user from ${account.provider} OAuth:`, email)
+            const newUser = await User.create({
+              name: user.name || (profile as any)?.name || "User",
+              email: email,
+              image: user.image || (profile as any)?.picture || null,
+              emailVerified: new Date(), // OAuth emails are pre-verified
+              role: "user",
+              provider: account.provider, // Store which OAuth provider was used
+              // No password for OAuth users
+            })
+            existingUser = newUser.toObject()
+            console.log("New OAuth user created:", existingUser._id)
+          } else {
+            console.log("Existing user found for OAuth login:", existingUser._id)
+            
+            // Check if existing user has a password (was created via email/password)
+            if (existingUser.password) {
+              console.error(`❌ Account with email ${email} already exists with password authentication`)
+              // Prevent OAuth login - user must use their password
+              throw new Error("An account already exists with this email. Please sign in with your email and password instead.")
+            }
+            
+            // If no password, it's an OAuth account - update image if Google/Facebook provides one
+            const oauthImage = user.image || (profile as any)?.picture
+            if (oauthImage) {
+              // Update image if it's different or if user doesn't have one
+              if (!existingUser.image || existingUser.image !== oauthImage) {
+                await User.updateOne(
+                  { _id: existingUser._id },
+                  { $set: { image: oauthImage, emailVerified: new Date() } }
+                )
+                console.log("Updated OAuth user image:", oauthImage)
+                // Update existingUser object with new image
+                existingUser.image = oauthImage
+              }
+            }
+          }
+
+          // Update the user object with database info (use database image if available, otherwise OAuth image)
+          user.id = existingUser._id.toString()
+          user.role = existingUser.role || "user"
+          // Prioritize database image (which may have been just updated), then OAuth image
+          user.image = existingUser.image || user.image || (profile as any)?.picture || null
+          
+          return true
+        }
+
+        return true
+      } catch (error) {
+        console.error("SignIn callback error:", error)
+        return false
+      }
+    },
+    async jwt({ token, user, trigger }) {
       try {
         if (user) {
           token.id = user.id
           token.role = user.role || "user"
+          // Store image from user (from Google/Facebook OAuth or database)
+          token.image = user.image || null
         }
+        
+        // If session is being updated (e.g., after profile picture change), fetch fresh user data
+        if (trigger === "update") {
+          try {
+            await connectToDatabase()
+            const User = await getUserModel()
+            const dbUser = await User.findById(token.id).select("image").lean()
+            if (dbUser) {
+              token.image = dbUser.image || null
+            }
+          } catch (error) {
+            console.error("Failed to fetch user image in JWT callback:", error)
+          }
+        }
+        
         return token
       } catch (error) {
         console.error("JWT callback error:", error)
@@ -167,6 +260,26 @@ const handler = NextAuth({
         if (token && session?.user) {
           session.user.id = token.id as string
           session.user.role = (token.role as string) || "user"
+          
+          // Always fetch fresh image from database to ensure it's up to date
+          if (token.id) {
+            try {
+              await connectToDatabase()
+              const User = await getUserModel()
+              const dbUser = await User.findById(token.id).select("image").lean()
+              if (dbUser?.image) {
+                session.user.image = dbUser.image
+              } else {
+                session.user.image = null
+              }
+            } catch (error) {
+              console.error("Failed to fetch user image in session callback:", error)
+              // Fallback to token image if database fetch fails
+              session.user.image = (token.image as string) || null
+            }
+          } else {
+            session.user.image = (token.image as string) || null
+          }
         }
         return session
       } catch (error) {

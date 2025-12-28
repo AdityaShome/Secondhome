@@ -116,6 +116,10 @@ export default function ProfilePage() {
     }
 
     if (user) {
+      // Set profile image from session first (for Google OAuth users)
+      if (user.image && !profileImage) {
+        setProfileImage(user.image)
+      }
       fetchProfileData()
     }
   }, [user, loading, router])
@@ -146,8 +150,12 @@ export default function ProfilePage() {
           pincode: userData.pincode || "",
           image: userData.image || "",
         })
-        // Set profile image from user data or session
-        setProfileImage(userData.image || user?.image || null)
+        // Set profile image - prioritize database image, then session image, then null
+        // This ensures Google profile pictures are displayed even if database fetch fails
+        const imageToUse = userData.image || user?.image || null
+        if (imageToUse) {
+          setProfileImage(imageToUse)
+        }
         calculateProfileCompletion(userData)
       }
     } catch (error) {
@@ -492,7 +500,7 @@ export default function ProfilePage() {
       setProfileImage(imageUrl)
       setProfileData((prev) => ({ ...prev, image: imageUrl }))
 
-      // Update session to refresh navbar immediately
+      // Update session to refresh navbar immediately - this triggers JWT callback with "update" trigger
       await updateSession()
 
       toast({
@@ -500,8 +508,10 @@ export default function ProfilePage() {
         description: "Your profile picture has been successfully updated.",
       })
 
-      // Refresh the page to ensure everything is in sync
-      window.location.reload()
+      // Small delay to ensure session update completes, then reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } catch (error: any) {
       console.error("Error uploading image:", error)
       toast({
@@ -539,7 +549,7 @@ export default function ProfilePage() {
       setProfileImage(null)
       setProfileData((prev) => ({ ...prev, image: "" }))
 
-      // Update session to refresh navbar immediately
+      // Update session to refresh navbar immediately - this triggers JWT callback with "update" trigger
       await updateSession()
 
       toast({
@@ -547,8 +557,10 @@ export default function ProfilePage() {
         description: "Your profile picture has been successfully removed.",
       })
 
-      // Refresh the page to ensure everything is in sync
-      window.location.reload()
+      // Small delay to ensure session update completes, then reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } catch (error: any) {
       console.error("Error deleting image:", error)
       toast({
