@@ -1,12 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { X, Send, Minimize2, Maximize2, Loader2, Sparkles } from "lucide-react"
+import { X, Send, Minimize2, Maximize2, Loader2, Sparkles, HeadphonesIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { useSession } from "next-auth/react"
+import { usePathname } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 
 interface Message {
   id: string
@@ -16,6 +19,9 @@ interface Message {
 }
 
 export function SmartChatbot() {
+  const { data: session } = useSession()
+  const pathname = usePathname()
+  const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
@@ -29,6 +35,8 @@ export function SmartChatbot() {
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [wantsExecutive, setWantsExecutive] = useState(false)
+  const [showExecutiveButton, setShowExecutiveButton] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -45,7 +53,38 @@ export function SmartChatbot() {
     "Properties near my college",
     "Girls PG options",
     "What cities do you serve?",
+    "Connect with executive",
   ]
+
+  // Track user activity and build context
+  const getUserContext = () => {
+    const context: string[] = []
+    
+    // Current page context
+    if (pathname) {
+      if (pathname.startsWith("/listings/")) {
+        const propertyId = pathname.split("/listings/")[1]
+        context.push(`User is currently viewing property page: ${propertyId}`)
+      } else if (pathname === "/listings") {
+        context.push("User is browsing the listings page")
+      } else if (pathname === "/messes") {
+        context.push("User is browsing mess options")
+      } else if (pathname === "/map") {
+        context.push("User is viewing the map")
+      } else if (pathname === "/verified") {
+        context.push("User is viewing verified properties")
+      }
+    }
+    
+    // User session context
+    if (session?.user) {
+      context.push(`User is logged in as: ${session.user.name || session.user.email}`)
+    } else {
+      context.push("User is browsing as guest")
+    }
+    
+    return context.join(". ")
+  }
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
@@ -62,6 +101,13 @@ export function SmartChatbot() {
     setIsLoading(true)
     setIsTyping(true)
 
+    // Check if user wants executive chat
+    const wantsExec = /executive|human|agent|talk to someone|speak with|connect with|help me|frustrated|angry|complaint|issue|problem/i.test(inputMessage.trim())
+    if (wantsExec) {
+      setWantsExecutive(true)
+      setShowExecutiveButton(true)
+    }
+
     try {
       // Prepare conversation history for context
       const conversationHistory = messages
@@ -71,6 +117,9 @@ export function SmartChatbot() {
           content: msg.content,
         }))
 
+      // Get user context
+      const userContext = getUserContext()
+
       const response = await fetch("/api/chatbot", {
         method: "POST",
         headers: {
@@ -79,6 +128,7 @@ export function SmartChatbot() {
         body: JSON.stringify({
           message: inputMessage.trim(),
           conversationHistory,
+          userContext,
         }),
       })
 
@@ -87,6 +137,11 @@ export function SmartChatbot() {
       // Even if response is not ok, try to use the response from API
       if (!response.ok && !data.response) {
         throw new Error(data.error || "Failed to get response")
+      }
+
+      // Check if AI detected executive request
+      if (data.wantsExecutive) {
+        setShowExecutiveButton(true)
       }
 
       // Simulate typing delay for better UX
@@ -118,6 +173,63 @@ export function SmartChatbot() {
     }
   }
 
+  const handleExecutiveChat = async () => {
+    if (!session?.user?.email) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to connect with an executive.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setWantsExecutive(true)
+    setIsLoading(true)
+
+    try {
+      const res = await fetch("/api/contact/escalate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: session.user.name || "User",
+          email: session.user.email,
+          phone: "",
+          transcript: messages.map((m) => ({
+            role: m.role === "assistant" ? "ai" : "user",
+            content: m.content,
+            ts: m.timestamp.getTime(),
+          })),
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to connect")
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content: "✅ I've connected you with one of our executives! They'll reach out to you shortly via email. You can also continue chatting with me if you have any other questions. 😊",
+          timestamp: new Date(),
+        },
+      ])
+
+      toast({
+        title: "Executive Notified",
+        description: "An executive has been notified and will contact you soon.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Could not connect to executive. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -126,6 +238,10 @@ export function SmartChatbot() {
   }
 
   const handleQuickAction = (action: string) => {
+    if (action.toLowerCase().includes("executive") || action.toLowerCase().includes("connect")) {
+      handleExecutiveChat()
+      return
+    }
     setInputMessage(action)
     setTimeout(() => handleSendMessage(), 100)
   }
@@ -440,6 +556,20 @@ export function SmartChatbot() {
                         {action}
                       </button>
                     ))}
+                  </div>
+                )}
+
+                {/* Executive Chat Button */}
+                {showExecutiveButton && (
+                  <div className="mt-4 md:mt-6">
+                    <Button
+                      onClick={handleExecutiveChat}
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-2.5 rounded-lg shadow-md flex items-center justify-center gap-2"
+                    >
+                      <HeadphonesIcon className="w-4 h-4" />
+                      {isLoading ? "Connecting..." : "Connect with Executive"}
+                    </Button>
                   </div>
                 )}
               </ScrollArea>

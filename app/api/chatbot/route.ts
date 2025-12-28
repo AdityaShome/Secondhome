@@ -3,10 +3,17 @@ import Groq from "groq-sdk"
 import { connectToDatabase } from "@/lib/mongodb"
 import { Property } from "@/models/property"
 import { Mess } from "@/models/mess"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth-options"
+import { Notification } from "@/models/notification"
+import { getUserModel } from "@/models/user"
 
 export async function POST(request: Request) {
   try {
-    const { message, conversationHistory } = await request.json()
+    const { message, conversationHistory, userContext } = await request.json()
+    
+    // Get user session for personalized context
+    const session = await getServerSession(authOptions)
 
     if (!message || message.trim().length === 0) {
       return NextResponse.json({
@@ -27,6 +34,71 @@ export async function POST(request: Request) {
 
     // Connect to database and fetch real data
     await connectToDatabase()
+
+    // Get user's browsing history if logged in
+    let userBrowsingHistory = ""
+    let userPreferences = ""
+    let recentPropertiesViewed: any[] = []
+    
+    if (session?.user?.id) {
+      try {
+        // Get user's recent property views from notifications (last 24 hours)
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        const propertyViews = await Notification.find({
+          user: session.user.id,
+          type: "property",
+          "metadata.propertyId": { $exists: true },
+          createdAt: { $gte: oneDayAgo },
+        })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .lean()
+
+        if (propertyViews.length > 0) {
+          const propertyIds = propertyViews
+            .map((n: any) => n.metadata?.propertyId)
+            .filter((id: any) => id && typeof id === 'string')
+          
+          if (propertyIds.length > 0) {
+            recentPropertiesViewed = await Property.find({
+              _id: { $in: propertyIds },
+            })
+              .select("title location city price type gender amenities rating")
+              .lean()
+
+            if (recentPropertiesViewed.length > 0) {
+              userBrowsingHistory = `USER'S RECENT BROWSING ACTIVITY (Last 24 hours):
+${recentPropertiesViewed.map((p: any, i: number) => 
+  `${i + 1}. ${p.title} - ${p.location}, ${p.city} - ₹${p.price}/month - ${p.type} - ${p.gender}`
+).join("\n")}
+
+This user has been actively looking at these properties. Use this context to understand their preferences and provide personalized recommendations.`
+            }
+          }
+        }
+
+        // Get user's favorites if available
+        const User = await getUserModel()
+        const user = await User.findById(session.user.id).select("favorites").lean()
+        if (user?.favorites && user.favorites.length > 0) {
+          const favoriteProperties = await Property.find({
+            _id: { $in: user.favorites },
+          })
+            .select("title location city price type")
+            .lean()
+          
+          if (favoriteProperties.length > 0) {
+            userPreferences = `USER'S SAVED FAVORITES:
+${favoriteProperties.map((p: any) => `- ${p.title} in ${p.location}, ${p.city} (₹${p.price}/month)`).join("\n")}
+
+The user has saved these properties, indicating strong interest.`
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user browsing history:", error)
+        // Continue without user context if there's an error
+      }
+    }
 
     // Fetch all approved properties
     const properties = await Property.find({
@@ -102,6 +174,9 @@ export async function POST(request: Request) {
       unisex: properties.filter((p: any) => p.gender === "Unisex").length,
     }
 
+    // Detect if user wants executive chat
+    const wantsExecutive = /executive|human|agent|talk to someone|speak with|connect with|help me|frustrated|angry|complaint|issue|problem/i.test(message)
+    
     // Create comprehensive context for AI
     const systemContext = `You are SecondHome AI Assistant, a friendly and helpful chatbot for SecondHome - India's #1 student accommodation platform.
 
@@ -111,6 +186,7 @@ YOUR IDENTITY:
 - You have access to REAL-TIME data from our database
 - You ONLY answer questions about SecondHome and student accommodations
 - You DO NOT answer general questions unrelated to accommodations
+${session?.user ? `- Current user: ${session.user.name || session.user.email} (logged in)` : "- Current user: Guest (not logged in)"}
 
 REAL-TIME DATABASE STATISTICS:
 - Total Properties Listed: ${stats.totalProperties}
@@ -143,6 +219,10 @@ GENDER-WISE AVAILABILITY:
 TOP RATED PROPERTIES:
 ${stats.topRatedProperties.map((p, i) => `${i + 1}. ${p.title} - ${p.location} - ₹${p.price}/month - ⭐${p.rating}`).join("\n")}
 
+${userBrowsingHistory ? `\n${userBrowsingHistory}\n` : ""}
+${userPreferences ? `\n${userPreferences}\n` : ""}
+${userContext ? `\nADDITIONAL USER CONTEXT:\n${userContext}\n` : ""}
+
 HOW TO RESPOND:
 1. Be conversational, friendly, and helpful
 2. Use the REAL data provided above - NO MADE UP INFORMATION
@@ -155,6 +235,9 @@ HOW TO RESPOND:
 9. FORMAT YOUR RESPONSES: Use bullet points (•) for multiple items, properties, or features. Break long responses into clear, readable points. Each property, feature, or key information should be on its own bullet point.
 10. Keep responses concise but informative
 11. Always end with a helpful suggestion or question
+12. PERSONALIZATION: If the user has viewed properties recently, reference them and suggest similar ones. Understand their preferences from browsing history.
+13. FRUSTRATION DETECTION: If the user seems frustrated, angry, or asks to "talk to someone", "connect with executive", or "speak with human", acknowledge their need and offer to connect them with an executive. Say: "I understand you'd like to speak with one of our executives. I can connect you right away! Would you like me to do that?"
+14. EXECUTIVE CHAT: When user requests executive chat, be helpful and offer to escalate. Don't try to solve complex issues yourself if they ask for human help.
 
 EXAMPLE GOOD RESPONSES:
 User: "Show me PGs under 10k"
@@ -185,6 +268,7 @@ Remember: You are a REAL-TIME assistant with access to actual database. Use the 
 ${conversationContext ? `CONVERSATION HISTORY:\n${conversationContext}\n` : ""}
 
 USER'S CURRENT MESSAGE: "${message}"
+${wantsExecutive ? "\n⚠️ USER IS REQUESTING TO SPEAK WITH AN EXECUTIVE/HUMAN. Acknowledge this and offer to connect them." : ""}
 
 Respond as SecondHome AI Assistant (keep it under 150 words):`
 
@@ -206,6 +290,14 @@ Respond as SecondHome AI Assistant (keep it under 150 words):`
         totalProperties: stats.totalProperties,
         citiesServed: stats.totalCities,
       },
+      wantsExecutive,
+      recentPropertiesViewed: recentPropertiesViewed.slice(0, 5).map((p: any) => ({
+        id: p._id.toString(),
+        title: p.title,
+        location: p.location,
+        city: p.city,
+        price: p.price,
+      })),
       timestamp: new Date().toISOString(),
     })
   } catch (error: any) {
