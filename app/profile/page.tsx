@@ -68,7 +68,10 @@ export default function ProfilePage() {
     city: "",
     state: "",
     pincode: "",
+    image: "",
   })
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [profileCompletion, setProfileCompletion] = useState(0)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
@@ -138,7 +141,10 @@ export default function ProfilePage() {
           city: userData.city || "",
           state: userData.state || "",
           pincode: userData.pincode || "",
+          image: userData.image || "",
         })
+        // Set profile image from user data or session
+        setProfileImage(userData.image || user?.image || null)
         calculateProfileCompletion(userData)
       }
     } catch (error) {
@@ -411,6 +417,83 @@ export default function ProfilePage() {
     router.push(`/profile?tab=${value}`, { scroll: false })
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsUploadingImage(true)
+    try {
+      // Upload image
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "profile")
+
+      const uploadResponse = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload image")
+      }
+
+      const uploadData = await uploadResponse.json()
+      const imageUrl = uploadData.url
+
+      // Update user profile with new image
+      const updateResponse = await fetch("/api/user/update-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageUrl }),
+      })
+
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update profile")
+      }
+
+      // Update local state
+      setProfileImage(imageUrl)
+      setProfileData((prev) => ({ ...prev, image: imageUrl }))
+
+      toast({
+        title: "Profile picture updated",
+        description: "Your profile picture has been successfully updated.",
+      })
+
+      // Refresh the page to update session
+      window.location.reload()
+    } catch (error: any) {
+      console.error("Error uploading image:", error)
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload profile picture. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
   const removeFavorite = async (propertyId: string) => {
     setRemovingId(propertyId)
     try {
@@ -492,12 +575,35 @@ export default function ProfilePage() {
 
             {/* Profile Picture */}
             <div className="relative">
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-4xl md:text-5xl font-bold shadow-2xl border-4 border-white">
-                {user.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
-              </div>
-              <button className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-200">
-                <Camera className="w-5 h-5 text-gray-700" />
-              </button>
+              {profileImage ? (
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden shadow-2xl border-4 border-white relative">
+                  <Image
+                    src={profileImage}
+                    alt={user.name || "Profile"}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-4xl md:text-5xl font-bold shadow-2xl border-4 border-white">
+                  {user.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
+                </div>
+              )}
+              <label className="absolute bottom-0 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow border-2 border-gray-200 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={isUploadingImage}
+                />
+                {isUploadingImage ? (
+                  <Loader2 className="w-5 h-5 text-gray-700 animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5 text-gray-700" />
+                )}
+              </label>
               {/* Online indicator */}
               <div className="absolute top-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-md" />
             </div>

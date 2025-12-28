@@ -70,6 +70,11 @@ export async function PUT(req: Request) {
       updateData.phone = body.phone
     }
 
+    // Update image if provided
+    if (body.image !== undefined) {
+      updateData.image = body.image
+    }
+
     // Update other profile fields
     if (body.dateOfBirth !== undefined) updateData.dateOfBirth = body.dateOfBirth
     if (body.gender !== undefined) updateData.gender = body.gender

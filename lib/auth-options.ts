@@ -234,6 +234,20 @@ export const authOptions: NextAuthOptions = {
         if (token && session?.user) {
           session.user.id = token.id as string
           session.user.role = (token.role as string) || "user"
+          
+          // Fetch user image from database
+          if (token.id) {
+            try {
+              await connectToDatabase()
+              const User = await getUserModel()
+              const dbUser = await User.findById(token.id).select("image").lean()
+              if (dbUser?.image) {
+                session.user.image = dbUser.image
+              }
+            } catch (error) {
+              console.error("Failed to fetch user image:", error)
+            }
+          }
         }
         return session
       } catch (error) {

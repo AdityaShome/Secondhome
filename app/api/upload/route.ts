@@ -25,6 +25,9 @@ export async function POST(req: Request) {
     const singleFile = formData.get("file") as File | null
     const multipleFiles = formData.getAll("images") as File[]
     
+    // Check upload type (profile or property)
+    const uploadType = formData.get("type") as string | null || "property"
+    
     const files = singleFile ? [singleFile] : multipleFiles
 
     if (files.length === 0) {
@@ -41,7 +44,10 @@ export async function POST(req: Request) {
       const uniqueId = uuidv4()
       const originalName = file.name
       const extension = originalName.split(".").pop()
-      const publicId = `secondhome/properties/${uniqueId}`
+      
+      // Use different folder based on upload type
+      const folder = uploadType === "profile" ? "secondhome/profiles" : "secondhome/properties"
+      const publicId = `${folder}/${uniqueId}`
 
       // Upload to Cloudinary
       const result = await new Promise<any>((resolve, reject) => {
@@ -49,7 +55,7 @@ export async function POST(req: Request) {
           .upload_stream(
             {
               public_id: publicId,
-              folder: "secondhome/properties",
+              folder: folder,
               resource_type: "auto",
             },
             (error, result) => {
