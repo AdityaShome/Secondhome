@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,6 +46,7 @@ export default function ProfilePage() {
   const searchParams = useSearchParams()
   const { user, loading } = useAuth()
   const { toast } = useToast()
+  const { update: updateSession } = useSession()
 
   // Tab management
   const tabFromUrl = searchParams.get("tab") || "overview"
@@ -490,12 +492,15 @@ export default function ProfilePage() {
       setProfileImage(imageUrl)
       setProfileData((prev) => ({ ...prev, image: imageUrl }))
 
+      // Update session to refresh navbar immediately
+      await updateSession()
+
       toast({
         title: "Profile picture updated",
         description: "Your profile picture has been successfully updated.",
       })
 
-      // Refresh the page to update session
+      // Refresh the page to ensure everything is in sync
       window.location.reload()
     } catch (error: any) {
       console.error("Error uploading image:", error)
@@ -534,12 +539,15 @@ export default function ProfilePage() {
       setProfileImage(null)
       setProfileData((prev) => ({ ...prev, image: "" }))
 
+      // Update session to refresh navbar immediately
+      await updateSession()
+
       toast({
         title: "Profile picture deleted",
         description: "Your profile picture has been successfully removed.",
       })
 
-      // Refresh the page to update session
+      // Refresh the page to ensure everything is in sync
       window.location.reload()
     } catch (error: any) {
       console.error("Error deleting image:", error)
