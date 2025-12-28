@@ -79,57 +79,134 @@ export default function MessesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 text-white overflow-hidden">
+      <div className="relative text-white overflow-hidden min-h-[500px] md:min-h-[600px]">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/mess_secondhome.png)',
+            backgroundPosition: 'center center',
+            backgroundSize: 'cover',
+          }}
+        />
+        {/* Gradient Overlay for better text readability and blend - careful opacity */}
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/30 via-orange-500/25 to-red-600/35" />
+        {/* Additional subtle overlay for depth */}
         <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
         
-        <div className="relative container mx-auto px-4 py-12">
+        {/* Decorative Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Floating circles */}
+          <div className="absolute top-20 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute bottom-32 right-20 w-40 h-40 bg-orange-400/10 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-white/5 rounded-full blur-xl" />
+        </div>
+        
+        <div className="relative container mx-auto px-4 py-12 md:py-16">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto text-center mb-8"
+            className="max-w-5xl mx-auto text-center mb-10"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Find Messes Near Your College
-            </h1>
-            <p className="text-lg md:text-xl text-orange-100 mb-8">
-              {filteredMesses.length} {filteredMesses.length === 1 ? 'mess' : 'messes'} available
-            </p>
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 mb-6"
+            >
+              <UtensilsCrossed className="w-4 h-4" />
+              <span className="text-sm font-medium">Delicious Home-Cooked Meals</span>
+            </motion.div>
 
-            {/* Search Bar */}
-            <div className="bg-white rounded-2xl shadow-2xl p-2 flex gap-2">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight drop-shadow-2xl">
+              <span className="bg-gradient-to-r from-white via-orange-50 to-white bg-clip-text text-transparent">
+                Find Messes Near Your College
+              </span>
+            </h1>
+            
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-xl md:text-2xl text-white/95 mb-4 font-medium drop-shadow-lg"
+            >
+              {filteredMesses.length} {filteredMesses.length === 1 ? 'mess' : 'messes'} available
+            </motion.p>
+            
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-base md:text-lg text-white/80 mb-10 max-w-2xl mx-auto"
+            >
+              Discover authentic home-cooked meals with verified mess services near your campus
+            </motion.p>
+
+            {/* Enhanced Search Bar with Glassmorphism */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20 max-w-3xl mx-auto"
+            >
               <div className="flex-1 flex items-center gap-3 px-4">
-                <Search className="w-5 h-5 text-gray-400" />
+                <Search className="w-5 h-5 text-orange-500" />
                 <Input
                   placeholder="Search by name, location, or cuisine..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-none focus-visible:ring-0 text-gray-900 placeholder:text-gray-500"
+                  className="border-none focus-visible:ring-0 text-gray-900 placeholder:text-gray-500 text-base"
                 />
               </div>
               <Button 
-                className="bg-orange-500 hover:bg-orange-600 px-8"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 px-8 py-6 text-base font-semibold shadow-lg"
               >
                 Search
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* List Your Mess Button */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex justify-center"
+            transition={{ delay: 0.6 }}
+            className="flex justify-center mb-8"
           >
             <Button
               size="lg"
               onClick={handleListYourMess}
-              className="bg-white text-orange-600 hover:bg-white/90 shadow-xl"
+              className="bg-white/95 backdrop-blur-md text-orange-600 hover:bg-white shadow-xl border-2 border-white/50 px-8 py-6 text-base font-semibold"
             >
               <Plus className="w-5 h-5 mr-2" />
               List Your Mess Service
             </Button>
+          </motion.div>
+
+          {/* Stats Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+          >
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{messes.length}</div>
+              <div className="text-sm text-white/80">Total Messes</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{messes.filter(m => m.homeDeliveryAvailable).length}</div>
+              <div className="text-sm text-white/80">Home Delivery</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{messes.filter(m => m.rating >= 4).length}</div>
+              <div className="text-sm text-white/80">Highly Rated</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
+              <div className="text-3xl font-bold mb-1">{new Set(messes.map(m => m.city).filter(Boolean)).size}</div>
+              <div className="text-sm text-white/80">Cities</div>
+            </div>
           </motion.div>
         </div>
       </div>
