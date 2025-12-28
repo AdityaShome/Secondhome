@@ -32,17 +32,23 @@ export async function POST(req: Request) {
     }
 
     // Configure Cloudinary with credentials - do this fresh each time
+    const cloudName = cloudinaryConfig.cloud_name?.trim() || ""
+    const apiKey = cloudinaryConfig.api_key?.trim() || ""
+    const apiSecret = cloudinaryConfig.api_secret?.trim() || ""
+
     cloudinary.config({
-      cloud_name: cloudinaryConfig.cloud_name.trim(),
-      api_key: cloudinaryConfig.api_key.trim(),
-      api_secret: cloudinaryConfig.api_secret.trim(),
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
     })
 
     // Log configuration (without exposing secret)
     console.log("✅ Cloudinary configured:", {
-      cloud_name: cloudinaryConfig.cloud_name,
-      api_key: cloudinaryConfig.api_key,
-      has_secret: !!cloudinaryConfig.api_secret,
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret_length: apiSecret.length,
+      api_secret_first_char: apiSecret.charAt(0),
+      api_secret_last_char: apiSecret.charAt(apiSecret.length - 1),
     })
 
     const formData = await req.formData()
@@ -73,24 +79,15 @@ export async function POST(req: Request) {
       const folder = uploadType === "profile" ? "secondhome/profiles" : "secondhome/properties"
       const publicId = `${folder}/${uniqueId}`
 
-      // Upload to Cloudinary - don't pass folder twice, only in public_id
-      const result = await new Promise<any>((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              public_id: publicId,
-              resource_type: "auto",
-            },
-            (error, result) => {
-              if (error) {
-                console.error("❌ Cloudinary upload error:", error)
-                reject(error)
-              } else {
-                resolve(result)
-              }
-            }
-          )
-          .end(buffer)
+      // Upload to Cloudinary using base64 string instead of stream
+      // This sometimes works better with signature validation
+      const base64String = buffer.toString('base64')
+      const dataUri = `data:${file.type || 'image/jpeg'};base64,${base64String}`
+
+      const result = await cloudinary.uploader.upload(dataUri, {
+        public_id: publicId,
+        resource_type: "auto",
+        overwrite: true,
       })
 
       // Use the secure URL from Cloudinary
