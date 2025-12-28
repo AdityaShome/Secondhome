@@ -13,46 +13,75 @@ export async function POST(req: Request) {
     }
 
     // Configure Cloudinary inside the function to ensure env vars are loaded
-    const cloudinaryConfig = {
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    }
+    // Extract credentials for logging and error messages
+    let cloudName = ""
+    let apiKey = ""
+    let apiSecret = ""
 
-    // Check if Cloudinary is properly configured
-    if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
-      console.error("❌ Cloudinary credentials missing:", {
-        hasCloudName: !!cloudinaryConfig.cloud_name,
-        hasApiKey: !!cloudinaryConfig.api_key,
-        hasApiSecret: !!cloudinaryConfig.api_secret,
+    // First try to use CLOUDINARY_URL if available (preferred method)
+    if (process.env.CLOUDINARY_URL) {
+      cloudinary.config({
+        cloudinary_url: process.env.CLOUDINARY_URL,
+        signature_algorithm: 'sha256', // Explicitly set to SHA-256
       })
-      return NextResponse.json({ 
-        error: "Image upload service not configured. Please contact support." 
-      }, { status: 503 })
+      // Extract credentials from URL for logging
+      try {
+        const urlMatch = process.env.CLOUDINARY_URL.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/)
+        if (urlMatch) {
+          apiKey = urlMatch[1]
+          apiSecret = urlMatch[2]
+          cloudName = urlMatch[3]
+        }
+      } catch (e) {
+        // If parsing fails, use individual env vars as fallback
+        cloudName = process.env.CLOUDINARY_CLOUD_NAME || ""
+        apiKey = process.env.CLOUDINARY_API_KEY || ""
+        apiSecret = process.env.CLOUDINARY_API_SECRET || ""
+      }
+      console.log("✅ Cloudinary configured via CLOUDINARY_URL")
+    } else {
+      // Fallback to individual credentials
+      const cloudinaryConfig = {
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      }
+
+      // Check if Cloudinary is properly configured
+      if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
+        console.error("❌ Cloudinary credentials missing:", {
+          hasCloudName: !!cloudinaryConfig.cloud_name,
+          hasApiKey: !!cloudinaryConfig.api_key,
+          hasApiSecret: !!cloudinaryConfig.api_secret,
+        })
+        return NextResponse.json({ 
+          error: "Image upload service not configured. Please contact support." 
+        }, { status: 503 })
+      }
+
+      // Configure Cloudinary with credentials - do this fresh each time
+      cloudName = cloudinaryConfig.cloud_name?.trim() || ""
+      apiKey = cloudinaryConfig.api_key?.trim() || ""
+      apiSecret = cloudinaryConfig.api_secret?.trim() || ""
+
+      // Verify credentials format (API secrets can vary in length, typically 27-28 characters)
+      if (apiSecret.length < 20 || apiSecret.length > 50) {
+        console.error("❌ API Secret length seems incorrect. Got:", apiSecret.length)
+        return NextResponse.json({ 
+          error: "Cloudinary API Secret has incorrect length. Please verify your credentials.",
+          details: `API Secret length is ${apiSecret.length}. Please check your .env.local file.`
+        }, { status: 400 })
+      }
+
+      // Configure Cloudinary with explicit signature algorithm
+      // Some accounts require SHA-256 instead of default SHA-1
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        signature_algorithm: 'sha256', // Explicitly set to SHA-256
+      })
     }
-
-    // Configure Cloudinary with credentials - do this fresh each time
-    const cloudName = cloudinaryConfig.cloud_name?.trim() || ""
-    const apiKey = cloudinaryConfig.api_key?.trim() || ""
-    const apiSecret = cloudinaryConfig.api_secret?.trim() || ""
-
-    // Verify credentials format
-    if (apiSecret.length !== 27) {
-      console.error("❌ API Secret length is incorrect. Expected 27 characters, got:", apiSecret.length)
-      return NextResponse.json({ 
-        error: "Cloudinary API Secret has incorrect length. Please verify your credentials.",
-        details: `Expected 27 characters, but got ${apiSecret.length}. Please check your .env.local file.`
-      }, { status: 400 })
-    }
-
-    // Configure Cloudinary with explicit signature algorithm
-    // Some accounts require SHA-256 instead of default SHA-1
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-      signature_algorithm: 'sha256', // Explicitly set to SHA-256
-    })
 
     // Log configuration (without exposing secret)
     console.log("✅ Cloudinary configured:", {
@@ -61,6 +90,7 @@ export async function POST(req: Request) {
       api_secret_length: apiSecret.length,
       api_secret_first_char: apiSecret.charAt(0),
       api_secret_last_char: apiSecret.charAt(apiSecret.length - 1),
+      configured_via: process.env.CLOUDINARY_URL ? "CLOUDINARY_URL" : "individual_vars",
     })
 
     const formData = await req.formData()
