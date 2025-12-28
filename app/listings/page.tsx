@@ -326,11 +326,22 @@ export default function ListingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-gray-50" key={`listings-${lang}-${forceUpdate}`}>
       {/* Hero Search Section */}
-      <div className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-orange-700 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-10" />
+      <div className="relative text-white overflow-hidden min-h-[500px] md:min-h-[600px]">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/secondhome_pgflat.png)',
+            backgroundPosition: 'center center',
+            backgroundSize: 'cover',
+          }}
+        />
+        {/* Gradient Overlay for better text readability and blend */}
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/80 via-orange-500/70 to-orange-700/85" />
+        {/* Additional subtle overlay for depth */}
+        <div className="absolute inset-0 bg-black/20" />
         
-        <div className="relative container mx-auto px-4 py-12">
+        <div className="relative container mx-auto px-4 py-12 md:py-16">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
