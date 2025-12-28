@@ -336,10 +336,10 @@ export default function ListingsPage() {
             backgroundSize: 'cover',
           }}
         />
-        {/* Gradient Overlay for better text readability and blend */}
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/80 via-orange-500/70 to-orange-700/85" />
+        {/* Gradient Overlay for better text readability and blend - reduced opacity */}
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/30 via-orange-500/25 to-orange-700/35" />
         {/* Additional subtle overlay for depth */}
-        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0 bg-black/10" />
         
         <div className="relative container mx-auto px-4 py-12 md:py-16">
           <motion.div 
