@@ -297,6 +297,8 @@ export default function MapPage() {
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchContainerRef = useRef<HTMLDivElement>(null)
+  const userLocationMarkerRef = useRef<any>(null)
+  const watchPositionIdRef = useRef<number | null>(null)
   
   // New feature states
   const [weather, setWeather] = useState<Weather | null>(null)
@@ -395,7 +397,14 @@ export default function MapPage() {
                     iconSize: [16, 16],
                     iconAnchor: [8, 8],
                   })
-                  L.marker(userLocation, { icon: userIcon }).addTo(mapInstance).bindPopup("📍 You are here")
+                  const userMarker = L.marker(userLocation, { 
+                    icon: userIcon,
+                    isUserMarker: true,
+                    zIndexOffset: 1000
+                  } as any).addTo(mapInstance)
+                  userMarker.bindPopup("📍 You are here")
+                  // Store marker reference to keep it persistent
+                  userLocationMarkerRef.current = userMarker
                   
                   // Get location name
                   reverseGeocode(userLocation)
@@ -496,6 +505,22 @@ export default function MapPage() {
       }
     }
   }, [])
+
+  // Cleanup geolocation watch on unmount
+  useEffect(() => {
+    return () => {
+      // Clear geolocation watch on unmount
+      if (watchPositionIdRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchPositionIdRef.current)
+        watchPositionIdRef.current = null
+      }
+      // Remove user marker if exists
+      if (userLocationMarkerRef.current && map) {
+        map.removeLayer(userLocationMarkerRef.current)
+        userLocationMarkerRef.current = null
+      }
+    }
+  }, [map])
 
   // Fetch search suggestions as user types
   useEffect(() => {
@@ -1057,8 +1082,8 @@ export default function MapPage() {
         // Also remove any markers that might be on the map but not in state
         if (map) {
           map.eachLayer((layer: any) => {
-            // Remove only marker layers (not tile layers or other controls)
-            if (layer instanceof L.Marker && !(layer.options as any)?.permanent) {
+            // Remove only marker layers (not tile layers, other controls, or user location marker)
+            if (layer instanceof L.Marker && !(layer.options as any)?.permanent && !(layer.options as any)?.isUserMarker) {
               map.removeLayer(layer)
             }
           })
@@ -1437,7 +1462,7 @@ export default function MapPage() {
       description: "Please allow location access when prompted",
     })
 
-    // Use watchPosition for better accuracy, then clear after first position
+    // Use watchPosition to keep location updated and marker visible
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
         console.log("✅ Location obtained:", position.coords.latitude, position.coords.longitude)
@@ -1448,13 +1473,12 @@ export default function MapPage() {
           map.setView(userLocation, 14)
           
           // Remove existing user marker if any
-          map.eachLayer((layer: any) => {
-            if (layer.options && (layer.options as any).isUserMarker) {
-              map.removeLayer(layer)
-            }
-          })
+          if (userLocationMarkerRef.current) {
+            map.removeLayer(userLocationMarkerRef.current)
+            userLocationMarkerRef.current = null
+          }
           
-          // Add user marker
+          // Add user marker with persistent reference
           const L = (await import('leaflet')).default
           const userIcon = L.divIcon({
             html: `<div class="w-4 h-4 bg-blue-600 border-2 border-white rounded-full shadow-lg animate-pulse"></div>`,
@@ -1462,21 +1486,37 @@ export default function MapPage() {
             iconSize: [16, 16],
             iconAnchor: [8, 8],
           })
-          const marker = L.marker(userLocation, { icon: userIcon }).addTo(map)
-          marker.bindPopup("📍 You are here").openPopup()
+          const marker = L.marker(userLocation, { 
+            icon: userIcon,
+            isUserMarker: true, // Mark as user marker
+            zIndexOffset: 1000 // Keep it on top
+          } as any).addTo(map)
+          
+          marker.bindPopup("📍 You are here")
+          
+          // Store marker reference to keep it persistent
+          userLocationMarkerRef.current = marker
+          
+          // Open popup only on first location
+          if (!watchPositionIdRef.current) {
+            marker.openPopup()
+          }
         }
         
-        reverseGeocode(userLocation)
-        loadDataForLocation(userLocation)
+        // Only reverse geocode and load data on first position
+        if (!watchPositionIdRef.current) {
+          reverseGeocode(userLocation)
+          loadDataForLocation(userLocation)
+          setIsGettingLocation(false)
+          
+          toast({
+            title: "✅ Location detected!",
+            description: "Showing nearby properties and amenities",
+          })
+        }
         
-        // Clear watch after getting position
-        navigator.geolocation.clearWatch(watchId)
-        setIsGettingLocation(false)
-        
-        toast({
-          title: "✅ Location detected!",
-          description: "Showing nearby properties and amenities",
-        })
+        // Store watch ID to keep it active
+        watchPositionIdRef.current = watchId
       },
       (error) => {
         console.error("Geolocation error:", error)
@@ -1491,7 +1531,10 @@ export default function MapPage() {
         }
         
         // Clear watch on error
-        navigator.geolocation.clearWatch(watchId)
+        if (watchPositionIdRef.current) {
+          navigator.geolocation.clearWatch(watchPositionIdRef.current)
+          watchPositionIdRef.current = null
+        }
         setIsGettingLocation(false)
         
         toast({
@@ -1512,11 +1555,11 @@ export default function MapPage() {
       }
     )
     
-    // Fallback: clear watch after 25 seconds if no position received
-    setTimeout(() => {
-      navigator.geolocation.clearWatch(watchId)
-      setIsGettingLocation(false)
-    }, 25000)
+    // Store watch ID
+    watchPositionIdRef.current = watchId
+    
+    // Note: We keep the watch active to maintain the marker visibility
+    // The watch will continue to update the marker position as user moves
   }
 
   // Save location
