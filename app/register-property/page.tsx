@@ -46,7 +46,8 @@ const signUpSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
-  otp: z.string().optional(),
+  emailOtp: z.string().optional(),
+  phoneOtp: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -63,7 +64,10 @@ export default function RegisterPropertyPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [otpSent, setOtpSent] = useState(false)
+  const [emailOtpSent, setEmailOtpSent] = useState(false)
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false)
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [phoneVerified, setPhoneVerified] = useState(false)
   const [stats, setStats] = useState([
     { value: "0", label: "Property Owners", description: "Trusted partners across India" },
     { value: "0", label: "Student Bookings", description: "Annual bookings on our platform" },
@@ -85,9 +89,48 @@ export default function RegisterPropertyPage() {
       phone: "",
       password: "",
       confirmPassword: "",
-      otp: "",
+      emailOtp: "",
+      phoneOtp: "",
     },
   })
+
+  // Autofill user data from session if logged in (only on Create Account tab)
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (session?.user && !isSignIn) {
+        try {
+          const response = await fetch("/api/user/profile")
+          if (response.ok) {
+            const data = await response.json()
+            const userData = data.user || data
+            
+            // Only autofill if the form is empty (first time switching to sign up)
+            const currentName = signUpForm.getValues("name")
+            const currentEmail = signUpForm.getValues("email")
+            
+            if (!currentName && !currentEmail) {
+              // Autofill form with existing user data
+              signUpForm.setValue("name", userData.name || "")
+              signUpForm.setValue("email", userData.email || "")
+              signUpForm.setValue("phone", userData.phone || "")
+              
+              toast({
+                title: "Welcome back!",
+                description: "We've pre-filled your information. Please verify to upgrade to property owner.",
+              })
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch user data:", error)
+        }
+      }
+    }
+    
+    // Only run when switching to sign up tab while logged in
+    if (!isSignIn && session?.user) {
+      fetchUserData()
+    }
+  }, [isSignIn, session?.user])
 
   const handleSignIn = async (data: SignInFormData) => {
     setIsLoading(true)
@@ -171,7 +214,7 @@ export default function RegisterPropertyPage() {
     }
   }
 
-  const sendOTP = async (email: string) => {
+  const sendEmailOTP = async (email: string) => {
     setIsLoading(true)
     try {
       const response = await fetch("/api/otp/send", {
@@ -195,7 +238,7 @@ export default function RegisterPropertyPage() {
           })
         } else {
           toast({
-            title: "Failed to send OTP",
+            title: "Failed to send Email OTP",
             description: data.error || data.details || "Please check your email and try again.",
             variant: "destructive",
           })
@@ -204,13 +247,13 @@ export default function RegisterPropertyPage() {
         return
       }
 
-      setOtpSent(true)
+      setEmailOtpSent(true)
       toast({
-        title: "✅ OTP Sent Successfully!",
+        title: "✅ Email OTP Sent!",
         description: `Check your email (${email}) for the 6-digit verification code. Valid for 10 minutes.`,
       })
     } catch (error: any) {
-      console.error("OTP send error:", error)
+      console.error("Email OTP send error:", error)
       toast({
         title: "Connection Error",
         description: "Failed to connect to email service. Please check your internet connection and try again.",
@@ -221,104 +264,202 @@ export default function RegisterPropertyPage() {
     }
   }
 
+  // COMMENTED OUT - Phone OTP for now
+  // const sendPhoneOTP = async (phone: string) => {
+  //   setIsLoading(true)
+  //   try {
+  //     const response = await fetch("/api/otp/send-phone", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         phone,
+  //         type: "registration",
+  //       }),
+  //     })
+
+  //     const data = await response.json()
+
+  //     if (!response.ok) {
+  //       if (response.status === 500 && data.error?.includes("not configured")) {
+  //         toast({
+  //           title: "SMS Service Unavailable",
+  //           description: "Please contact support or try again later. Error: SMS service not configured.",
+  //           variant: "destructive",
+  //         })
+  //       } else {
+  //         toast({
+  //           title: "Failed to send Phone OTP",
+  //           description: data.error || "Please check your phone number and try again.",
+  //           variant: "destructive",
+  //         })
+  //       }
+  //       setIsLoading(false)
+  //       return
+  //     }
+
+  //     setPhoneOtpSent(true)
+  //     toast({
+  //       title: "✅ Phone OTP Sent!",
+  //       description: `Check your phone (${phone}) for the 6-digit verification code. Valid for 10 minutes.`,
+  //     })
+  //   } catch (error: any) {
+  //     console.error("Phone OTP send error:", error)
+  //     toast({
+  //       title: "Connection Error",
+  //       description: "Failed to connect to SMS service. Please check your internet connection and try again.",
+  //       variant: "destructive",
+  //     })
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
+
   const handleSignUp = async (data: SignUpFormData) => {
-    if (!otpSent) {
-      // First step: Send OTP
-      console.log("Sending OTP to:", data.email)
-      await sendOTP(data.email)
+    // Step 1: Send Email OTP
+    if (!emailOtpSent) {
+      console.log("Sending Email OTP to:", data.email)
+      await sendEmailOTP(data.email)
       return
     }
 
-    // Second step: Verify OTP and register
-    if (!data.otp || data.otp.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter the 6-digit OTP sent to your email.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    console.log("Verifying OTP and registering...")
-    setIsLoading(true)
-    try {
-      // Verify OTP with API
-      const verifyResponse = await fetch("/api/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: data.email,
-          otp: data.otp,
-          type: "registration",
-        }),
-      })
-
-      if (!verifyResponse.ok) {
-        const error = await verifyResponse.json()
-        throw new Error(error.error || "Invalid or expired OTP")
+    // Step 2: Verify Email OTP and Register (Phone verification commented out)
+    if (emailOtpSent && !emailVerified) {
+      if (!data.emailOtp || data.emailOtp.length !== 6) {
+        toast({
+          title: "Invalid Email OTP",
+          description: "Please enter the 6-digit OTP sent to your email.",
+          variant: "destructive",
+        })
+        return
       }
 
-      // Register user as property owner
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.name,
+      setIsLoading(true)
+      try {
+        // Verify Email OTP
+        const verifyEmailResponse = await fetch("/api/otp/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: data.email,
+            otp: data.emailOtp,
+            type: "registration",
+          }),
+        })
+
+        if (!verifyEmailResponse.ok) {
+          const error = await verifyEmailResponse.json()
+          throw new Error(error.error || "Invalid or expired Email OTP")
+        }
+
+        setEmailVerified(true)
+        toast({
+          title: "✅ Email Verified!",
+          description: "Creating your account...",
+        })
+
+        // COMMENTED OUT - Phone OTP verification
+        // await sendPhoneOTP(data.phone)
+        // Register user as property owner (directly after email verification)
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            password: data.password,
+            phone: data.phone,
+            isPropertyOwner: true,
+          }),
+        })
+
+        const result = await response.json()
+        
+        if (!response.ok) {
+          throw new Error(result.error || "Registration failed")
+        }
+
+        // Auto sign in after registration or re-authenticate to refresh session
+        const signInResult = await signIn("credentials", {
           email: data.email,
           password: data.password,
-          phone: data.phone,
-          isPropertyOwner: true,
-        }),
-      })
-
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.error || "Registration failed")
-      }
-
-      // Auto sign in after registration or re-authenticate to refresh session
-      const signInResult = await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      })
-
-      if (signInResult?.error) {
-        throw new Error("Auto sign-in failed. Please try logging in manually.")
-      }
-
-      // Refresh the session to get updated role and wait for it to complete
-      await update()
-      
-      // Add a longer delay to ensure session is fully refreshed with new role
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Show appropriate success message
-      if (result.upgraded) {
-        toast({
-          title: "🎉 Account Upgraded!",
-          description: "You are now a property owner! Redirecting to list your property...",
+          redirect: false,
         })
-      } else if (result.created) {
-        toast({
-          title: "✅ Registration successful!",
-          description: "Welcome to Second Home! Redirecting to property listing...",
-        })
-      }
 
-      setTimeout(() => {
-        router.push("/list-property")
-      }, 1500)
-    } catch (error: any) {
-      toast({
-        title: "Registration failed",
-        description: error.message || "An error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+        if (signInResult?.error) {
+          throw new Error("Auto sign-in failed. Please try logging in manually.")
+        }
+
+        // Refresh the session to get updated role and wait for it to complete
+        await update()
+        
+        // Add a longer delay to ensure session is fully refreshed with new role
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
+        // Show appropriate success message
+        if (result.upgraded) {
+          toast({
+            title: "🎉 Account Upgraded!",
+            description: "You are now a property owner! Redirecting to list your property...",
+          })
+        } else if (result.created) {
+          toast({
+            title: "✅ Registration successful!",
+            description: "Welcome to Second Home! Redirecting to property listing...",
+          })
+        }
+
+        setTimeout(() => {
+          router.push("/list-property")
+        }, 1500)
+      } catch (error: any) {
+        toast({
+          title: "Registration Failed",
+          description: error.message || "An error occurred. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+      return
     }
+
+    // COMMENTED OUT - Phone verification step
+    // if (emailVerified && phoneOtpSent && !phoneVerified) {
+    //   if (!data.phoneOtp || data.phoneOtp.length !== 6) {
+    //     toast({
+    //       title: "Invalid Phone OTP",
+    //       description: "Please enter the 6-digit OTP sent to your phone.",
+    //       variant: "destructive",
+    //     })
+    //     return
+    //   }
+    //   setIsLoading(true)
+    //   try {
+    //     const verifyPhoneResponse = await fetch("/api/otp/verify-phone", {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({
+    //         phone: data.phone,
+    //         otp: data.phoneOtp,
+    //         type: "registration",
+    //       }),
+    //     })
+    //     if (!verifyPhoneResponse.ok) {
+    //       const error = await verifyPhoneResponse.json()
+    //       throw new Error(error.error || "Invalid or expired Phone OTP")
+    //     }
+    //     setPhoneVerified(true)
+    //   } catch (error: any) {
+    //     toast({
+    //       title: "Phone Verification Failed",
+    //       description: error.message || "An error occurred. Please try again.",
+    //       variant: "destructive",
+    //     })
+    //   } finally {
+    //     setIsLoading(false)
+    //   }
+    //   return
+    // }
   }
 async function handleGoogleSignIn() {
     setIsGoogleLoading(true)
@@ -429,7 +570,10 @@ async function handleGoogleSignIn() {
                     <button
                       onClick={() => {
                         setIsSignIn(true)
-                        setOtpSent(false)
+                        setEmailOtpSent(false)
+                        setPhoneOtpSent(false)
+                        setEmailVerified(false)
+                        setPhoneVerified(false)
                       }}
                       className={`flex-1 py-3 text-sm font-semibold transition-all ${
                         isSignIn
@@ -442,7 +586,10 @@ async function handleGoogleSignIn() {
                     <button
                       onClick={() => {
                         setIsSignIn(false)
-                        setOtpSent(false)
+                        setEmailOtpSent(false)
+                        setPhoneOtpSent(false)
+                        setEmailVerified(false)
+                        setPhoneVerified(false)
                         signUpForm.reset()
                       }}
                       className={`flex-1 py-3 text-sm font-semibold transition-all ${
@@ -585,13 +732,16 @@ async function handleGoogleSignIn() {
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Full Name
+                          </label>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <Input
                               {...signUpForm.register("name")}
                               placeholder="Enter your full name"
-                              className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400"
+                              disabled={emailOtpSent}
+                              className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400 disabled:opacity-60"
                             />
                           </div>
                           {signUpForm.formState.errors.name && (
@@ -602,14 +752,17 @@ async function handleGoogleSignIn() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Email address</label>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Email address {emailVerified && <span className="text-green-400 text-xs ml-2">✓ Verified</span>}
+                          </label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <Input
                               {...signUpForm.register("email")}
                               type="email"
                               placeholder="Enter your email"
-                              className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400"
+                              disabled={emailOtpSent}
+                              className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400 disabled:opacity-60"
                             />
                           </div>
                           {signUpForm.formState.errors.email && (
@@ -620,17 +773,22 @@ async function handleGoogleSignIn() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Phone Number {phoneVerified && <span className="text-green-400 text-xs ml-2">✓ Verified</span>}
+                          </label>
                           <div className="relative">
                             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <Input
                               {...signUpForm.register("phone")}
                               type="tel"
                               placeholder="Enter your phone number (e.g., +91 9876543210)"
-                              className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400"
+                              disabled={phoneOtpSent}
+                              className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400 disabled:opacity-60"
                             />
                           </div>
-                          <p className="text-xs text-gray-400 mt-1">You can verify your phone after registration for enhanced security</p>
+                          <p className="text-xs text-orange-300 mt-1 font-medium">
+                            Required: You must verify both email and phone number during registration
+                          </p>
                           {signUpForm.formState.errors.phone && (
                             <p className="text-red-400 text-xs mt-1">
                               {signUpForm.formState.errors.phone.message}
@@ -638,7 +796,97 @@ async function handleGoogleSignIn() {
                           )}
                         </div>
 
-                        {!otpSent && (
+                        {/* Email OTP Verification */}
+                        {emailOtpSent && !emailVerified && (
+                          <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-5 h-5 text-blue-400" />
+                              <h3 className="text-sm font-semibold text-blue-300">Step 1: Verify Email</h3>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-2">Enter Email OTP</label>
+                              <div className="relative">
+                                <Input
+                                  {...signUpForm.register("emailOtp")}
+                                  type="text"
+                                  maxLength={6}
+                                  placeholder="Enter 6-digit email OTP"
+                                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-blue-400 text-center text-2xl tracking-widest"
+                                />
+                              </div>
+                              {signUpForm.formState.errors.emailOtp && (
+                                <p className="text-red-400 text-xs mt-1">
+                                  {signUpForm.formState.errors.emailOtp.message}
+                                </p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const email = signUpForm.getValues("email")
+                                  sendEmailOTP(email)
+                                }}
+                                className="text-sm text-blue-400 hover:text-blue-300 mt-2"
+                              >
+                                Resend Email OTP
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Email Verified Badge */}
+                        {emailVerified && (
+                          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            <span className="text-sm text-green-300 font-medium">Email Verified Successfully!</span>
+                          </div>
+                        )}
+
+                        {/* Phone OTP Verification - COMMENTED OUT */}
+                        {/* {phoneOtpSent && !phoneVerified && (
+                          <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-5 h-5 text-purple-400" />
+                              <h3 className="text-sm font-semibold text-purple-300">Step 2: Verify Phone</h3>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-2">Enter Phone OTP</label>
+                              <div className="relative">
+                                <Input
+                                  {...signUpForm.register("phoneOtp")}
+                                  type="text"
+                                  maxLength={6}
+                                  placeholder="Enter 6-digit phone OTP"
+                                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-purple-400 text-center text-2xl tracking-widest"
+                                />
+                              </div>
+                              {signUpForm.formState.errors.phoneOtp && (
+                                <p className="text-red-400 text-xs mt-1">
+                                  {signUpForm.formState.errors.phoneOtp.message}
+                                </p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const phone = signUpForm.getValues("phone")
+                                  sendPhoneOTP(phone)
+                                }}
+                                className="text-sm text-purple-400 hover:text-purple-300 mt-2"
+                              >
+                                Resend Phone OTP
+                              </button>
+                            </div>
+                          </div>
+                        )} */}
+
+                        {/* Phone Verified Badge - COMMENTED OUT */}
+                        {/* {phoneVerified && (
+                          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                            <span className="text-sm text-green-300 font-medium">Phone Verified Successfully!</span>
+                          </div>
+                        )} */}
+
+                        {!emailOtpSent && (
                           <>
                             <div>
                               <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
@@ -684,36 +932,6 @@ async function handleGoogleSignIn() {
                             </div>
                           </>
                         )}
-
-                        {otpSent && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Enter OTP</label>
-                            <div className="relative">
-                              <Input
-                                {...signUpForm.register("otp")}
-                                type="text"
-                                maxLength={6}
-                                placeholder="Enter 6-digit OTP"
-                                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-500 focus:border-orange-400 text-center text-2xl tracking-widest"
-                              />
-                            </div>
-                            {signUpForm.formState.errors.otp && (
-                              <p className="text-red-400 text-xs mt-1">
-                                {signUpForm.formState.errors.otp.message}
-                              </p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const email = signUpForm.getValues("email")
-                                sendOTP(email)
-                              }}
-                              className="text-sm text-orange-400 hover:text-orange-300 mt-2"
-                            >
-                              Resend OTP
-                            </button>
-                          </div>
-                        )}
                       </div>
 
                       <Button
@@ -724,16 +942,18 @@ async function handleGoogleSignIn() {
                         {isLoading ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            {otpSent ? "Verifying..." : "Sending OTP..."}
+                            {emailOtpSent && !emailVerified && "Verifying Email..."}
+                            {emailVerified && "Creating Account..."}
+                            {!emailOtpSent && "Sending Email OTP..."}
                           </>
-                        ) : otpSent ? (
-                          "Verify & Register"
+                        ) : emailOtpSent && !emailVerified ? (
+                          "Verify Email & Register"
                         ) : (
-                          "Send OTP & Continue"
+                          "Send Verification Code"
                         )}
                       </Button>
 
-                      {!otpSent && (
+                      {!emailOtpSent && (
                         <>
                           {/* Divider */}
                           <div className="relative">
@@ -768,7 +988,7 @@ async function handleGoogleSignIn() {
                         </>
                       )}
 
-                      {!otpSent && (
+                      {!emailOtpSent && (
                         <p className="text-xs text-gray-400 text-center">
                           By continuing, you agree to Second Home's Terms of Service and Privacy Policy
                         </p>

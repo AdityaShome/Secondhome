@@ -56,6 +56,7 @@ export async function POST(req: Request) {
     const accountSid = process.env.TWILIO_ACCOUNT_SID
     const authToken = process.env.TWILIO_AUTH_TOKEN
     const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
+    const isDevelopment = process.env.NODE_ENV === "development" || process.env.SKIP_SMS === "true"
     
     if (!accountSid || !authToken || !twilioPhoneNumber) {
       console.error("❌ Twilio credentials not configured")
@@ -98,7 +99,21 @@ export async function POST(req: Request) {
       expiresAt,
     })
 
-    // Send SMS via Twilio
+    // Send SMS via Twilio or skip in development mode
+    if (isDevelopment) {
+      // Development mode: Log OTP to console instead of sending SMS
+      console.log(`🔧 DEV MODE - Phone OTP for ${normalizedPhone}: ${otp}`)
+      console.log(`⚠️ Twilio trial account detected or SKIP_SMS enabled. Check console for OTP.`)
+      
+      return NextResponse.json({
+        message: "OTP generated successfully (check server console in development mode)",
+        phone: normalizedPhone,
+        expiresIn: 600,
+        devMode: true,
+        otp: isDevelopment ? otp : undefined, // Only expose OTP in dev mode
+      })
+    }
+
     try {
       const client = twilio(accountSid, authToken)
       
@@ -118,7 +133,22 @@ export async function POST(req: Request) {
     } catch (twilioError: any) {
       console.error("❌ Twilio SMS Error:", twilioError)
       
-      // Clean up OTP if SMS failed
+      // If it's a trial account error, switch to dev mode
+      if (twilioError.code === 21608) {
+        console.log(`🔧 DEV MODE FALLBACK - Phone OTP for ${normalizedPhone}: ${otp}`)
+        console.log(`⚠️ Twilio trial account limitation. Use this OTP: ${otp}`)
+        
+        return NextResponse.json({
+          message: "OTP generated (Twilio trial account - check server console for OTP)",
+          phone: normalizedPhone,
+          expiresIn: 600,
+          devMode: true,
+          otp: otp, // Expose OTP due to trial limitation
+          warning: "Using development mode due to Twilio trial account"
+        })
+      }
+      
+      // Clean up OTP if SMS failed for other reasons
       await OTP.deleteOne({ phone: normalizedPhone, otp })
       
       return NextResponse.json(

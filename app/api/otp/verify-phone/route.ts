@@ -38,7 +38,9 @@ export async function POST(req: Request) {
 
     await connectToDatabase()
 
-    // Find the OTP
+    // Find the OTP (log for debugging)
+    console.log(`🔍 Looking for OTP - Phone: ${normalizedPhone}, OTP: ${otp}, Type: ${type}`)
+    
     const otpRecord = await OTP.findOne({
       phone: normalizedPhone,
       otp,
@@ -46,6 +48,12 @@ export async function POST(req: Request) {
     })
 
     if (!otpRecord) {
+      // Debug: Check if OTP exists with different type
+      const anyOtpForPhone = await OTP.findOne({ phone: normalizedPhone, otp })
+      if (anyOtpForPhone) {
+        console.log(`⚠️ OTP exists but with different type: ${anyOtpForPhone.type}`)
+      }
+      
       return NextResponse.json(
         { error: "Invalid or expired OTP" },
         { status: 400 }
@@ -61,8 +69,9 @@ export async function POST(req: Request) {
       )
     }
 
-    // If this is phone verification, update user's phone verification status
+    // Handle different verification types
     if (type === "phone-verification") {
+      // For logged-in user phone verification
       const session = await getServerSession(authOptions)
       
       if (!session?.user?.id) {
@@ -100,6 +109,10 @@ export async function POST(req: Request) {
           } 
         }
       )
+    } else if (type === "registration") {
+      // For registration, just verify the OTP - don't update user yet
+      // The user will be created after this verification step
+      console.log(`✅ Phone OTP verified for registration: ${normalizedPhone}`)
     }
 
     // Delete the used OTP
