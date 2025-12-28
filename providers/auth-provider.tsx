@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 function AuthProviderContent({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { data: session, status, update: updateSession } = useSession()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -63,6 +63,18 @@ function AuthProviderContent({ children }: { children: React.ReactNode }) {
 
     setLoading(false)
   }, [session, status])
+
+  // Listen for session updates (e.g., when profile picture changes)
+  useEffect(() => {
+    const handleSessionUpdate = () => {
+      updateSession()
+    }
+    
+    window.addEventListener('session-update', handleSessionUpdate)
+    return () => {
+      window.removeEventListener('session-update', handleSessionUpdate)
+    }
+  }, [updateSession])
 
   const login = async (email: string, password: string) => {
     try {

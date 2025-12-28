@@ -492,16 +492,21 @@ export default function ProfilePage() {
       setProfileImage(imageUrl)
       setProfileData((prev) => ({ ...prev, image: imageUrl }))
 
-      // Update session to refresh navbar immediately
+      // Update session to refresh navbar immediately - this triggers JWT callback with "update" trigger
       await updateSession()
+      
+      // Dispatch event to notify other components of session update
+      window.dispatchEvent(new Event('session-update'))
 
       toast({
         title: "Profile picture updated",
         description: "Your profile picture has been successfully updated.",
       })
 
-      // Refresh the page to ensure everything is in sync
-      window.location.reload()
+      // Small delay to ensure session update completes, then reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } catch (error: any) {
       console.error("Error uploading image:", error)
       toast({
@@ -539,16 +544,21 @@ export default function ProfilePage() {
       setProfileImage(null)
       setProfileData((prev) => ({ ...prev, image: "" }))
 
-      // Update session to refresh navbar immediately
+      // Update session to refresh navbar immediately - this triggers JWT callback with "update" trigger
       await updateSession()
+      
+      // Dispatch event to notify other components of session update
+      window.dispatchEvent(new Event('session-update'))
 
       toast({
         title: "Profile picture deleted",
         description: "Your profile picture has been successfully removed.",
       })
 
-      // Refresh the page to ensure everything is in sync
-      window.location.reload()
+      // Small delay to ensure session update completes, then reload
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } catch (error: any) {
       console.error("Error deleting image:", error)
       toast({

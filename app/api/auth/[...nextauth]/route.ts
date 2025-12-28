@@ -150,12 +150,28 @@ if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
 const handler = NextAuth({
   providers,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       try {
         if (user) {
           token.id = user.id
           token.role = user.role || "user"
+          token.image = user.image || null
         }
+        
+        // If session is being updated (e.g., after profile picture change), fetch fresh user data
+        if (trigger === "update" && token.id) {
+          try {
+            await connectToDatabase()
+            const User = await getUserModel()
+            const dbUser = await User.findById(token.id).select("image").lean()
+            if (dbUser) {
+              token.image = dbUser.image || null
+            }
+          } catch (error) {
+            console.error("Failed to fetch user image in JWT callback:", error)
+          }
+        }
+        
         return token
       } catch (error) {
         console.error("JWT callback error:", error)
@@ -167,6 +183,26 @@ const handler = NextAuth({
         if (token && session?.user) {
           session.user.id = token.id as string
           session.user.role = (token.role as string) || "user"
+          
+          // Always fetch fresh image from database to ensure it's up to date
+          if (token.id) {
+            try {
+              await connectToDatabase()
+              const User = await getUserModel()
+              const dbUser = await User.findById(token.id).select("image").lean()
+              if (dbUser?.image) {
+                session.user.image = dbUser.image
+              } else {
+                session.user.image = null
+              }
+            } catch (error) {
+              console.error("Failed to fetch user image in session callback:", error)
+              // Fallback to token image if database fetch fails
+              session.user.image = (token.image as string) || null
+            }
+          } else {
+            session.user.image = (token.image as string) || null
+          }
         }
         return session
       } catch (error) {
