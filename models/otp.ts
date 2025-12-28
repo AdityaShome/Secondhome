@@ -20,11 +20,9 @@ const OTPSchema = new Schema<IOTP>({
 })
 
 // Ensure at least one identifier exists
-OTPSchema.pre('validate', function(next) {
+OTPSchema.pre('validate', function() {
   if (!this.email && !this.phone) {
-    next(new Error('Either email or phone must be provided'))
-  } else {
-    next()
+    throw new Error('Either email or phone must be provided')
   }
 })
 

@@ -22,7 +22,6 @@ import {
   CheckCircle,
   Phone,
   Tag,
-  TrendingUp,
   Wifi,
   Utensils,
   Zap,
@@ -49,7 +48,6 @@ export default function Page() {
   const [budget, setBudget] = useState("")
   const [moveInDate, setMoveInDate] = useState("")
   const [featuredProperties, setFeaturedProperties] = useState<any[]>([])
-  const [offers, setOffers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const isAuthenticated = status === "authenticated"
 
@@ -97,33 +95,6 @@ export default function Page() {
             const featuredData = await featuredRes.json()
             const props = featuredData.properties || []
             setFeaturedProperties(props)
-
-            // Generate offers from featured properties
-            if (props.length > 0) {
-              setOffers([
-                {
-                  id: "first-booking",
-                  title: "Get FLAT 12% OFF",
-                  description: "On Your First Property Booking",
-                  code: "WELCOME12",
-                  image: props[0]?.image || "/placeholder.jpg",
-                },
-                {
-                  id: "semester-plan",
-                  title: "Save Up to ₹5,000",
-                  description: "Book Semester-Wise Plans",
-                  code: "SEMESTER",
-                  image: props[1]?.image || props[0]?.image || "/placeholder.jpg",
-                },
-                {
-                  id: "referral",
-                  title: "Earn ₹1,000",
-                  description: "Refer a Friend & Both Save",
-                  code: "REFER1000",
-                  image: props[2]?.image || props[0]?.image || "/placeholder.jpg",
-                },
-              ])
-            }
           }
         } catch (error) {
           console.error("Error fetching featured properties:", error)
@@ -575,59 +546,6 @@ export default function Page() {
                     </CardContent>
                   </Card>
                 </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Offers Section - Real Data - Only show for authenticated users */}
-      {isAuthenticated && offers.length > 0 && (
-        <section className="py-16 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-gray-900 mb-10">
-              Exclusive Student Offers
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {offers.map((offer, idx) => (
-                <Card key={idx} className="border-2 border-gray-200 hover:border-orange-500 hover:shadow-xl transition-all overflow-hidden">
-                  <div className="relative h-48 overflow-hidden bg-gray-100">
-                    <Image
-                      src={offer.image || "/placeholder.jpg"}
-                      alt={offer.title}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <div className="text-white font-bold text-xl mb-1">{offer.title}</div>
-                      <div className="text-white/90 text-sm">{offer.description}</div>
-                    </div>
-                  </div>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-4 p-3 bg-orange-50 rounded border border-orange-200">
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Use Code</div>
-                        <div className="font-bold text-orange-600 text-lg">{offer.code}</div>
-                      </div>
-                      <div className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">
-                        ACTIVE
-                      </div>
-                    </div>
-                    <Button
-                      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold"
-                      onClick={() => {
-                        router.push(`/listings?promo=${offer.code}`)
-                        toast({
-                          title: "Offer Applied!",
-                          description: `Promo code ${offer.code} has been applied`,
-                        })
-                      }}
-                    >
-                      {idx === 0 ? "BOOK NOW" : idx === 1 ? "VIEW PLANS" : "REFER NOW"}
-                    </Button>
-                  </CardContent>
-                </Card>
               ))}
             </div>
           </div>
