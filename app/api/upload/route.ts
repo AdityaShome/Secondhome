@@ -4,20 +4,6 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import { v2 as cloudinary } from "cloudinary"
 
-// Configure Cloudinary - check if credentials exist
-const cloudinaryConfig = {
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-}
-
-// Only configure if all credentials are present
-if (cloudinaryConfig.cloud_name && cloudinaryConfig.api_key && cloudinaryConfig.api_secret) {
-  cloudinary.config(cloudinaryConfig)
-} else {
-  console.warn("⚠️ Cloudinary credentials not fully configured. Check environment variables.")
-}
-
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -26,12 +12,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Configure Cloudinary inside the function to ensure env vars are loaded
+    const cloudinaryConfig = {
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    }
+
     // Check if Cloudinary is properly configured
     if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
+      console.error("❌ Cloudinary credentials missing:", {
+        hasCloudName: !!cloudinaryConfig.cloud_name,
+        hasApiKey: !!cloudinaryConfig.api_key,
+        hasApiSecret: !!cloudinaryConfig.api_secret,
+      })
       return NextResponse.json({ 
         error: "Image upload service not configured. Please contact support." 
       }, { status: 503 })
     }
+
+    // Configure Cloudinary with credentials
+    cloudinary.config({
+      cloud_name: cloudinaryConfig.cloud_name,
+      api_key: cloudinaryConfig.api_key,
+      api_secret: cloudinaryConfig.api_secret,
+    })
 
     const formData = await req.formData()
     
