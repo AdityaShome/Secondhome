@@ -93,7 +93,7 @@ export async function POST(req: Request) {
         password: hashedPassword,
         phone: phone || undefined,
         role: body.isPropertyOwner ? "owner" : "user",
-        emailVerified: true, // Email verified via OTP
+        emailVerified: new Date(), // Email verified via OTP - store verification date
         createdAt: new Date(),
       })
 
