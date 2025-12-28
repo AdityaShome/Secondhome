@@ -454,11 +454,25 @@ export default function ProfilePage() {
       })
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload image")
+        const errorData = await uploadResponse.json().catch(() => ({}))
+        const errorMessage = errorData.error || errorData.message || "Failed to upload image"
+        
+        // Check if it's a signature error
+        if (errorMessage.includes("Invalid Signature") || errorMessage.includes("signature")) {
+          throw new Error(
+            "Cloudinary authentication error. Please verify your API credentials are correct in the dashboard."
+          )
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const uploadData = await uploadResponse.json()
       const imageUrl = uploadData.url
+
+      if (!imageUrl) {
+        throw new Error("Upload succeeded but no image URL was returned")
+      }
 
       // Update user profile with new image
       const updateResponse = await fetch("/api/user/update-profile", {

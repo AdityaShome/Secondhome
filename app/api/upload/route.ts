@@ -79,33 +79,70 @@ export async function POST(req: Request) {
       const folder = uploadType === "profile" ? "secondhome/profiles" : "secondhome/properties"
       const publicId = `${folder}/${uniqueId}`
 
-      // Upload to Cloudinary using the upload_stream method with proper error handling
-      const result = await new Promise<any>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
+      // Try multiple upload methods to handle signature errors
+      let result: any = null
+      let uploadError: any = null
+
+      // Method 1: Try upload_stream first
+      try {
+        result = await new Promise<any>((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              public_id: publicId,
+              resource_type: "auto",
+            },
+            (error, result) => {
+              if (error) {
+                reject(error)
+              } else {
+                resolve(result)
+              }
+            }
+          )
+          uploadStream.end(buffer)
+        })
+        console.log("✅ Upload successful (method 1 - stream):", result?.public_id)
+      } catch (error: any) {
+        uploadError = error
+        console.log("⚠️ Method 1 (stream) failed, trying method 2...", error.message)
+
+        // Method 2: Try base64 upload
+        try {
+          const base64String = buffer.toString('base64')
+          const dataUri = `data:${file.type || 'image/jpeg'};base64,${base64String}`
+          
+          result = await cloudinary.uploader.upload(dataUri, {
             public_id: publicId,
             resource_type: "auto",
-            // Don't use overwrite - let Cloudinary handle duplicates
-          },
-          (error, result) => {
-            if (error) {
-              console.error("❌ Cloudinary upload error details:", {
-                message: error.message,
-                http_code: error.http_code,
-                name: error.name,
-                cloud_name: cloudName,
-                api_key: apiKey,
-              })
-              reject(error)
-            } else {
-              console.log("✅ Upload successful:", result?.public_id)
-              resolve(result)
-            }
+          })
+          console.log("✅ Upload successful (method 2 - base64):", result?.public_id)
+        } catch (error2: any) {
+          console.log("⚠️ Method 2 (base64) failed, trying method 3...", error2.message)
+
+          // Method 3: Try without public_id (let Cloudinary generate it)
+          try {
+            const base64String = buffer.toString('base64')
+            const dataUri = `data:${file.type || 'image/jpeg'};base64,${base64String}`
+            
+            result = await cloudinary.uploader.upload(dataUri, {
+              folder: folder,
+              resource_type: "auto",
+            })
+            console.log("✅ Upload successful (method 3 - no public_id):", result?.public_id)
+          } catch (error3: any) {
+            // All methods failed
+            console.error("❌ All upload methods failed:", {
+              method1: uploadError?.message,
+              method2: error2?.message,
+              method3: error3?.message,
+            })
+            throw new Error(
+              `Upload failed: ${error3?.message || uploadError?.message || 'Unknown error'}. ` +
+              `Please verify your Cloudinary API credentials are correct.`
+            )
           }
-        )
-        
-        uploadStream.end(buffer)
-      })
+        }
+      }
 
       // Use the secure URL from Cloudinary
       uploadedUrls.push(result.secure_url)
