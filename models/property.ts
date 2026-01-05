@@ -37,7 +37,8 @@ export interface IProperty extends Document {
     coordinates: [number, number]
   }
   price: number
-  deposit: number
+  deposit?: number
+  feeStructure?: string
   images: string[]
   amenities: string[]
   rules: string[]
@@ -111,7 +112,8 @@ const PropertySchema = new Schema<IProperty>({
     coordinates: { type: [Number], required: true },
   },
   price: { type: Number, required: true },
-  deposit: { type: Number, required: true },
+  deposit: { type: Number, required: false },
+  feeStructure: { type: String, required: false },
   images: { type: [String], required: true },
   amenities: { type: [String], required: true },
   rules: { type: [String] },

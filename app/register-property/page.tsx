@@ -508,8 +508,7 @@ async function handleGoogleSignIn() {
           backgroundSize: 'cover',
           backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
-          imageRendering: 'high-quality',
-        } as React.CSSProperties}
+        }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-blue-900/70 to-slate-900/80" />
         

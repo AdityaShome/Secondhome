@@ -125,9 +125,7 @@ export default function ListPropertyPage() {
       partiesAllowed: false,
     },
     monthlyRent: "",
-    securityDeposit: "",
-    maintenanceCharges: "",
-    electricityCharges: "",
+    feeStructure: "",
   })
 
   useEffect(() => {
@@ -444,15 +442,6 @@ export default function ListPropertyPage() {
           return false
         }
         
-        if (!propertyData.securityDeposit || propertyData.securityDeposit < 0) {
-          toast({
-            title: "⚠️ Security Deposit Required",
-            description: "Please enter the security deposit amount (enter 0 if not applicable)",
-            variant: "destructive",
-          })
-          return false
-        }
-        
         return true
       
       case "preview":
@@ -493,7 +482,7 @@ export default function ListPropertyPage() {
         
         // Pricing
         price: parseInt(propertyData.monthlyRent) || 0,
-        deposit: parseInt(propertyData.securityDeposit) || 0,
+        feeStructure: propertyData.feeStructure || "",
         
         // Images - Extract just URLs (placeholder for now)
         images: propertyData.images?.map((img: any) => img.url || img) || [
@@ -1649,27 +1638,77 @@ function PoliciesTab({ propertyData, setPropertyData }: any) {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Check-in Time</Label>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                id="checkInAnytime"
+                checked={propertyData.houseRules?.checkIn === "anytime"}
+                onChange={(e) => setPropertyData({
+                  ...propertyData,
+                  houseRules: { 
+                    ...propertyData.houseRules, 
+                    checkIn: e.target.checked ? "anytime" : "" 
+                  }
+                })}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="checkInAnytime" className="text-sm text-gray-600">Anytime</label>
+            </div>
             <Input
               type="time"
-              value={propertyData.houseRules?.checkIn}
+              value={propertyData.houseRules?.checkIn === "anytime" ? "" : propertyData.houseRules?.checkIn || ""}
               onChange={(e) => setPropertyData({
                 ...propertyData,
                 houseRules: { ...propertyData.houseRules, checkIn: e.target.value }
               })}
+              disabled={propertyData.houseRules?.checkIn === "anytime"}
+              className={propertyData.houseRules?.checkIn === "anytime" ? "opacity-50" : ""}
             />
           </div>
 
           <div className="space-y-2">
             <Label>Check-out Time</Label>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                id="checkOutAnytime"
+                checked={propertyData.houseRules?.checkOut === "anytime"}
+                onChange={(e) => setPropertyData({
+                  ...propertyData,
+                  houseRules: { 
+                    ...propertyData.houseRules, 
+                    checkOut: e.target.checked ? "anytime" : "" 
+                  }
+                })}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="checkOutAnytime" className="text-sm text-gray-600">Anytime</label>
+            </div>
             <Input
               type="time"
-              value={propertyData.houseRules?.checkOut}
+              value={propertyData.houseRules?.checkOut === "anytime" ? "" : propertyData.houseRules?.checkOut || ""}
               onChange={(e) => setPropertyData({
                 ...propertyData,
                 houseRules: { ...propertyData.houseRules, checkOut: e.target.value }
               })}
+              disabled={propertyData.houseRules?.checkOut === "anytime"}
+              className={propertyData.houseRules?.checkOut === "anytime" ? "opacity-50" : ""}
             />
           </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Stay Duration Preference (optional)</Label>
+          <Input
+            type="text"
+            placeholder="e.g., Minimum 3 months, Semester/Academic year only"
+            value={propertyData.houseRules?.stayDuration || ""}
+            onChange={(e) => setPropertyData({
+              ...propertyData,
+              houseRules: { ...propertyData.houseRules, stayDuration: e.target.value }
+            })}
+          />
+          <p className="text-xs text-gray-500">Specify preferred duration for tenant stays (e.g., minimum stay period, semester-based, etc.)</p>
         </div>
 
         <div className="space-y-3">
@@ -1710,52 +1749,25 @@ function FinancialTab({ propertyData, setPropertyData }: any) {
         <CardDescription>Set pricing and payment terms</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Monthly Rent <span className="text-red-500">*</span></Label>
-            <Input
-              type="number"
-              placeholder="e.g., 15000"
-              value={propertyData.monthlyRent}
-              onChange={(e) => setPropertyData({ ...propertyData, monthlyRent: e.target.value })}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label>Monthly Rent <span className="text-red-500">*</span></Label>
+          <Input
+            type="number"
+            placeholder="e.g., 15000"
+            value={propertyData.monthlyRent}
+            onChange={(e) => setPropertyData({ ...propertyData, monthlyRent: e.target.value })}
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label>Security Deposit</Label>
-            <Input
-              type="number"
-              placeholder="e.g., 30000"
-              value={propertyData.securityDeposit}
-              onChange={(e) => setPropertyData({ ...propertyData, securityDeposit: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Maintenance Charges</Label>
-            <Input
-              type="number"
-              placeholder="e.g., 2000"
-              value={propertyData.maintenanceCharges}
-              onChange={(e) => setPropertyData({ ...propertyData, maintenanceCharges: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Electricity Charges</Label>
-            <Select
-              value={propertyData.electricityCharges}
-              onValueChange={(value) => setPropertyData({ ...propertyData, electricityCharges: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select option" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="included">Included in Rent</SelectItem>
-                <SelectItem value="extra">Extra as per usage</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label>Fee Structure & Payment Terms</Label>
+          <textarea
+            className="w-full min-h-[120px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y"
+            placeholder="Describe your complete fee structure here...\n\nExample:\n• Security Deposit: ₹30,000 (refundable)\n• Maintenance: ₹2,000/month\n• Electricity: Extra as per usage\n• First 6 months rent in advance required\n• Minimum stay: 11 months\n• Notice period: 1 month"
+            value={propertyData.feeStructure}
+            onChange={(e) => setPropertyData({ ...propertyData, feeStructure: e.target.value })}
+          />
+          <p className="text-xs text-gray-500">Provide detailed information about security deposit, maintenance charges, electricity, advance payments, notice period, and any other fees or payment terms.</p>
         </div>
       </CardContent>
     </Card>
