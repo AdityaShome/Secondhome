@@ -11,11 +11,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { motion } from "framer-motion"
-import { MapPin, Star, Clock, Utensils, Share, Phone, Mail } from "lucide-react"
+import { MapPin, Star, Clock, Utensils, Share, Phone, Mail, Map } from "lucide-react"
 import { LikeButton } from "@/components/like-button"
 import { ShareModal } from "@/components/share-modal"
 import { ReviewForm } from "@/components/review-form"
 import { ReviewsList } from "@/components/reviews-list"
+import { MessLocationMapReadonly } from "@/components/mess-location-map-readonly"
 
 interface Mess {
   _id: string
@@ -23,8 +24,17 @@ interface Mess {
   description: string
   address: string
   location: string
+  coordinates?: {
+    type?: string
+    coordinates?: [number, number]
+  }
+  contactName?: string
+  contactPhone?: string
+  contactEmail?: string
   monthlyPrice: number
   dailyPrice: number
+  packagingAvailable?: boolean
+  packagingPrice?: number
   images: string[]
   menu: {
     day: string
@@ -54,19 +64,45 @@ export default function MessDetailPage() {
   const { toast } = useToast()
   const { user } = useAuth()
 
+  const messId = Array.isArray((params as any)?.id) ? (params as any).id[0] : (params as any)?.id
+
   const [mess, setMess] = useState<Mess | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("menu")
+  const [activeTab, setActiveTab] = useState("location")
 
   useEffect(() => {
     const fetchMess = async () => {
+      if (!messId || typeof messId !== "string") {
+        return
+      }
+
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/messes/${params.id}`)
+        const response = await fetch(`/api/messes/${encodeURIComponent(messId)}`)
 
         if (!response.ok) {
+          if (response.status === 400) {
+            toast({
+              title: "Invalid link",
+              description: "This mess link looks invalid. Please open it again from the mess listing.",
+              variant: "destructive",
+            })
+            router.push("/messes")
+            return
+          }
+
+          if (response.status === 401 || response.status === 403) {
+            toast({
+              title: "Not authorized",
+              description: "This mess is not public yet (pending approval) or you don't have access.",
+              variant: "destructive",
+            })
+            router.push("/messes")
+            return
+          }
+
           if (response.status === 404) {
             toast({
               title: "Mess not found",
@@ -81,6 +117,9 @@ export default function MessDetailPage() {
 
         const data = await response.json()
         setMess(data)
+
+        const hasMenu = Array.isArray(data?.menu) && data.menu.some((day: any) => day && (day.breakfast || day.lunch || day.dinner))
+        setActiveTab(hasMenu ? "menu" : "location")
       } catch (error) {
         console.error("Error fetching mess details:", error)
         toast({
@@ -97,7 +136,7 @@ export default function MessDetailPage() {
     }
 
     fetchMess()
-  }, [params.id, router, toast])
+  }, [messId, router, toast])
 
   const handleRatingChange = (rating: number, count: number) => {
     if (mess) {
@@ -113,7 +152,7 @@ export default function MessDetailPage() {
     if (typeof window !== "undefined") {
       return window.location.href
     }
-    return `https://secondhome.com/messes/${params.id}`
+    return `https://secondhome.com/messes/${messId}`
   }
 
   if (isLoading) {
@@ -140,6 +179,30 @@ export default function MessDetailPage() {
       </div>
     )
   }
+
+  const addressText = (mess.address || "").trim() || (mess.location || "").trim()
+  const monthlyPrice = Number(mess.monthlyPrice)
+  const dailyPrice = Number(mess.dailyPrice)
+  const packagingPrice = Number(mess.packagingPrice)
+
+  const hasMonthlyPrice = Number.isFinite(monthlyPrice) && monthlyPrice > 0
+  const hasDailyPrice = Number.isFinite(dailyPrice) && dailyPrice > 0
+  const hasPackagingCharges = Boolean(mess.packagingAvailable) && Number.isFinite(packagingPrice) && packagingPrice > 0
+
+  const mealTimings = [
+    { label: "Breakfast", value: mess.openingHours?.breakfast },
+    { label: "Lunch", value: mess.openingHours?.lunch },
+    { label: "Dinner", value: mess.openingHours?.dinner },
+  ].filter((t) => Boolean((t.value || "").trim()))
+  const hasMealTimings = mealTimings.length > 0
+
+  const hasMenu = Array.isArray(mess.menu) && mess.menu.some((day) => day && (day.breakfast || day.lunch || day.dinner))
+  const hasPhotos = Array.isArray(mess.images) && mess.images.length > 0
+
+  const contactName = (mess.contactName || "").trim() || mess.owner?.name
+  const contactPhone = (mess.contactPhone || "").trim() || mess.owner?.phone
+  const contactEmail = (mess.contactEmail || "").trim() || mess.owner?.email
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -205,7 +268,7 @@ export default function MessDetailPage() {
 
                 <div className="flex items-center mt-2 text-muted-foreground">
                   <MapPin className="w-5 h-5 mr-1 flex-shrink-0" />
-                  <span className="text-sm">{mess.address}</span>
+                  {addressText ? <span className="text-sm">{addressText}</span> : null}
                 </div>
 
                 <div className="mt-6">
@@ -213,68 +276,70 @@ export default function MessDetailPage() {
                   <p className="text-muted-foreground">{mess.description}</p>
                 </div>
 
-                <div className="mt-8">
-                  <h2 className="text-xl font-bold mb-4">Meal Timings</h2>
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center mb-2">
-                          <Clock className="w-5 h-5 mr-2 text-primary" />
-                          <h3 className="font-medium">Breakfast</h3>
-                        </div>
-                        <p className="text-muted-foreground">{mess.openingHours.breakfast}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center mb-2">
-                          <Clock className="w-5 h-5 mr-2 text-primary" />
-                          <h3 className="font-medium">Lunch</h3>
-                        </div>
-                        <p className="text-muted-foreground">{mess.openingHours.lunch}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center mb-2">
-                          <Clock className="w-5 h-5 mr-2 text-primary" />
-                          <h3 className="font-medium">Dinner</h3>
-                        </div>
-                        <p className="text-muted-foreground">{mess.openingHours.dinner}</p>
-                      </CardContent>
-                    </Card>
+                {hasMealTimings && (
+                  <div className="mt-8">
+                    <h2 className="text-xl font-bold mb-4">Meal Timings</h2>
+                    <div className={`grid gap-4 ${mealTimings.length >= 3 ? "md:grid-cols-3" : mealTimings.length === 2 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+                      {mealTimings.map((timing) => (
+                        <Card key={timing.label}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center mb-2">
+                              <Clock className="w-5 h-5 mr-2 text-primary" />
+                              <h3 className="font-medium">{timing.label}</h3>
+                            </div>
+                            <p className="text-muted-foreground">{timing.value}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="mt-8">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">Pricing</h2>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <Card>
-                      <CardContent className="p-4">
-                        <h3 className="font-medium mb-2">Monthly Subscription</h3>
-                        <div className="flex items-end">
-                          <span className="text-2xl font-bold">₹{mess.monthlyPrice}</span>
-                          <span className="text-muted-foreground ml-1">/month</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Includes breakfast, lunch, and dinner for the entire month
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <h3 className="font-medium mb-2">Daily Meal</h3>
-                        <div className="flex items-end">
-                          <span className="text-2xl font-bold">₹{mess.dailyPrice}</span>
-                          <span className="text-muted-foreground ml-1">/day</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Pay as you go for breakfast, lunch, and dinner
-                        </p>
-                      </CardContent>
-                    </Card>
+                    {hasMonthlyPrice && (
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="font-medium mb-2">Monthly Subscription</h3>
+                          <div className="flex items-end">
+                            <span className="text-2xl font-bold">₹{monthlyPrice}</span>
+                            <span className="text-muted-foreground ml-1">/month</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Includes breakfast, lunch, and dinner for the entire month
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {hasDailyPrice && (
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="font-medium mb-2">Daily Meal</h3>
+                          <div className="flex items-end">
+                            <span className="text-2xl font-bold">₹{dailyPrice}</span>
+                            <span className="text-muted-foreground ml-1">/day</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">Pay as you go for breakfast, lunch, and dinner</p>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {hasPackagingCharges && (
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="font-medium mb-2">Packaging Charges</h3>
+                          <div className="flex items-end">
+                            <span className="text-2xl font-bold">₹{packagingPrice}</span>
+                            <span className="text-muted-foreground ml-1">/order</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">Optional packaging for home delivery</p>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </div>
               </div>
@@ -288,66 +353,110 @@ export default function MessDetailPage() {
             >
               <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="w-full border-b rounded-none p-0">
-                  <TabsTrigger value="menu" className="flex-1 rounded-none py-3">
-                    Weekly Menu
+                  {hasMenu && (
+                    <TabsTrigger value="menu" className="flex-1 rounded-none py-3">
+                      Weekly Menu
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger value="location" className="flex-1 rounded-none py-3">
+                    <Map className="w-4 h-4 mr-2" />
+                    Location
                   </TabsTrigger>
-                  <TabsTrigger value="photos" className="flex-1 rounded-none py-3">
-                    Photos
-                  </TabsTrigger>
+                  {hasPhotos && (
+                    <TabsTrigger value="photos" className="flex-1 rounded-none py-3">
+                      Photos
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="reviews" className="flex-1 rounded-none py-3">
                     Reviews
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value="menu" className="p-6">
+                {hasMenu && (
+                  <TabsContent value="menu" className="p-6">
+                    <div className="space-y-6">
+                      {mess.menu.map((day, index) => (
+                        <Card key={index}>
+                          <CardContent className="p-4">
+                            <h3 className="font-bold text-lg mb-3">{day.day}</h3>
+                            <div className="grid gap-4 md:grid-cols-3">
+                              {day.breakfast && (
+                                <div>
+                                  <div className="flex items-center mb-2">
+                                    <Utensils className="w-4 h-4 mr-2 text-primary" />
+                                    <h4 className="font-medium">Breakfast</h4>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{day.breakfast}</p>
+                                </div>
+                              )}
+                              {day.lunch && (
+                                <div>
+                                  <div className="flex items-center mb-2">
+                                    <Utensils className="w-4 h-4 mr-2 text-primary" />
+                                    <h4 className="font-medium">Lunch</h4>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{day.lunch}</p>
+                                </div>
+                              )}
+                              {day.dinner && (
+                                <div>
+                                  <div className="flex items-center mb-2">
+                                    <Utensils className="w-4 h-4 mr-2 text-primary" />
+                                    <h4 className="font-medium">Dinner</h4>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{day.dinner}</p>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+                )}
+                <TabsContent value="location" className="p-6">
                   <div className="space-y-6">
-                    {mess.menu.map((day, index) => (
-                      <Card key={index}>
+                    <div>
+                      <h3 className="text-lg font-bold mb-4">📍 Mess Location</h3>
+                      <Card className="mb-4">
                         <CardContent className="p-4">
-                          <h3 className="font-bold text-lg mb-3">{day.day}</h3>
-                          <div className="grid gap-4 md:grid-cols-3">
+                          <div className="space-y-3">
                             <div>
-                              <div className="flex items-center mb-2">
-                                <Utensils className="w-4 h-4 mr-2 text-primary" />
-                                <h4 className="font-medium">Breakfast</h4>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{day.breakfast}</p>
-                            </div>
-                            <div>
-                              <div className="flex items-center mb-2">
-                                <Utensils className="w-4 h-4 mr-2 text-primary" />
-                                <h4 className="font-medium">Lunch</h4>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{day.lunch}</p>
-                            </div>
-                            <div>
-                              <div className="flex items-center mb-2">
-                                <Utensils className="w-4 h-4 mr-2 text-primary" />
-                                <h4 className="font-medium">Dinner</h4>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{day.dinner}</p>
+                              <p className="text-sm text-muted-foreground font-medium">Address</p>
+                              <p className="text-base text-gray-900">{addressText || "Not provided"}</p>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-                <TabsContent value="photos" className="p-6">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {mess.images.map((image, index) => (
-                      <div key={index} className="aspect-square rounded-lg overflow-hidden">
-                        <Image
-                          src={image || "/placeholder.svg"}
-                          alt={`${mess.name} - Photo ${index + 1}`}
-                          width={300}
-                          height={300}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                          onClick={() => setActiveImageIndex(index)}
+
+                      {addressText ? (
+                        <MessLocationMapReadonly
+                          address={addressText}
+                          coordinates={mess.coordinates || null}
+                          heightClassName="h-[420px]"
                         />
-                      </div>
-                    ))}
+                      ) : null}
+
+                    </div>
                   </div>
                 </TabsContent>
+                {hasPhotos && (
+                  <TabsContent value="photos" className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {mess.images.map((image, index) => (
+                        <div key={index} className="aspect-square rounded-lg overflow-hidden">
+                          <Image
+                            src={image || "/placeholder.svg"}
+                            alt={`${mess.name} - Photo ${index + 1}`}
+                            width={300}
+                            height={300}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            onClick={() => setActiveImageIndex(index)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                )}
                 <TabsContent value="reviews" className="p-6">
                   <div className="space-y-8">
                     <div>
@@ -373,11 +482,22 @@ export default function MessDetailPage() {
           >
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-20">
               <div className="mb-4 pb-4 border-b">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold">₹{mess.monthlyPrice}</span>
-                  <span className="text-muted-foreground">/month</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">or ₹{mess.dailyPrice}/day</p>
+                {hasMonthlyPrice ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">₹{monthlyPrice}</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    {hasDailyPrice ? <p className="text-sm text-muted-foreground mt-1">or ₹{dailyPrice}/day</p> : null}
+                  </>
+                ) : hasDailyPrice ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">₹{dailyPrice}</span>
+                      <span className="text-muted-foreground">/day</span>
+                    </div>
+                  </>
+                ) : null}
               </div>
 
               <div className="mb-6">
@@ -388,7 +508,7 @@ export default function MessDetailPage() {
                       <Utensils className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{mess.owner.name}</p>
+                      <p className="font-medium">{contactName}</p>
                       <p className="text-sm text-muted-foreground">Mess Owner</p>
                     </div>
                   </div>
@@ -398,7 +518,7 @@ export default function MessDetailPage() {
                       <Phone className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{mess.owner.phone}</p>
+                      <p className="font-medium">{contactPhone || "Not provided"}</p>
                       <p className="text-sm text-muted-foreground">Call or WhatsApp</p>
                     </div>
                   </div>
@@ -408,7 +528,7 @@ export default function MessDetailPage() {
                       <Mail className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{mess.owner.email}</p>
+                      <p className="font-medium">{contactEmail || "Not provided"}</p>
                       <p className="text-sm text-muted-foreground">Email</p>
                     </div>
                   </div>
@@ -425,7 +545,7 @@ export default function MessDetailPage() {
                         description: "Please login to subscribe to this mess",
                         variant: "destructive",
                       })
-                      router.push(`/login?redirect=/messes/${params.id}`)
+                      router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
                       return
                     }
 
@@ -447,7 +567,7 @@ export default function MessDetailPage() {
                         description: "Please login to book a meal",
                         variant: "destructive",
                       })
-                      router.push(`/login?redirect=/messes/${params.id}`)
+                      router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
                       return
                     }
 

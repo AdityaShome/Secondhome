@@ -51,6 +51,8 @@ export async function GET(req: Request) {
     // Build filter
     const filter: any = {
       monthlyPrice: { $gte: minPrice, $lte: maxPrice },
+      isApproved: true,
+      isRejected: false,
     }
 
     if (query) {

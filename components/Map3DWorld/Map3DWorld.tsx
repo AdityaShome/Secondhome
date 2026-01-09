@@ -4,7 +4,15 @@ import React, { useEffect, useRef, useState, useMemo } from "react"
 import maplibregl from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
 import { X, Maximize2, RotateCcw, Navigation, Globe, Eye, EyeOff } from "lucide-react"
-import { Property } from "@/types/property"
+
+interface Property {
+  _id: string
+  title: string
+  location: string
+  price: number
+  type: string
+  coordinates: { coordinates: [number, number] }
+}
 
 interface Place {
   id: string
@@ -90,7 +98,6 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
         zoom: 15.5,
         pitch: 65,
         bearing: -20,
-        antialias: true,
         touchZoomRotate: true,
         touchPitch: true,
         dragRotate: true,
@@ -228,17 +235,16 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
     const processedIndices = new Set<number>()
 
     properties.forEach((property, index) => {
-      // Updated: coordinates is now a direct array [lng, lat]
-      if (!property.coordinates || property.coordinates.length < 2 || processedIndices.has(index)) return
-      const [lng, lat] = property.coordinates
+      if (!property.coordinates?.coordinates || processedIndices.has(index)) return
+      const [lng, lat] = property.coordinates.coordinates
       
       // Find nearby properties
       const group = [property]
       processedIndices.add(index)
       
       properties.forEach((p, idx) => {
-        if (idx === index || processedIndices.has(idx) || !p.coordinates || p.coordinates.length < 2) return
-        const [plng, plat] = p.coordinates
+        if (idx === index || processedIndices.has(idx) || !p.coordinates?.coordinates) return
+        const [plng, plat] = p.coordinates.coordinates
         if (areMarkersClose(lat, lng, plat, plng, 0.00015)) {
           group.push(p)
           processedIndices.add(idx)
@@ -246,8 +252,8 @@ function Map3DWorld({ properties, places, insights, mapCenter, onClose }: Map3DW
       })
       
       // Calculate center of group
-      const avgLng = group.reduce((sum, p) => sum + p.coordinates![0], 0) / group.length
-      const avgLat = group.reduce((sum, p) => sum + p.coordinates![1], 0) / group.length
+      const avgLng = group.reduce((sum, p) => sum + p.coordinates!.coordinates[0], 0) / group.length
+      const avgLat = group.reduce((sum, p) => sum + p.coordinates!.coordinates[1], 0) / group.length
       
       propertyGroups.push({ properties: group, center: [avgLng, avgLat] })
     })
