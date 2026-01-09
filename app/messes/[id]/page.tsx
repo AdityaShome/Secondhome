@@ -72,6 +72,24 @@ export default function MessDetailPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("location")
 
+  const imageCount = mess?.images?.length ?? 0
+
+  useEffect(() => {
+    if (imageCount < 2) return
+
+    const intervalId = window.setInterval(() => {
+      setActiveImageIndex((current) => (current + 1) % imageCount)
+    }, 4000)
+
+    return () => window.clearInterval(intervalId)
+  }, [imageCount])
+
+  useEffect(() => {
+    if (activeImageIndex >= imageCount && imageCount > 0) {
+      setActiveImageIndex(0)
+    }
+  }, [activeImageIndex, imageCount])
+
   useEffect(() => {
     const fetchMess = async () => {
       if (!messId || typeof messId !== "string") {
@@ -226,7 +244,7 @@ export default function MessDetailPage() {
               <div className="relative">
                 <Badge className="absolute top-4 left-4 z-10">Mess</Badge>
                 <div className="absolute top-4 right-4 z-10 flex gap-2">
-                  <LikeButton itemType="mess" itemId={mess._id} />
+                  <LikeButton itemType="mess" itemId={mess._id} appearance="overlay" />
                   <Button
                     variant="secondary"
                     size="icon"
@@ -536,49 +554,54 @@ export default function MessDetailPage() {
               </div>
 
               <div className="space-y-3">
-                <Button
-                  className="w-full h-12"
-                  onClick={() => {
-                    if (!user) {
-                      toast({
-                        title: "Login required",
-                        description: "Please login to subscribe to this mess",
-                        variant: "destructive",
-                      })
-                      router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
-                      return
-                    }
+                {hasMonthlyPrice ? (
+                  <Button
+                    className="w-full h-12"
+                    onClick={() => {
+                      if (!user) {
+                        toast({
+                          title: "Login required",
+                          description: "Please login to subscribe to this mess",
+                          variant: "destructive",
+                        })
+                        router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
+                        return
+                      }
 
-                    toast({
-                      title: "Subscription request sent",
-                      description: "The mess owner will contact you shortly to confirm your subscription.",
-                    })
-                  }}
-                >
-                  Subscribe Monthly
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full h-12"
-                  onClick={() => {
-                    if (!user) {
                       toast({
-                        title: "Login required",
-                        description: "Please login to book a meal",
-                        variant: "destructive",
+                        title: "Subscription request sent",
+                        description: "The mess owner will contact you shortly to confirm your subscription.",
                       })
-                      router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
-                      return
-                    }
+                    }}
+                  >
+                    Subscribe Monthly
+                  </Button>
+                ) : null}
 
-                    toast({
-                      title: "Meal booked",
-                      description: "Your meal has been booked for today. You can pay at the mess.",
-                    })
-                  }}
-                >
-                  Book Daily Meal
-                </Button>
+                {hasDailyPrice ? (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12"
+                    onClick={() => {
+                      if (!user) {
+                        toast({
+                          title: "Login required",
+                          description: "Please login to book a meal",
+                          variant: "destructive",
+                        })
+                        router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
+                        return
+                      }
+
+                      toast({
+                        title: "Meal booked",
+                        description: "Your meal has been booked for today. You can pay at the mess.",
+                      })
+                    }}
+                  >
+                    Book Daily Meal
+                  </Button>
+                ) : null}
               </div>
 
               <div className="mt-6 pt-6 border-t">

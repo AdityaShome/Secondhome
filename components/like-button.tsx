@@ -5,7 +5,7 @@ import { Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/hooks/use-auth"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface LikeButtonProps {
@@ -13,11 +13,14 @@ interface LikeButtonProps {
   itemId: string
   className?: string
   size?: "sm" | "md" | "lg"
+  appearance?: "default" | "overlay"
 }
 
-export function LikeButton({ itemType, itemId, className = "", size = "md" }: LikeButtonProps) {
+export function LikeButton({ itemType, itemId, className = "", size = "md", appearance = "default" }: LikeButtonProps) {
   const { user } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
@@ -86,7 +89,9 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
         description: "Please login to like this item",
         variant: "destructive",
       })
-      router.push(`/login?redirect=${router.asPath}`)
+
+      const redirectPath = `${pathname || "/"}${searchParams?.toString() ? `?${searchParams.toString()}` : ""}`
+      router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
       return
     }
 
@@ -117,13 +122,13 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
       // Show success toast
       if (data.liked) {
         toast({
-          title: "Property saved!",
-          description: "This property has been added to your saved properties.",
+          title: "Saved!",
+          description: "Added to your favorites.",
         })
       } else {
         toast({
-          title: "Property unsaved",
-          description: "This property has been removed from your saved properties.",
+          title: "Removed",
+          description: "Removed from your favorites.",
         })
       }
 
@@ -188,12 +193,24 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
   }
 
   return (
-    <div className={`flex items-center gap-1.5 relative ${className}`}>
+    <div
+      className={`flex items-center gap-1.5 relative ${
+        appearance === "overlay" ? "rounded-full bg-white/85 backdrop-blur-sm shadow-sm px-1 py-1" : ""
+      } ${className}`}
+    >
       <Button
         ref={buttonRef}
         variant="ghost"
         size="sm"
-        className={`relative rounded-full ${sizeMap[size].button} flex-shrink-0 p-0 ${liked ? "bg-red-50 hover:bg-red-100" : "bg-transparent hover:bg-gray-100"} shadow-none`}
+        className={`relative rounded-full ${sizeMap[size].button} flex-shrink-0 p-0 shadow-none ${
+          appearance === "overlay"
+            ? liked
+              ? "bg-red-50/80 hover:bg-red-100/80"
+              : "bg-transparent hover:bg-white/60"
+            : liked
+              ? "bg-red-50 hover:bg-red-100"
+              : "bg-transparent hover:bg-gray-100"
+        }`}
         onClick={handleLike}
         disabled={isLoading}
         onMouseEnter={handleMouseEnter}
@@ -237,7 +254,7 @@ export function LikeButton({ itemType, itemId, className = "", size = "md" }: Li
         key={likeCount}
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className={`${sizeMap[size].text} font-medium text-gray-700 whitespace-nowrap`}
+        className={`${sizeMap[size].text} font-medium whitespace-nowrap ${appearance === "overlay" ? "text-gray-900" : "text-gray-700"}`}
       >
         {likeCount}
       </motion.span>
