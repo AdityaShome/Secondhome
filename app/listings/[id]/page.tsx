@@ -41,6 +41,7 @@ import { ReviewForm } from "@/components/review-form"
 import { ReviewsList } from "@/components/reviews-list"
 import { WhatsAppChatButton } from "@/components/whatsapp-chat-button"
 import { SettlingInKits, type SettlingInKit } from "@/components/settling-in-kits"
+import { MessLocationMapReadonly } from "@/components/mess-location-map-readonly"
 
 interface Property {
   _id: string
@@ -505,36 +506,39 @@ export default function ListingDetailPage() {
               className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-gray-100"
             >
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Location</h2>
-              <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden">
+              <div className="space-y-4">
+                <div className="rounded-xl border bg-white p-4">
+                  <p className="text-sm text-muted-foreground font-medium">Address</p>
+                  <p className="text-base text-gray-900">
+                    {typeof property.location === "string"
+                      ? property.location
+                      : property.location?.address || property.address || "Not provided"}
+                  </p>
+                </div>
+
                 {(() => {
-                  // Handle both old nested structure and new flat array structure
-                  let coords: [number, number] | null = null
-                  
+                  const addressText =
+                    (typeof property.location === "string" ? property.location : property.location?.address || property.address || "").trim()
+
+                  let normalizedCoordinates: { type?: string; coordinates?: [number, number] } | null = null
                   if (property.coordinates) {
                     if (Array.isArray(property.coordinates) && property.coordinates.length >= 2) {
-                      // New flat structure: [lng, lat]
-                      coords = property.coordinates as [number, number]
-                    } else if (property.coordinates.coordinates && Array.isArray(property.coordinates.coordinates) && property.coordinates.coordinates.length >= 2) {
-                      // Old nested structure: {type: 'Point', coordinates: [lng, lat]}
-                      coords = property.coordinates.coordinates as [number, number]
+                      normalizedCoordinates = { type: "Point", coordinates: property.coordinates as any }
+                    } else if (
+                      (property.coordinates as any).coordinates &&
+                      Array.isArray((property.coordinates as any).coordinates) &&
+                      (property.coordinates as any).coordinates.length >= 2
+                    ) {
+                      normalizedCoordinates = property.coordinates as any
                     }
                   }
-                  
-                  return coords && coords[0] !== 0 && coords[1] !== 0 ? (
-                    <iframe
-                      width="100%"
-                      height="100%"
-                      frameBorder="0"
-                      scrolling="no"
-                      marginHeight={0}
-                      marginWidth={0}
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${coords[0] - 0.01},${coords[1] - 0.01},${coords[0] + 0.01},${coords[1] + 0.01}&layer=mapnik&marker=${coords[1]},${coords[0]}`}
-                      className="border-0"
-                    />
+
+                  return addressText ? (
+                    <MessLocationMapReadonly address={addressText} coordinates={normalizedCoordinates} heightClassName="h-[420px]" />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="aspect-video bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center text-gray-500">
                       <MapPin className="w-8 h-8 mr-2" />
-                      <span className="text-sm">Map location not available - coordinates not set</span>
+                      <span className="text-sm">Map location not available - address not set</span>
                     </div>
                   )
                 })()}
