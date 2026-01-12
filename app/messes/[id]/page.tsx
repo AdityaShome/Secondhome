@@ -5,6 +5,15 @@ import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -71,6 +80,16 @@ export default function MessDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("location")
+
+  const [isSubscribeOpen, setIsSubscribeOpen] = useState(false)
+  const [subscriptionStartDate, setSubscriptionStartDate] = useState<string>(() => {
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, "0")
+    const dd = String(today.getDate()).padStart(2, "0")
+    return `${yyyy}-${mm}-${dd}`
+  })
+  const [isCreatingSubscription, setIsCreatingSubscription] = useState(false)
 
   const imageCount = mess?.images?.length ?? 0
 
@@ -220,6 +239,73 @@ export default function MessDetailPage() {
   const contactName = (mess.contactName || "").trim() || mess.owner?.name
   const contactPhone = (mess.contactPhone || "").trim() || mess.owner?.phone
   const contactEmail = (mess.contactEmail || "").trim() || mess.owner?.email
+
+  const handleSubscribeMonthly = async () => {
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please login to subscribe to this mess",
+        variant: "destructive",
+      })
+      router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
+      return
+    }
+
+    if (!hasMonthlyPrice) {
+      toast({
+        title: "Not available",
+        description: "Monthly subscription is not available for this mess.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubscribeOpen(true)
+  }
+
+  const confirmSubscription = async () => {
+    if (!mess?._id) return
+    if (!subscriptionStartDate) {
+      toast({
+        title: "Start date required",
+        description: "Please select a start date.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsCreatingSubscription(true)
+    try {
+      const res = await fetch("/api/mess-subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messId: mess._id,
+          startDate: subscriptionStartDate,
+        }),
+      })
+
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to create subscription")
+      }
+
+      toast({
+        title: "Subscription request created",
+        description: "We sent confirmation emails and notified the mess owner.",
+      })
+
+      setIsSubscribeOpen(false)
+    } catch (e) {
+      toast({
+        title: "Could not subscribe",
+        description: e instanceof Error ? e.message : "Something went wrong. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreatingSubscription(false)
+    }
+  }
 
 
   return (
@@ -558,20 +644,7 @@ export default function MessDetailPage() {
                   <Button
                     className="w-full h-12"
                     onClick={() => {
-                      if (!user) {
-                        toast({
-                          title: "Login required",
-                          description: "Please login to subscribe to this mess",
-                          variant: "destructive",
-                        })
-                        router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
-                        return
-                      }
-
-                      toast({
-                        title: "Subscription request sent",
-                        description: "The mess owner will contact you shortly to confirm your subscription.",
-                      })
+                      handleSubscribeMonthly()
                     }}
                   >
                     Subscribe Monthly
@@ -641,6 +714,40 @@ export default function MessDetailPage() {
         title={mess.name}
         url={getShareUrl()}
       />
+
+      <Dialog open={isSubscribeOpen} onOpenChange={setIsSubscribeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start your monthly subscription</DialogTitle>
+            <DialogDescription>
+              Choose your start date. End date will be automatically set to 1 month from the start date.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="subscriptionStartDate">Start date</Label>
+            <input
+              id="subscriptionStartDate"
+              type="date"
+              value={subscriptionStartDate}
+              onChange={(e) => setSubscriptionStartDate(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+            {hasMonthlyPrice ? (
+              <p className="text-sm text-muted-foreground">Amount: ₹{monthlyPrice}/month</p>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubscribeOpen(false)} disabled={isCreatingSubscription}>
+              Cancel
+            </Button>
+            <Button onClick={confirmSubscription} disabled={isCreatingSubscription}>
+              {isCreatingSubscription ? "Creating..." : "Confirm Subscription"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
