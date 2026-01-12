@@ -117,25 +117,24 @@ export function ScheduleVisitModal({ isOpen, onClose, propertyId, propertyName }
     try {
       // Format the WhatsApp message
       const formattedDate = format(date, "EEEE, MMMM dd, yyyy")
-      const visitMessage = `🏠 *Property Visit Request - SecondHome*
+      const visitMessage = `Property Visit Request - SecondHome
 
-*Property Details:*
-📍 Property: ${propertyName}
-🆔 Property ID: ${propertyId}
+    Property Details:
+    Property: ${propertyName}
+    Property ID: ${propertyId}
 
-*Visitor Information:*
-👤 Name: ${name}
-📱 Phone: ${phone}
-📧 Email: ${email}
+    Visitor Information:
+    Name: ${name}
+    Phone: ${phone}
+    Email: ${email}
 
-*Visit Schedule:*
-📅 Date: ${formattedDate}
-⏰ Time: ${time}
+    Visit Schedule:
+    Date: ${formattedDate}
+    Time: ${time}
 
-${notes ? `*Additional Notes:*\n${notes}\n` : ""}
----
-This is an automated message from SecondHome platform.
-Please confirm the visit schedule with the visitor.`
+    ${notes ? `Additional Notes:\n${notes}\n\n` : ""}---
+    This is an automated message from SecondHome platform.
+    Please confirm the visit schedule with the visitor.`
 
       // Send to business number 7384662005 (917384662005 in international format)
       const businessNumber = "917384662005"
