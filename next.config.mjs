@@ -1,9 +1,15 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
+
 let userConfig = undefined
 try {
   userConfig = await import('./v0-user-next.config')
 } catch (e) {
   // ignore error
 }
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -12,6 +18,18 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+    ],
+  },
+  // Prevent Next from auto-inferring the repo root from unrelated lockfiles
+  // outside this folder (common on Windows), which can break builds.
+  outputFileTracingRoot: __dirname,
+  turbopack: {
+    root: __dirname,
   },
   experimental: {},
 }

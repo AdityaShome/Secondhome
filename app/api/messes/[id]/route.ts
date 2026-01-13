@@ -5,9 +5,9 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
 import mongoose from "mongoose"
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id
+    const { id } = await params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid mess ID" }, { status: 400 })
@@ -21,6 +21,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Mess not found" }, { status: 404 })
     }
 
+    // Only approved messes are public. Pending/rejected are visible to admin/owner only.
+    if (!mess.isApproved || mess.isRejected) {
+      const session = await getServerSession(authOptions)
+      const isAdmin = !!session && session.user.role === "admin"
+      const ownerId = String((mess.owner as any)?._id ?? mess.owner)
+      const isOwner = !!session && ownerId === session.user.id
+
+      if (!isAdmin && !isOwner) {
+        return NextResponse.json({ error: "Mess not found" }, { status: 404 })
+      }
+    }
+
     return NextResponse.json(mess)
   } catch (error) {
     console.error("Error fetching mess:", error)
@@ -28,7 +40,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -36,7 +48,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await params
     const body = await req.json()
 
     await connectToDatabase()
@@ -61,7 +73,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -69,7 +81,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await params
 
     await connectToDatabase()
 

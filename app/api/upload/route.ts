@@ -99,8 +99,8 @@ export async function POST(req: Request) {
     const singleFile = formData.get("file") as File | null
     const multipleFiles = formData.getAll("images") as File[]
     
-    // Check upload type (profile or property)
-    const uploadType = formData.get("type") as string | null || "property"
+    // Check upload type (profile, property, mess)
+    const uploadType = (formData.get("type") as string | null) || "property"
     
     const files = singleFile ? [singleFile] : multipleFiles
 
@@ -118,7 +118,12 @@ export async function POST(req: Request) {
       const uniqueId = uuidv4()
       
       // Use different folder based on upload type
-      const folder = uploadType === "profile" ? "secondhome/profiles" : "secondhome/properties"
+      const folder =
+        uploadType === "profile"
+          ? "secondhome/profiles"
+          : uploadType === "mess"
+            ? "secondhome/messes"
+            : "secondhome/properties"
       const publicId = `${folder}/${uniqueId}`
 
       // Try multiple upload methods to handle signature errors

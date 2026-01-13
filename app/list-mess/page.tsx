@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
+import { MessLocationMap } from "@/components/mess-location-map"
 import {
   Building2, FileText, MapPin, UtensilsCrossed, IndianRupee, Camera, CheckCircle2, 
   Clock, Truck, Users, Phone, Mail, Plus, X, Loader2, ArrowLeft, ArrowRight
@@ -50,12 +51,15 @@ export default function ListMessPage() {
     city: "",
     state: "",
     pincode: "",
+    coordinates: [0, 0],
     monthlyPrice: "",
     dailyPrice: "",
     trialDays: "0",
     homeDeliveryAvailable: false,
     deliveryRadius: "0",
     deliveryCharges: "0",
+    packagingAvailable: false,
+    packagingPrice: "0",
     dietTypes: [],
     mealTypes: [],
     cuisineTypes: [],
@@ -129,6 +133,10 @@ export default function ListMessPage() {
         }
         if (messData.homeDeliveryAvailable && parseFloat(messData.deliveryRadius) === 0) {
           toast({ title: "Error", description: "Please specify delivery radius if home delivery is available", variant: "destructive" })
+          return false
+        }
+        if (messData.homeDeliveryAvailable && messData.packagingAvailable && parseFloat(messData.packagingPrice || "0") <= 0) {
+          toast({ title: "Error", description: "Please enter a valid packaging price", variant: "destructive" })
           return false
         }
         return true
@@ -222,21 +230,40 @@ export default function ListMessPage() {
     setIsLoading(true)
 
     try {
-      // Upload images first
-      const imageUrls: string[] = []
-      for (const img of messData.images) {
-        const formData = new FormData()
-        formData.append("file", img.file)
+      // Upload images first (to Cloudinary via /api/upload)
+      const files: File[] = (messData.images || [])
+        .map((img: any) => img?.file)
+        .filter(Boolean)
 
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
+      if (files.length < 2) {
+        throw new Error("Please upload at least 2 photos of your mess")
+      }
 
-        if (uploadRes.ok) {
-          const { url } = await uploadRes.json()
-          imageUrls.push(url)
-        }
+      const uploadFormData = new FormData()
+      uploadFormData.append("type", "mess")
+      for (const file of files) {
+        uploadFormData.append("images", file)
+      }
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      })
+
+      if (!uploadRes.ok) {
+        const errorData = await uploadRes.json().catch(() => null)
+        throw new Error(errorData?.error || "Failed to upload images")
+      }
+
+      const uploadData = await uploadRes.json()
+      const imageUrls: string[] = Array.isArray(uploadData?.imageUrls)
+        ? uploadData.imageUrls
+        : uploadData?.url
+          ? [uploadData.url]
+          : []
+
+      if (imageUrls.length !== files.length) {
+        throw new Error("Some images failed to upload. Please try again.")
       }
 
       // Prepare mess data for submission
@@ -250,7 +277,9 @@ export default function ListMessPage() {
         pincode: messData.pincode,
         coordinates: {
           type: "Point",
-          coordinates: [0, 0], // Default, can be improved with geocoding
+          coordinates: messData.coordinates && messData.coordinates.length === 2 
+            ? [messData.coordinates[1], messData.coordinates[0]]  // GeoJSON format: [lng, lat]
+            : [0, 0],
         },
         monthlyPrice: parseFloat(messData.monthlyPrice),
         dailyPrice: messData.dailyPrice ? parseFloat(messData.dailyPrice) : undefined,
@@ -258,6 +287,8 @@ export default function ListMessPage() {
         homeDeliveryAvailable: messData.homeDeliveryAvailable,
         deliveryRadius: parseFloat(messData.deliveryRadius) || 0,
         deliveryCharges: parseFloat(messData.deliveryCharges) || 0,
+        packagingAvailable: !!messData.packagingAvailable,
+        packagingPrice: messData.packagingAvailable ? (parseFloat(messData.packagingPrice) || 0) : 0,
         images: imageUrls,
         mealTypes: messData.mealTypes,
         cuisineTypes: messData.cuisineTypes,
@@ -544,6 +575,23 @@ function LocationTab({ messData, setMessData }: any) {
           onChange={(e) => setMessData({ ...messData, pincode: e.target.value.replace(/\D/g, "") })}
         />
       </div>
+
+      {/* Location Map Section */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">📍 Verify Location on Map</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          As you enter the address details, the map will automatically locate your mess service. You can verify the exact location coordinates below.
+        </p>
+        <MessLocationMap
+          address={messData.address}
+          city={messData.city}
+          state={messData.state}
+          pincode={messData.pincode}
+          onCoordinatesChange={(coords) => {
+            setMessData({ ...messData, coordinates: coords })
+          }}
+        />
+      </div>
     </div>
   )
 }
@@ -593,9 +641,21 @@ function PricingTab({ messData, setMessData }: any) {
           <Checkbox
             id="homeDelivery"
             checked={messData.homeDeliveryAvailable}
-            onCheckedChange={(checked) =>
-              setMessData({ ...messData, homeDeliveryAvailable: checked })
-            }
+            onCheckedChange={(checked) => {
+              const enabled = !!checked
+              setMessData({
+                ...messData,
+                homeDeliveryAvailable: enabled,
+                ...(enabled
+                  ? {}
+                  : {
+                      deliveryRadius: "0",
+                      deliveryCharges: "0",
+                      packagingAvailable: false,
+                      packagingPrice: "0",
+                    }),
+              })
+            }}
           />
           <Label htmlFor="homeDelivery" className="flex items-center gap-2">
             <Truck className="w-4 h-4" />
@@ -604,27 +664,59 @@ function PricingTab({ messData, setMessData }: any) {
         </div>
 
         {messData.homeDeliveryAvailable && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="deliveryRadius">Delivery Radius (km)</Label>
-              <Input
-                id="deliveryRadius"
-                type="number"
-                placeholder="E.g., 5"
-                value={messData.deliveryRadius}
-                onChange={(e) => setMessData({ ...messData, deliveryRadius: e.target.value })}
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="deliveryRadius">Delivery Radius (km)</Label>
+                <Input
+                  id="deliveryRadius"
+                  type="number"
+                  placeholder="E.g., 5"
+                  value={messData.deliveryRadius}
+                  onChange={(e) => setMessData({ ...messData, deliveryRadius: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="deliveryCharges">Delivery Charges (₹)</Label>
+                <Input
+                  id="deliveryCharges"
+                  type="number"
+                  placeholder="E.g., 20"
+                  value={messData.deliveryCharges}
+                  onChange={(e) => setMessData({ ...messData, deliveryCharges: e.target.value })}
+                />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="deliveryCharges">Delivery Charges (₹)</Label>
-              <Input
-                id="deliveryCharges"
-                type="number"
-                placeholder="E.g., 20"
-                value={messData.deliveryCharges}
-                onChange={(e) => setMessData({ ...messData, deliveryCharges: e.target.value })}
-              />
+            <div className="border-t pt-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <Checkbox
+                  id="packagingAvailable"
+                  checked={messData.packagingAvailable}
+                  onCheckedChange={(checked) =>
+                    setMessData({
+                      ...messData,
+                      packagingAvailable: checked,
+                      packagingPrice: checked ? messData.packagingPrice : "0",
+                    })
+                  }
+                />
+                <Label htmlFor="packagingAvailable">Packaging available (extra)</Label>
+              </div>
+
+              {messData.packagingAvailable && (
+                <div className="max-w-sm">
+                  <Label htmlFor="packagingPrice">Packaging Charges (₹)</Label>
+                  <Input
+                    id="packagingPrice"
+                    type="number"
+                    placeholder="E.g., 10"
+                    value={messData.packagingPrice}
+                    onChange={(e) => setMessData({ ...messData, packagingPrice: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

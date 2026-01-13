@@ -18,6 +18,8 @@ export interface IMess extends Document {
   homeDeliveryAvailable: boolean
   deliveryRadius: number // in km
   deliveryCharges: number
+  packagingAvailable?: boolean
+  packagingPrice?: number
   images: string[]
   mealTypes: string[] // breakfast, lunch, dinner, snacks
   cuisineTypes: string[] // North Indian, South Indian, Chinese, etc.
@@ -43,6 +45,22 @@ export interface IMess extends Document {
   reviews: number
   isApproved: boolean
   isRejected: boolean
+  approvedAt?: Date
+  approvedBy?: mongoose.Types.ObjectId
+  rejectedAt?: Date
+  rejectedBy?: mongoose.Types.ObjectId
+  rejectionReason?: string
+  aiReview?: {
+    reviewed: boolean
+    reviewedAt?: Date
+    confidence?: number
+    score?: number
+    recommendation?: string
+    summary?: string
+    analysis?: any
+    redFlags?: string[]
+    reason?: string
+  }
   createdAt: Date
   updatedAt?: Date
 }
@@ -65,6 +83,8 @@ const MessSchema = new Schema<IMess>({
   homeDeliveryAvailable: { type: Boolean, default: false },
   deliveryRadius: { type: Number, default: 0 },
   deliveryCharges: { type: Number, default: 0 },
+  packagingAvailable: { type: Boolean, default: false },
+  packagingPrice: { type: Number, default: 0 },
   images: { type: [String] },
   mealTypes: { type: [String], required: true },
   cuisineTypes: { type: [String] },
@@ -92,6 +112,22 @@ const MessSchema = new Schema<IMess>({
   reviews: { type: Number, default: 0 },
   isApproved: { type: Boolean, default: false },
   isRejected: { type: Boolean, default: false },
+  approvedAt: { type: Date },
+  approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  rejectedAt: { type: Date },
+  rejectedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  rejectionReason: { type: String },
+  aiReview: {
+    reviewed: { type: Boolean, default: false },
+    reviewedAt: { type: Date },
+    confidence: { type: Number },
+    score: { type: Number },
+    recommendation: { type: String },
+    summary: { type: String },
+    analysis: { type: Schema.Types.Mixed },
+    redFlags: [{ type: String }],
+    reason: { type: String },
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date },
 })

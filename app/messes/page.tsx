@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+// Map view is shown on the single mess detail page.
 
 export default function MessesPage() {
   const { data: session } = useSession()
@@ -301,7 +302,7 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
     if (mess.images && mess.images.length > 0) {
       return mess.images[0]
     }
-    return "/placeholder-mess.jpg"
+    return "/placeholder.jpg"
   }
 
   return (
@@ -312,11 +313,11 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
     >
       <Card
         className="group overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white"
-        onClick={() => router.push(`/messes/${mess._id}`)}
+        onClick={() => router.push(`/messes/${encodeURIComponent(String(mess._id))}`)}
       >
         <div className="relative h-48 overflow-hidden">
           <Image
-            src={imageError ? "/placeholder-mess.jpg" : getMessImage()}
+            src={imageError ? "/placeholder.jpg" : getMessImage()}
             alt={mess.name}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -402,12 +403,31 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
             </div>
           )}
 
+          {/* Delivery / Packaging */}
+          {(mess.homeDeliveryAvailable || mess.packagingAvailable) && (
+            <div className="mt-2 text-xs text-gray-600 space-y-1">
+              {mess.homeDeliveryAvailable && (
+                <div className="flex items-center gap-2">
+                  <Truck className="w-3 h-3" />
+                  <span>
+                    Delivery: up to {mess.deliveryRadius || 0}km • ₹{mess.deliveryCharges || 0}
+                  </span>
+                </div>
+              )}
+              {mess.packagingAvailable && (
+                <div>
+                  Packaging: ₹{mess.packagingPrice || 0}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* View Details Button */}
           <Button 
             className="w-full mt-4 bg-orange-500 hover:bg-orange-600"
             onClick={(e) => {
               e.stopPropagation()
-              router.push(`/messes/${mess._id}`)
+              router.push(`/messes/${encodeURIComponent(String(mess._id))}`)
             }}
           >
             View Details
