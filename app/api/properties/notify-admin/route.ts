@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const normalizeBaseUrl = () => {
       const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim()
       const vercelBase = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
-      const fallbackProd = "https://secondhome-zeta.vercel.app"
+      const fallbackProd = "https://secondhome.site"
       if (envBase && !envBase.includes("localhost")) return envBase.replace(/\/$/, "")
       if (vercelBase) return vercelBase.replace(/\/$/, "")
       return fallbackProd

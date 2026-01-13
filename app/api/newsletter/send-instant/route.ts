@@ -71,7 +71,7 @@ Format as HTML with inline CSS (email-safe).`
     let failCount = 0
 
     const propertyLink = `${process.env.NEXT_PUBLIC_BASE_URL}/listings/${propertyData._id}`
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://secondhome-zeta.vercel.app'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://secondhome.site'
 
     // Prepare property images HTML
     const propertyImagesHTML = propertyData.images && propertyData.images.length > 0 ? `

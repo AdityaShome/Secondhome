@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email
     try {
-      await fetch(`https://secondhome-eight.vercel.app/api/newsletter/send-welcome`, {
+      await fetch(`https://secondhome.site/api/newsletter/send-welcome`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: newsletter.email, unsubscribeToken }),

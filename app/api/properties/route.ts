@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       const normalizeBaseUrl = () => {
         const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim()
         const vercelBase = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
-        const fallbackProd = "https://secondhome-zeta.vercel.app"
+        const fallbackProd = "https://secondhome.site"
 
         // If env points to localhost, ignore it for outbound links/emails
         if (envBase && !envBase.includes("localhost")) return envBase.replace(/\/$/, "")
@@ -190,7 +190,7 @@ export async function POST(req: Request) {
         const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
         const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim()
         const vercelBase = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
-        const fallbackProd = "https://secondhome-eight.vercel.app"
+        const fallbackProd = "https://secondhome.site"
         // Prefer NEXT_PUBLIC_SITE_URL for production
         if (envSiteUrl && !envSiteUrl.includes("localhost")) return envSiteUrl.replace(/\/$/, "")
         if (envBase && !envBase.includes("localhost")) return envBase.replace(/\/$/, "")
@@ -264,7 +264,7 @@ export async function POST(req: Request) {
     // Send notification to admin only if needs manual review
     if (!autoApproved) {
       try {
-        const baseUrl = 'https://secondhome-eight.vercel.app'
+        const baseUrl = 'https://secondhome.site'
         await fetch(`${baseUrl}/api/properties/notify-admin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
