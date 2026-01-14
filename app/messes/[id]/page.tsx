@@ -89,6 +89,7 @@ export default function MessDetailPage() {
     const dd = String(today.getDate()).padStart(2, "0")
     return `${yyyy}-${mm}-${dd}`
   })
+  const [subscriptionPhone, setSubscriptionPhone] = useState("")
   const [isCreatingSubscription, setIsCreatingSubscription] = useState(false)
 
   const imageCount = mess?.images?.length ?? 0
@@ -274,6 +275,16 @@ export default function MessDetailPage() {
       return
     }
 
+    const normalizedPhone = (subscriptionPhone || "").replace(/\D/g, "")
+    if (normalizedPhone.length !== 10) {
+      toast({
+        title: "Phone number required",
+        description: "Please enter a valid 10-digit phone number.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsCreatingSubscription(true)
     try {
       const res = await fetch("/api/mess-subscriptions", {
@@ -282,6 +293,7 @@ export default function MessDetailPage() {
         body: JSON.stringify({
           messId: mess._id,
           startDate: subscriptionStartDate,
+          phone: normalizedPhone,
         }),
       })
 
@@ -724,18 +736,36 @@ export default function MessDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor="subscriptionStartDate">Start date</Label>
-            <input
-              id="subscriptionStartDate"
-              type="date"
-              value={subscriptionStartDate}
-              onChange={(e) => setSubscriptionStartDate(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            />
-            {hasMonthlyPrice ? (
-              <p className="text-sm text-muted-foreground">Amount: ₹{monthlyPrice}/month</p>
-            ) : null}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionStartDate">Start date</Label>
+              <input
+                id="subscriptionStartDate"
+                type="date"
+                value={subscriptionStartDate}
+                onChange={(e) => setSubscriptionStartDate(e.target.value)}
+                className="w-full rounded-md border px-3 py-2 text-sm"
+              />
+              {hasMonthlyPrice ? (
+                <p className="text-sm text-muted-foreground">Amount: ₹{monthlyPrice}/month</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionPhone">Your phone number</Label>
+              <input
+                id="subscriptionPhone"
+                type="tel"
+                inputMode="numeric"
+                placeholder="10-digit phone number"
+                value={subscriptionPhone}
+                onChange={(e) => setSubscriptionPhone(e.target.value)}
+                className="w-full rounded-md border px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                This is used in the booking emails sent to you, the mess owner, and SecondHome.
+              </p>
+            </div>
           </div>
 
           <DialogFooter>

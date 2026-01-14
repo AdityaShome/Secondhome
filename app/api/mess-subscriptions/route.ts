@@ -10,16 +10,49 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth-options";
 import mongoose from "mongoose";
 
-function normalizeBaseUrl() {
-  const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+function isLocalhostUrl(url: string) {
+  return /localhost|127\.0\.0\.1/i.test(url);
+}
+
+function getBaseUrlFromRequest(req: Request) {
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  if (!host) return null;
+  const candidate = `${proto}://${host}`;
+  if (isLocalhostUrl(candidate)) return null;
+  return candidate.replace(/\/$/, "");
+}
+
+function normalizeBaseUrl(req: Request) {
+  const requestBase = getBaseUrlFromRequest(req);
+  if (requestBase) return requestBase;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (siteUrl && !isLocalhostUrl(siteUrl)) return siteUrl.replace(/\/$/, "");
+
   const vercelBase = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : undefined;
-  const fallbackProd =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://secondhome.com";
-  if (envBase) return envBase.replace(/\/$/, "");
-  if (vercelBase) return vercelBase.replace(/\/$/, "");
-  return fallbackProd.replace(/\/$/, "");
+  if (vercelBase && !isLocalhostUrl(vercelBase)) return vercelBase.replace(/\/$/, "");
+
+  const envBase = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  if (envBase && !isLocalhostUrl(envBase)) return envBase.replace(/\/$/, "");
+
+  // Last resort.
+  return "https://secondhome.site";
+}
+
+function normalizePhone(value: unknown) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes("@")) return null;
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return digits;
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
+  return null;
 }
 
 function getEmailTransporter() {
@@ -47,6 +80,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const messId = body?.messId;
     const startDateRaw = body?.startDate;
+    const subscriberPhoneRaw = body?.phone;
 
     if (
       !messId ||
@@ -107,6 +141,21 @@ export async function POST(req: Request) {
       .select("name email phone")
       .lean();
 
+    const messOwner = mess.owner as any;
+    const accountOwnerName = (messOwner?.name || ownerDoc?.name || "Mess Owner") as string;
+    const accountOwnerEmail = (messOwner?.email || ownerDoc?.email || "") as string;
+    const accountOwnerPhone =
+      normalizePhone(messOwner?.phone) || normalizePhone(ownerDoc?.phone);
+
+    const listingContactName = String((mess as any).contactName || "").trim();
+    const listingContactEmail = String((mess as any).contactEmail || "").trim();
+    const listingContactPhoneRaw = String((mess as any).contactPhone || "").trim();
+    const listingContactPhone = normalizePhone(listingContactPhoneRaw);
+
+    const ownerName = listingContactName || accountOwnerName;
+    const ownerEmail = listingContactEmail || accountOwnerEmail;
+    const ownerPhone = listingContactPhone || accountOwnerPhone;
+
     const monthlyPrice = Number((mess as any).monthlyPrice);
     if (!Number.isFinite(monthlyPrice) || monthlyPrice <= 0) {
       return NextResponse.json(
@@ -114,6 +163,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    const subscriberPhone = normalizePhone(subscriberPhoneRaw) || normalizePhone((userDoc as any).phone);
 
     const subscription = await MessSubscription.create({
       user: session.user.id,
@@ -123,10 +174,13 @@ export async function POST(req: Request) {
       endDate: endDateUtc,
       monthlyPrice,
       status: "pending",
+      subscriberName: (userDoc as any).name,
+      subscriberEmail: (userDoc as any).email,
+      subscriberPhone: subscriberPhone || undefined,
       createdAt: new Date(),
     });
 
-    const baseUrl = normalizeBaseUrl();
+    const baseUrl = normalizeBaseUrl(req);
     const messLink = `${baseUrl}/messes/${encodeURIComponent(
       String(mess._id)
     )}`;
@@ -177,11 +231,7 @@ export async function POST(req: Request) {
       "second.home2k25@gmail.com";
 
     const userEmail = (userDoc as any).email;
-    const ownerEmail = ownerDoc?.email || (mess.owner as any)?.email;
-
     const userName = (userDoc as any).name || "User";
-    const ownerName =
-      ownerDoc?.name || (mess.owner as any)?.name || "Mess Owner";
 
     if (transporter && fromEmail) {
       const subjectUser = `SecondHome: Subscription request created for ${mess.name}`;
@@ -214,7 +264,7 @@ export async function POST(req: Request) {
         `Mess: ${mess.name}`,
         `User: ${userName}`,
         `User email: ${userEmail || "Not provided"}`,
-        `User phone: ${(userDoc as any).phone || "Not provided"}`,
+        `User phone: ${subscriberPhone || "Not provided"}`,
         "",
         `Start date: ${startDateRaw}`,
         `End date: ${endDateUtc.toISOString().slice(0, 10)}`,
@@ -231,11 +281,15 @@ export async function POST(req: Request) {
         "New Mess Monthly Subscription Request",
         "",
         `Mess: ${mess.name} (${String(mess._id)})`,
-        `Owner: ${ownerName} (${ownerEmail || "No email"})`,
+        `Listing contact: ${ownerName} (${ownerEmail || "No email"})`,
+        `Listing phone: ${ownerPhone || "Not provided"}`,
+        "",
+        `Account owner: ${accountOwnerName} (${accountOwnerEmail || "No email"})`,
+        `Account owner phone: ${accountOwnerPhone || "Not provided"}`,
         "",
         `User: ${userName}`,
         `User email: ${userEmail || "Not provided"}`,
-        `User phone: ${(userDoc as any).phone || "Not provided"}`,
+        `User phone: ${subscriberPhone || "Not provided"}`,
         "",
         `Start date: ${startDateRaw}`,
         `End date: ${endDateUtc.toISOString().slice(0, 10)}`,

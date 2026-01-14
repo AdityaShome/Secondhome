@@ -58,7 +58,6 @@ const NewsletterSchema = new Schema<INewsletter>(
 )
 
 // Indexes
-NewsletterSchema.index({ email: 1 })
 NewsletterSchema.index({ isActive: 1 })
 
 export default mongoose.models.Newsletter || mongoose.model<INewsletter>("Newsletter", NewsletterSchema)
