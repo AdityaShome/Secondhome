@@ -89,7 +89,10 @@ export function MessLocationMap({
   }
 
   const handleLocate = async () => {
-    const fullAddress = `${address}, ${city}, ${state} ${pincode}`.trim()
+    const fullAddress = `${address}, ${city}, ${state}, ${pincode}, India`
+      .replace(/\s+/g, " ")
+      .replace(/,\s*,/g, ",")
+      .trim()
 
     setError(null)
 
@@ -104,14 +107,25 @@ export function MessLocationMap({
       const response = await fetch("/api/geocode", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: fullAddress }),
+        body: JSON.stringify({
+          address: (address || "").trim(),
+          city: (city || "").trim(),
+          state: (state || "").trim(),
+          pincode: (pincode || "").trim(),
+          country: "India",
+          // Backward compat: keep the full string available for providers that
+          // do best with a single combined query.
+          fullAddress,
+        }),
       })
 
       if (!response.ok) {
         const responseText = await response.text()
         console.error("❌ Geocoding failed with status:", response.status)
         console.error("❌ Response:", responseText)
-        setError("Could not locate this address. Please refine it and try again.")
+        setError(
+          "Could not locate this address. Try adding street/area name, or turn ON 'Pick on Map' and pin the exact location manually."
+        )
         return
       }
 
