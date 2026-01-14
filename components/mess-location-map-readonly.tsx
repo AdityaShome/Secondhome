@@ -344,11 +344,36 @@ export function MessLocationMapReadonly({
     if (typeof window === "undefined") return
     if (typeof DeviceOrientationEvent === "undefined") return
 
+    const getScreenAngle = () => {
+      const anyWindow = window as any
+      const angle =
+        window.screen?.orientation?.angle ??
+        (typeof anyWindow.orientation === "number" ? anyWindow.orientation : 0)
+      return typeof angle === "number" && Number.isFinite(angle) ? angle : 0
+    }
+
+    const alphaToCompassHeading = (alpha: number) => {
+      // In most non-iOS browsers, alpha is clockwise from the device coordinate frame;
+      // compass heading for the top of the device is commonly computed as (360 - alpha).
+      return normalizeDeg(360 - alpha)
+    }
+
     const handler = (event: DeviceOrientationEvent) => {
-      const alpha = (event as any).webkitCompassHeading ?? event.alpha
-      if (typeof alpha === "number" && Number.isFinite(alpha)) {
-        // 0..360, where 0 is North
-        setHeadingTarget(alpha)
+      // iOS Safari provides a direct compass heading.
+      const webkitHeading = (event as any).webkitCompassHeading
+      const alpha = event.alpha
+
+      let heading: number | null = null
+      if (typeof webkitHeading === "number" && Number.isFinite(webkitHeading)) {
+        heading = normalizeDeg(webkitHeading)
+      } else if (typeof alpha === "number" && Number.isFinite(alpha)) {
+        heading = alphaToCompassHeading(alpha)
+      }
+
+      if (typeof heading === "number") {
+        // Compensate for screen rotation (portrait/landscape)
+        heading = normalizeDeg(heading + getScreenAngle())
+        setHeadingTarget(heading)
       }
     }
 
