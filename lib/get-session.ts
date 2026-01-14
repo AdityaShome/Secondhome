@@ -1,5 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
+import { connectToDatabase } from "@/lib/mongodb"
+import { getUserModel } from "@/models/user"
 
 /**
  * Get the current session in App Router API routes
@@ -24,11 +26,30 @@ export async function getSession() {
     }
     
     if (!session.user.id) {
+      const email = session.user.email?.toLowerCase().trim()
       console.log("⚠️ Session found but missing user.id", {
         user: session.user,
-        email: session.user.email,
+        email,
       })
-      return null
+
+      if (!email) {
+        return null
+      }
+
+      try {
+        await connectToDatabase()
+        const User = await getUserModel()
+        const dbUser = await User.findOne({ email }).select("_id role").lean()
+        if (dbUser?._id) {
+          session.user.id = dbUser._id.toString()
+          ;(session.user as any).role = (dbUser as any).role || (session.user as any).role || "user"
+        } else {
+          return null
+        }
+      } catch (error) {
+        console.error("❌ Failed to backfill session.user.id:", error)
+        return null
+      }
     }
     
     console.log("✅ Session found:", {

@@ -261,18 +261,32 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid item type" }, { status: 400 })
     }
 
+    if (!mongoose.Types.ObjectId.isValid(itemId)) {
+      return NextResponse.json({ error: "Invalid item ID format" }, { status: 400 })
+    }
+
     await connectToDatabase()
 
+    const itemObjectId = new mongoose.Types.ObjectId(itemId)
+
     // Get the like count for the item
-    const likeCount = await Like.countDocuments({ itemType, itemId })
+    const likeCount = await Like.countDocuments({ itemType, itemId: itemObjectId })
 
     // Check if the user has liked this item (if userId is provided)
     let userLiked = false
-    if (userId) {
+
+    let effectiveUserId: string | null = userId
+    if (!effectiveUserId || !mongoose.Types.ObjectId.isValid(effectiveUserId)) {
+      const session = await getSession()
+      effectiveUserId = session?.user?.id && mongoose.Types.ObjectId.isValid(session.user.id) ? session.user.id : null
+    }
+
+    if (effectiveUserId) {
+      const userObjectId = new mongoose.Types.ObjectId(effectiveUserId)
       const userLike = await Like.findOne({
-        user: userId,
+        user: userObjectId,
         itemType,
-        itemId,
+        itemId: itemObjectId,
       })
       userLiked = !!userLike
     }

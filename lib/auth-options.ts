@@ -208,6 +208,23 @@ export const authOptions: NextAuthOptions = {
           token.id = user.id
           token.role = user.role || "user"
         }
+
+        // Robust fallback: some OAuth sessions can end up without token.id.
+        // If we have an email, resolve the user from DB and backfill token.id.
+        if (!token.id && token.email) {
+          try {
+            await connectToDatabase()
+            const User = await getUserModel()
+            const normalizedEmail = token.email.toLowerCase().trim()
+            const dbUser = await User.findOne({ email: normalizedEmail }).select("_id role").lean()
+            if (dbUser?._id) {
+              token.id = dbUser._id.toString()
+              token.role = (dbUser as any).role || token.role || "user"
+            }
+          } catch (error) {
+            console.error("Failed to backfill token.id from email:", error)
+          }
+        }
         
         // If session is being updated (e.g., via update()), refresh role from database
         if (trigger === "update" && token.id) {
