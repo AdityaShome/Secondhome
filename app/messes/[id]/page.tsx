@@ -26,6 +26,7 @@ import { ShareModal } from "@/components/share-modal"
 import { ReviewForm } from "@/components/review-form"
 import { ReviewsList } from "@/components/reviews-list"
 import { MessLocationMapReadonly } from "@/components/mess-location-map-readonly"
+import { useLanguage } from "@/providers/language-provider"
 
 interface Mess {
   _id: string
@@ -72,6 +73,7 @@ export default function MessDetailPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
+  const { t } = useLanguage()
 
   const messId = Array.isArray((params as any)?.id) ? (params as any).id[0] : (params as any)?.id
 
@@ -123,8 +125,8 @@ export default function MessDetailPage() {
         if (!response.ok) {
           if (response.status === 400) {
             toast({
-              title: "Invalid link",
-              description: "This mess link looks invalid. Please open it again from the mess listing.",
+              title: t("mess.detail.toast.invalidLink.title"),
+              description: t("mess.detail.toast.invalidLink.desc"),
               variant: "destructive",
             })
             router.push("/messes")
@@ -133,8 +135,8 @@ export default function MessDetailPage() {
 
           if (response.status === 401 || response.status === 403) {
             toast({
-              title: "Not authorized",
-              description: "This mess is not public yet (pending approval) or you don't have access.",
+              title: t("mess.detail.toast.notAuthorized.title"),
+              description: t("mess.detail.toast.notAuthorized.desc"),
               variant: "destructive",
             })
             router.push("/messes")
@@ -143,8 +145,8 @@ export default function MessDetailPage() {
 
           if (response.status === 404) {
             toast({
-              title: "Mess not found",
-              description: "The mess you're looking for doesn't exist or has been removed.",
+              title: t("mess.detail.toast.notFound.title"),
+              description: t("mess.detail.toast.notFound.desc"),
               variant: "destructive",
             })
             router.push("/messes")
@@ -161,8 +163,8 @@ export default function MessDetailPage() {
       } catch (error) {
         console.error("Error fetching mess details:", error)
         toast({
-          title: "Error",
-          description: "Failed to fetch mess details. Please try again later.",
+          title: t("common.error"),
+          description: t("mess.detail.toast.fetchFailed"),
           variant: "destructive",
         })
 
@@ -198,7 +200,7 @@ export default function MessDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading mess details...</p>
+          <p className="text-muted-foreground">{t("mess.detail.loading")}</p>
         </div>
       </div>
     )
@@ -208,10 +210,10 @@ export default function MessDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md px-4">
-          <h2 className="text-2xl font-bold mb-2">Mess Not Found</h2>
-          <p className="text-muted-foreground mb-6">The mess you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-2xl font-bold mb-2">{t("mess.detail.notFoundTitle")}</h2>
+          <p className="text-muted-foreground mb-6">{t("mess.detail.notFoundDesc")}</p>
           <Button asChild>
-            <Link href="/messes">Browse Other Messes</Link>
+            <Link href="/messes">{t("mess.detail.browseOthers")}</Link>
           </Button>
         </div>
       </div>
@@ -228,9 +230,9 @@ export default function MessDetailPage() {
   const hasPackagingCharges = Boolean(mess.packagingAvailable) && Number.isFinite(packagingPrice) && packagingPrice > 0
 
   const mealTimings = [
-    { label: "Breakfast", value: mess.openingHours?.breakfast },
-    { label: "Lunch", value: mess.openingHours?.lunch },
-    { label: "Dinner", value: mess.openingHours?.dinner },
+    { label: t("common.meal.breakfast"), value: mess.openingHours?.breakfast },
+    { label: t("common.meal.lunch"), value: mess.openingHours?.lunch },
+    { label: t("common.meal.dinner"), value: mess.openingHours?.dinner },
   ].filter((t) => Boolean((t.value || "").trim()))
   const hasMealTimings = mealTimings.length > 0
 
@@ -244,8 +246,8 @@ export default function MessDetailPage() {
   const handleSubscribeMonthly = async () => {
     if (!user) {
       toast({
-        title: "Login required",
-        description: "Please login to subscribe to this mess",
+        title: t("common.loginRequired"),
+        description: t("mess.detail.toast.loginToSubscribe"),
         variant: "destructive",
       })
       router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
@@ -254,8 +256,8 @@ export default function MessDetailPage() {
 
     if (!hasMonthlyPrice) {
       toast({
-        title: "Not available",
-        description: "Monthly subscription is not available for this mess.",
+        title: t("common.notAvailable"),
+        description: t("mess.detail.toast.subscriptionNotAvailable"),
         variant: "destructive",
       })
       return
@@ -268,8 +270,8 @@ export default function MessDetailPage() {
     if (!mess?._id) return
     if (!subscriptionStartDate) {
       toast({
-        title: "Start date required",
-        description: "Please select a start date.",
+        title: t("mess.detail.toast.startDateRequired.title"),
+        description: t("mess.detail.toast.startDateRequired.desc"),
         variant: "destructive",
       })
       return
@@ -278,8 +280,8 @@ export default function MessDetailPage() {
     const normalizedPhone = (subscriptionPhone || "").replace(/\D/g, "")
     if (normalizedPhone.length !== 10) {
       toast({
-        title: "Phone number required",
-        description: "Please enter a valid 10-digit phone number.",
+        title: t("mess.detail.toast.phoneRequired.title"),
+        description: t("mess.detail.toast.phoneRequired.desc"),
         variant: "destructive",
       })
       return
@@ -303,15 +305,15 @@ export default function MessDetailPage() {
       }
 
       toast({
-        title: "Subscription request created",
-        description: "We sent confirmation emails and notified the mess owner.",
+        title: t("mess.detail.toast.subscriptionCreated.title"),
+        description: t("mess.detail.toast.subscriptionCreated.desc"),
       })
 
       setIsSubscribeOpen(false)
     } catch (e) {
       toast({
-        title: "Could not subscribe",
-        description: e instanceof Error ? e.message : "Something went wrong. Please try again.",
+        title: t("mess.detail.toast.subscribeFailed.title"),
+        description: e instanceof Error ? e.message : t("common.somethingWentWrong"),
         variant: "destructive",
       })
     } finally {
@@ -325,7 +327,7 @@ export default function MessDetailPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-2 items-start mb-6">
           <Link href="/messes" className="text-sm text-muted-foreground hover:text-primary">
-            Messes
+            {t("nav.messes")}
           </Link>
           <span className="hidden md:inline text-muted-foreground">/</span>
           <span className="text-sm">{mess.name}</span>
@@ -378,7 +380,9 @@ export default function MessDetailPage() {
                   <div className="flex items-center">
                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400 mr-1" />
                     <span className="font-medium">{mess.rating.toFixed(1)}</span>
-                    <span className="text-sm text-muted-foreground ml-1">({mess.reviews} reviews)</span>
+                    <span className="text-sm text-muted-foreground ml-1">
+                      ({mess.reviews} {t("common.reviews")})
+                    </span>
                   </div>
                 </div>
 
@@ -388,13 +392,13 @@ export default function MessDetailPage() {
                 </div>
 
                 <div className="mt-6">
-                  <h2 className="text-xl font-bold mb-3">Description</h2>
+                  <h2 className="text-xl font-bold mb-3">{t("common.description")}</h2>
                   <p className="text-muted-foreground">{mess.description}</p>
                 </div>
 
                 {hasMealTimings && (
                   <div className="mt-8">
-                    <h2 className="text-xl font-bold mb-4">Meal Timings</h2>
+                    <h2 className="text-xl font-bold mb-4">{t("mess.detail.mealTimings")}</h2>
                     <div className={`grid gap-4 ${mealTimings.length >= 3 ? "md:grid-cols-3" : mealTimings.length === 2 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
                       {mealTimings.map((timing) => (
                         <Card key={timing.label}>
@@ -413,19 +417,19 @@ export default function MessDetailPage() {
 
                 <div className="mt-8">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">Pricing</h2>
+                    <h2 className="text-xl font-bold">{t("mess.detail.pricing.title")}</h2>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     {hasMonthlyPrice && (
                       <Card>
                         <CardContent className="p-4">
-                          <h3 className="font-medium mb-2">Monthly Subscription</h3>
+                          <h3 className="font-medium mb-2">{t("mess.detail.pricing.monthlyTitle")}</h3>
                           <div className="flex items-end">
                             <span className="text-2xl font-bold">₹{monthlyPrice}</span>
-                            <span className="text-muted-foreground ml-1">/month</span>
+                            <span className="text-muted-foreground ml-1">/{t("common.perMonth")}</span>
                           </div>
                           <p className="text-sm text-muted-foreground mt-2">
-                            Includes breakfast, lunch, and dinner for the entire month
+                            {t("mess.detail.pricing.monthlySubtitle")}
                           </p>
                         </CardContent>
                       </Card>
@@ -434,12 +438,12 @@ export default function MessDetailPage() {
                     {hasDailyPrice && (
                       <Card>
                         <CardContent className="p-4">
-                          <h3 className="font-medium mb-2">Daily Meal</h3>
+                          <h3 className="font-medium mb-2">{t("mess.detail.pricing.dailyTitle")}</h3>
                           <div className="flex items-end">
                             <span className="text-2xl font-bold">₹{dailyPrice}</span>
-                            <span className="text-muted-foreground ml-1">/day</span>
+                            <span className="text-muted-foreground ml-1">/{t("common.perDay")}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-2">Pay as you go for breakfast, lunch, and dinner</p>
+                          <p className="text-sm text-muted-foreground mt-2">{t("mess.detail.pricing.payAsYouGo")}</p>
                         </CardContent>
                       </Card>
                     )}
@@ -447,12 +451,12 @@ export default function MessDetailPage() {
                     {hasPackagingCharges && (
                       <Card>
                         <CardContent className="p-4">
-                          <h3 className="font-medium mb-2">Packaging Charges</h3>
+                          <h3 className="font-medium mb-2">{t("mess.detail.packaging.title")}</h3>
                           <div className="flex items-end">
                             <span className="text-2xl font-bold">₹{packagingPrice}</span>
-                            <span className="text-muted-foreground ml-1">/order</span>
+                            <span className="text-muted-foreground ml-1">/{t("common.perOrder")}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground mt-2">Optional packaging for home delivery</p>
+                          <p className="text-sm text-muted-foreground mt-2">{t("mess.detail.packaging.subtitle")}</p>
                         </CardContent>
                       </Card>
                     )}
@@ -471,20 +475,20 @@ export default function MessDetailPage() {
                 <TabsList className="w-full border-b rounded-none p-0">
                   {hasMenu && (
                     <TabsTrigger value="menu" className="flex-1 rounded-none py-3">
-                      Weekly Menu
+                      {t("mess.tabs.menu")}
                     </TabsTrigger>
                   )}
                   <TabsTrigger value="location" className="flex-1 rounded-none py-3">
                     <Map className="w-4 h-4 mr-2" />
-                    Location
+                    {t("mess.tabs.location")}
                   </TabsTrigger>
                   {hasPhotos && (
                     <TabsTrigger value="photos" className="flex-1 rounded-none py-3">
-                      Photos
+                      {t("mess.tabs.photos")}
                     </TabsTrigger>
                   )}
                   <TabsTrigger value="reviews" className="flex-1 rounded-none py-3">
-                    Reviews
+                    {t("mess.tabs.reviews")}
                   </TabsTrigger>
                 </TabsList>
                 {hasMenu && (
@@ -499,7 +503,7 @@ export default function MessDetailPage() {
                                 <div>
                                   <div className="flex items-center mb-2">
                                     <Utensils className="w-4 h-4 mr-2 text-primary" />
-                                    <h4 className="font-medium">Breakfast</h4>
+                                      <h4 className="font-medium">{t("common.meal.breakfast")}</h4>
                                   </div>
                                   <p className="text-sm text-muted-foreground">{day.breakfast}</p>
                                 </div>
@@ -508,7 +512,7 @@ export default function MessDetailPage() {
                                 <div>
                                   <div className="flex items-center mb-2">
                                     <Utensils className="w-4 h-4 mr-2 text-primary" />
-                                    <h4 className="font-medium">Lunch</h4>
+                                      <h4 className="font-medium">{t("common.meal.lunch")}</h4>
                                   </div>
                                   <p className="text-sm text-muted-foreground">{day.lunch}</p>
                                 </div>
@@ -517,7 +521,7 @@ export default function MessDetailPage() {
                                 <div>
                                   <div className="flex items-center mb-2">
                                     <Utensils className="w-4 h-4 mr-2 text-primary" />
-                                    <h4 className="font-medium">Dinner</h4>
+                                      <h4 className="font-medium">{t("common.meal.dinner")}</h4>
                                   </div>
                                   <p className="text-sm text-muted-foreground">{day.dinner}</p>
                                 </div>
@@ -532,13 +536,13 @@ export default function MessDetailPage() {
                 <TabsContent value="location" className="p-6">
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-bold mb-4">📍 Mess Location</h3>
+                      <h3 className="text-lg font-bold mb-4">{t("mess.detail.location.heading")}</h3>
                       <Card className="mb-4">
                         <CardContent className="p-4">
                           <div className="space-y-3">
                             <div>
-                              <p className="text-sm text-muted-foreground font-medium">Address</p>
-                              <p className="text-base text-gray-900">{addressText || "Not provided"}</p>
+                              <p className="text-sm text-muted-foreground font-medium">{t("common.address")}</p>
+                              <p className="text-base text-gray-900">{addressText || t("common.notProvided")}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -576,12 +580,12 @@ export default function MessDetailPage() {
                 <TabsContent value="reviews" className="p-6">
                   <div className="space-y-8">
                     <div>
-                      <h3 className="text-lg font-bold mb-4">Write a Review</h3>
+                      <h3 className="text-lg font-bold mb-4">{t("reviews.writeTitle")}</h3>
                       <ReviewForm itemType="mess" itemId={mess._id} onSuccess={() => setActiveTab("reviews")} />
                     </div>
 
                     <div className="pt-6 border-t">
-                      <h3 className="text-lg font-bold mb-4">Reviews</h3>
+                      <h3 className="text-lg font-bold mb-4">{t("reviews.title")}</h3>
                       <ReviewsList itemType="mess" itemId={mess._id} onRatingChange={handleRatingChange} />
                     </div>
                   </div>
@@ -602,22 +606,26 @@ export default function MessDetailPage() {
                   <>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold">₹{monthlyPrice}</span>
-                      <span className="text-muted-foreground">/month</span>
+                      <span className="text-muted-foreground">/{t("common.perMonth")}</span>
                     </div>
-                    {hasDailyPrice ? <p className="text-sm text-muted-foreground mt-1">or ₹{dailyPrice}/day</p> : null}
+                    {hasDailyPrice ? (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {t("common.or")} ₹{dailyPrice}/{t("common.perDay")}
+                      </p>
+                    ) : null}
                   </>
                 ) : hasDailyPrice ? (
                   <>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold">₹{dailyPrice}</span>
-                      <span className="text-muted-foreground">/day</span>
+                      <span className="text-muted-foreground">/{t("common.perDay")}</span>
                     </div>
                   </>
                 ) : null}
               </div>
 
               <div className="mb-6">
-                <h3 className="font-bold mb-3">Contact Information</h3>
+                <h3 className="font-bold mb-3">{t("common.contactInformation")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mr-3">
@@ -625,7 +633,7 @@ export default function MessDetailPage() {
                     </div>
                     <div>
                       <p className="font-medium">{contactName}</p>
-                      <p className="text-sm text-muted-foreground">Mess Owner</p>
+                      <p className="text-sm text-muted-foreground">{t("mess.detail.contact.owner")}</p>
                     </div>
                   </div>
 
@@ -634,8 +642,8 @@ export default function MessDetailPage() {
                       <Phone className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{contactPhone || "Not provided"}</p>
-                      <p className="text-sm text-muted-foreground">Call or WhatsApp</p>
+                      <p className="font-medium">{contactPhone || t("common.notProvided")}</p>
+                      <p className="text-sm text-muted-foreground">{t("common.callOrWhatsapp")}</p>
                     </div>
                   </div>
 
@@ -644,8 +652,8 @@ export default function MessDetailPage() {
                       <Mail className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium">{contactEmail || "Not provided"}</p>
-                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{contactEmail || t("common.notProvided")}</p>
+                      <p className="text-sm text-muted-foreground">{t("common.email")}</p>
                     </div>
                   </div>
                 </div>
@@ -659,7 +667,7 @@ export default function MessDetailPage() {
                       handleSubscribeMonthly()
                     }}
                   >
-                    Subscribe Monthly
+                    {t("mess.detail.action.subscribeMonthly")}
                   </Button>
                 ) : null}
 
@@ -670,8 +678,8 @@ export default function MessDetailPage() {
                     onClick={() => {
                       if (!user) {
                         toast({
-                          title: "Login required",
-                          description: "Please login to book a meal",
+                          title: t("common.loginRequired"),
+                          description: t("mess.detail.toast.loginToBookMeal"),
                           variant: "destructive",
                         })
                         router.push(`/login?redirect=/messes/${encodeURIComponent(String(messId || ""))}`)
@@ -679,37 +687,37 @@ export default function MessDetailPage() {
                       }
 
                       toast({
-                        title: "Meal booked",
-                        description: "Your meal has been booked for today. You can pay at the mess.",
+                        title: t("mess.detail.toast.mealBooked.title"),
+                        description: t("mess.detail.toast.mealBooked.desc"),
                       })
                     }}
                   >
-                    Book Daily Meal
+                    {t("mess.detail.action.bookDailyMeal")}
                   </Button>
                 ) : null}
               </div>
 
               <div className="mt-6 pt-6 border-t">
-                <h3 className="font-bold mb-3">Meal Timings</h3>
+                <h3 className="font-bold mb-3">{t("mess.detail.mealTimings")}</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-2 text-primary" />
-                      <span className="text-sm">Breakfast</span>
+                      <span className="text-sm">{t("common.meal.breakfast")}</span>
                     </div>
                     <span className="text-sm font-medium">{mess.openingHours.breakfast}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-2 text-primary" />
-                      <span className="text-sm">Lunch</span>
+                      <span className="text-sm">{t("common.meal.lunch")}</span>
                     </div>
                     <span className="text-sm font-medium">{mess.openingHours.lunch}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-2 text-primary" />
-                      <span className="text-sm">Dinner</span>
+                      <span className="text-sm">{t("common.meal.dinner")}</span>
                     </div>
                     <span className="text-sm font-medium">{mess.openingHours.dinner}</span>
                   </div>
@@ -730,15 +738,15 @@ export default function MessDetailPage() {
       <Dialog open={isSubscribeOpen} onOpenChange={setIsSubscribeOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Start your monthly subscription</DialogTitle>
+            <DialogTitle>{t("mess.detail.subscribeDialog.title")}</DialogTitle>
             <DialogDescription>
-              Choose your start date. End date will be automatically set to 1 month from the start date.
+              {t("mess.detail.subscribeDialog.desc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="subscriptionStartDate">Start date</Label>
+              <Label htmlFor="subscriptionStartDate">{t("mess.detail.subscribeDialog.startDate")}</Label>
               <input
                 id="subscriptionStartDate"
                 type="date"
@@ -747,33 +755,35 @@ export default function MessDetailPage() {
                 className="w-full rounded-md border px-3 py-2 text-sm"
               />
               {hasMonthlyPrice ? (
-                <p className="text-sm text-muted-foreground">Amount: ₹{monthlyPrice}/month</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("common.amount")}: ₹{monthlyPrice}/{t("common.perMonth")}
+                </p>
               ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subscriptionPhone">Your phone number</Label>
+              <Label htmlFor="subscriptionPhone">{t("mess.detail.subscribeDialog.phone")}</Label>
               <input
                 id="subscriptionPhone"
                 type="tel"
                 inputMode="numeric"
-                placeholder="10-digit phone number"
+                placeholder={t("mess.detail.subscribeDialog.phonePlaceholder")}
                 value={subscriptionPhone}
                 onChange={(e) => setSubscriptionPhone(e.target.value)}
                 className="w-full rounded-md border px-3 py-2 text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                This is used in the booking emails sent to you, the mess owner, and SecondHome.
+                {t("mess.detail.subscribeDialog.phoneHelp")}
               </p>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubscribeOpen(false)} disabled={isCreatingSubscription}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={confirmSubscription} disabled={isCreatingSubscription}>
-              {isCreatingSubscription ? "Creating..." : "Confirm Subscription"}
+              {isCreatingSubscription ? t("common.creating") : t("mess.detail.subscribeDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

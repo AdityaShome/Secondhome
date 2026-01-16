@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import "leaflet/dist/leaflet.css"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { useLanguage } from "@/providers/language-provider"
 
 interface MessLocationMapReadonlyProps {
   address: string
@@ -19,6 +20,7 @@ export function MessLocationMapReadonly({
   className = "",
   heightClassName = "h-[360px]",
 }: MessLocationMapReadonlyProps) {
+  const { t } = useLanguage()
   const [leaflet, setLeaflet] = useState<any>(null)
   const mapRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -56,7 +58,7 @@ export function MessLocationMapReadonly({
       })
       .catch((err) => {
         console.error("Failed to load Leaflet:", err)
-        setError("Failed to load map.")
+        setError(t("map.error.loadFailed"))
       })
 
     return () => {
@@ -103,7 +105,7 @@ export function MessLocationMapReadonly({
       .catch((err) => {
         if (cancelled) return
         console.error("Failed to geocode address:", err)
-        setError("Could not locate this address on the map.")
+        setError(t("map.error.couldNotLocate"))
         setPosition(null)
       })
       .finally(() => {
@@ -317,7 +319,7 @@ export function MessLocationMapReadonly({
     if (userPosition) return userPosition
     if (typeof window === "undefined") return null
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported in this browser.")
+      setError(t("map.error.noGeolocation"))
       return null
     }
 
@@ -332,7 +334,7 @@ export function MessLocationMapReadonly({
         },
         (err) => {
           console.error("Geolocation error:", err)
-          setError("Location permission denied. Please allow location to show the route.")
+          setError(t("map.error.permissionDenied"))
           resolve(null)
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
@@ -420,7 +422,7 @@ export function MessLocationMapReadonly({
     setError(null)
 
     if (!position) {
-      setError("Destination location is not available.")
+      setError(t("map.error.noDestination"))
       return
     }
 
@@ -487,7 +489,7 @@ export function MessLocationMapReadonly({
       map.fitBounds(bounds, { padding: [40, 40] })
     } catch (err) {
       console.error("Failed to build route:", err)
-      setError("Could not build route right now. Please try again.")
+      setError(t("map.error.routeBuildFailed"))
     } finally {
       setRouteLoading(false)
     }
@@ -585,7 +587,7 @@ export function MessLocationMapReadonly({
       },
       (err) => {
         console.error("watchPosition error:", err)
-        setError("Could not track your location. Please allow location access.")
+        setError(t("map.error.trackFailed"))
         stopNavigation()
       },
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
@@ -595,10 +597,10 @@ export function MessLocationMapReadonly({
   return (
     <div className={`space-y-3 ${className}`}>
       <div ref={containerRef} className={`w-full ${heightClassName} rounded-lg border overflow-hidden`} />
-      {loading && <p className="text-xs text-muted-foreground">Locating on map…</p>}
+      {loading && <p className="text-xs text-muted-foreground">{t("map.status.locating")}</p>}
       {routeInfo && (
         <div className="text-sm text-muted-foreground">
-          ETA <span className="font-semibold text-foreground">{routeInfo.durationMin} min</span> • {routeInfo.distanceKm} km
+          {t("map.route.eta")} <span className="font-semibold text-foreground">{routeInfo.durationMin} {t("map.route.min")}</span> • {routeInfo.distanceKm} {t("map.route.km")}
         </div>
       )}
       <div className="flex flex-wrap gap-3">
@@ -607,23 +609,23 @@ export function MessLocationMapReadonly({
             {routeLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Starting…
+                {t("map.status.starting")}
               </>
             ) : (
-              "Start navigation"
+              t("map.action.startNavigation")
             )}
           </Button>
         ) : (
           <Button type="button" className="bg-red-500 hover:bg-red-600" onClick={stopNavigation}>
-            Stop navigation
+            {t("map.action.stopNavigation")}
           </Button>
         )}
 
         <Button type="button" variant="outline" onClick={showRoute} disabled={routeLoading || loading || !position}>
-          Preview route
+          {t("map.action.previewRoute")}
         </Button>
         <Button type="button" variant="outline" onClick={clearRoute} disabled={routeLoading}>
-          Clear route
+          {t("map.action.clearRoute")}
         </Button>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}

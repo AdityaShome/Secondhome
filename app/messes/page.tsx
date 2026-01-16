@@ -16,12 +16,14 @@ import {
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useLanguage } from "@/providers/language-provider"
 // Map view is shown on the single mess detail page.
 
 export default function MessesPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const { toast } = useToast()
+  const { t } = useLanguage()
   
   const [messes, setMesses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,8 +46,8 @@ export default function MessesPage() {
     } catch (error) {
       console.error("❌ Error fetching messes:", error)
       toast({
-        title: "Error",
-        description: "Failed to load messes. Please try again.",
+        title: t("common.error"),
+        description: t("messes.toast.loadFailed"),
         variant: "destructive",
       })
     } finally {
@@ -67,8 +69,8 @@ export default function MessesPage() {
   const handleListYourMess = () => {
     if (!session) {
       toast({
-        title: "Login Required",
-        description: "Please login to list your mess service",
+        title: t("common.loginRequired"),
+        description: t("messes.toast.loginToList"),
         variant: "destructive",
       })
       router.push("/login")
@@ -117,12 +119,12 @@ export default function MessesPage() {
               className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-4 py-2 mb-6"
             >
               <UtensilsCrossed className="w-4 h-4" />
-              <span className="text-sm font-medium">Delicious Home-Cooked Meals</span>
+              <span className="text-sm font-medium">{t("messes.hero.badge")}</span>
             </motion.div>
 
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight drop-shadow-2xl">
               <span className="bg-gradient-to-r from-white via-orange-50 to-white bg-clip-text text-transparent">
-                Find Messes Near Your College
+                {t("messes.hero.title")}
               </span>
             </h1>
             
@@ -132,7 +134,9 @@ export default function MessesPage() {
               transition={{ delay: 0.3 }}
               className="text-xl md:text-2xl text-white/95 mb-4 font-medium drop-shadow-lg"
             >
-              {filteredMesses.length} {filteredMesses.length === 1 ? 'mess' : 'messes'} available
+              {filteredMesses.length}{" "}
+              {filteredMesses.length === 1 ? t("messes.count.mess") : t("messes.count.messes")}{" "}
+              {t("messes.count.available")}
             </motion.p>
             
             <motion.p 
@@ -141,7 +145,7 @@ export default function MessesPage() {
               transition={{ delay: 0.4 }}
               className="text-base md:text-lg text-white/80 mb-10 max-w-2xl mx-auto"
             >
-              Discover authentic home-cooked meals with verified mess services near your campus
+              {t("messes.hero.subtitle")}
             </motion.p>
 
             {/* Enhanced Search Bar with Glassmorphism */}
@@ -154,7 +158,7 @@ export default function MessesPage() {
               <div className="flex-1 flex items-center gap-3 px-4">
                 <Search className="w-5 h-5 text-orange-500" />
                 <Input
-                  placeholder="Search by name, location, or cuisine..."
+                  placeholder={t("messes.search.placeholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="border-none focus-visible:ring-0 text-gray-900 placeholder:text-gray-500 text-base"
@@ -163,7 +167,7 @@ export default function MessesPage() {
               <Button 
                 className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 px-8 py-6 text-base font-semibold shadow-lg"
               >
-                Search
+                {t("common.search")}
               </Button>
             </motion.div>
           </motion.div>
@@ -181,7 +185,7 @@ export default function MessesPage() {
               className="bg-white/95 backdrop-blur-md text-orange-600 hover:bg-white shadow-xl border-2 border-white/50 px-8 py-6 text-base font-semibold"
             >
               <Plus className="w-5 h-5 mr-2" />
-              List Your Mess Service
+              {t("messes.action.listYourMess")}
             </Button>
           </motion.div>
 
@@ -194,19 +198,19 @@ export default function MessesPage() {
           >
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
               <div className="text-3xl font-bold mb-1">{messes.length}</div>
-              <div className="text-sm text-white/80">Total Messes</div>
+              <div className="text-sm text-white/80">{t("messes.stats.total")}</div>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
               <div className="text-3xl font-bold mb-1">{messes.filter(m => m.homeDeliveryAvailable).length}</div>
-              <div className="text-sm text-white/80">Home Delivery</div>
+              <div className="text-sm text-white/80">{t("messes.stats.delivery")}</div>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
               <div className="text-3xl font-bold mb-1">{messes.filter(m => m.rating >= 4).length}</div>
-              <div className="text-sm text-white/80">Highly Rated</div>
+              <div className="text-sm text-white/80">{t("messes.stats.highlyRated")}</div>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 text-center">
               <div className="text-3xl font-bold mb-1">{new Set(messes.map(m => m.city).filter(Boolean)).size}</div>
-              <div className="text-sm text-white/80">Cities</div>
+              <div className="text-sm text-white/80">{t("messes.stats.cities")}</div>
             </div>
           </motion.div>
         </div>
@@ -216,8 +220,8 @@ export default function MessesPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Browse Available Messes</h2>
-            <p className="text-gray-600 mt-1">Delicious homemade food for students</p>
+            <h2 className="text-2xl font-bold text-gray-900">{t("messes.section.title")}</h2>
+            <p className="text-gray-600 mt-1">{t("messes.section.subtitle")}</p>
           </div>
         </div>
 
@@ -248,21 +252,21 @@ export default function MessesPage() {
               <UtensilsCrossed className="w-12 h-12 text-orange-500" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              {searchQuery ? "No Messes Found" : "No Messes Available Yet"}
+              {searchQuery ? t("messes.empty.searchTitle") : t("messes.empty.noDataTitle")}
             </h2>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
               {searchQuery 
-                ? "Try adjusting your search or filters to find what you're looking for." 
-                : "Be the first to list your mess service on our platform!"}
+                ? t("messes.empty.searchHint")
+                : t("messes.empty.noDataHint")}
             </p>
             {searchQuery ? (
               <Button onClick={() => setSearchQuery("")} variant="outline">
-                Clear Search
+                {t("common.clearSearch")}
               </Button>
             ) : (
               <Button onClick={handleListYourMess} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
                 <Plus className="w-4 h-4 mr-2" />
-                List Your Mess Service
+                {t("messes.action.listYourMess")}
               </Button>
             )}
           </motion.div>
@@ -291,6 +295,7 @@ export default function MessesPage() {
 function MessCard({ mess, index }: { mess: any; index: number }) {
   const router = useRouter()
   const [imageError, setImageError] = useState(false)
+  const { t } = useLanguage()
 
   const formatPrice = (price: number) => {
     if (price >= 100000) return `${(price / 100000).toFixed(1)}L`
@@ -330,12 +335,12 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
           {/* Badges */}
           <div className="absolute top-4 left-4 flex flex-wrap gap-2">
             <Badge className="bg-orange-500/90 text-white backdrop-blur">
-              Mess
+              {t("messes.card.badge")}
             </Badge>
             {mess.homeDeliveryAvailable && (
               <Badge className="bg-green-500/90 text-white backdrop-blur flex items-center gap-1">
                 <Truck className="w-3 h-3" />
-                Home Delivery
+                {t("messes.card.delivery")}
               </Badge>
             )}
           </div>
@@ -358,7 +363,7 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
           <div className="flex items-center text-gray-600 mb-4">
             <MapPin className="w-4 h-4 mr-2 text-orange-500" />
             <span className="text-sm line-clamp-1">
-              {mess.location || mess.city || "Location not specified"}
+              {mess.location || mess.city || t("messes.card.locationNotSpecified")}
             </span>
           </div>
 
@@ -368,7 +373,7 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
               <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 mr-1" />
               <span className="font-semibold text-gray-900">{mess.rating}</span>
               <span className="text-gray-500 text-sm ml-2">
-                ({mess.reviews || 0} reviews)
+                ({mess.reviews || 0} {t("common.reviews")})
               </span>
             </div>
           )}
@@ -379,7 +384,9 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
               {mess.openingHours.breakfast && (
                 <div className="flex items-center text-xs text-gray-600">
                   <Clock className="w-3 h-3 mr-2" />
-                  <span>Breakfast: {mess.openingHours.breakfast}</span>
+                  <span>
+                    {t("common.meal.breakfast")}: {mess.openingHours.breakfast}
+                  </span>
                 </div>
               )}
             </div>
@@ -410,13 +417,13 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
                 <div className="flex items-center gap-2">
                   <Truck className="w-3 h-3" />
                   <span>
-                    Delivery: up to {mess.deliveryRadius || 0}km • ₹{mess.deliveryCharges || 0}
+                    {t("messes.card.deliveryLabel")}: {t("messes.card.upTo")} {mess.deliveryRadius || 0}km • ₹{mess.deliveryCharges || 0}
                   </span>
                 </div>
               )}
               {mess.packagingAvailable && (
                 <div>
-                  Packaging: ₹{mess.packagingPrice || 0}
+                  {t("messes.card.packaging")}: ₹{mess.packagingPrice || 0}
                 </div>
               )}
             </div>
@@ -430,7 +437,7 @@ function MessCard({ mess, index }: { mess: any; index: number }) {
               router.push(`/messes/${encodeURIComponent(String(mess._id))}`)
             }}
           >
-            View Details
+            {t("common.viewDetails")}
           </Button>
         </CardContent>
       </Card>

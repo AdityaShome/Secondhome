@@ -83,7 +83,7 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm text-slate-300">
           <div className="flex items-center gap-2">
             <Home className="h-5 w-5 text-orange-400" />
-            <span className="font-semibold text-white">Second Home</span>
+            <span className="font-semibold text-white">SecondHome</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
@@ -196,7 +196,7 @@ export default function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2 group">
               <Home className="h-7 w-7 text-orange-400 group-hover:scale-110 transition-transform duration-300" />
-              <span className="text-xl font-bold text-white">Second Home</span>
+              <span className="text-xl font-bold text-white">SecondHome</span>
             </Link>
             <p className="text-slate-300 leading-relaxed">
               {t("brandTagline")}
