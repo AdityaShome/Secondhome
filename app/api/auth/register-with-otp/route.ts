@@ -4,6 +4,7 @@ import { z } from "zod"
 import { getUserModel } from "@/models/user"
 import { connectToDatabase } from "@/lib/mongodb"
 import { OTP } from "@/models/otp"
+import { findUserByEmailLoose } from "@/lib/email"
 
 const userSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -48,14 +49,28 @@ export async function POST(req: Request) {
       // Get User model
       const User = await getUserModel()
 
-      // Check if user already exists (emails are stored normalized)
-      const existingUser = await User.findOne({ 
-        email: normalizedEmail
-      })
+      // Check if user already exists (robust to legacy mixed-case email rows)
+      const existingLookup = await findUserByEmailLoose(User as any, normalizedEmail)
+      const existingUser = existingLookup.multiple ? null : existingLookup.user
       
+      if (existingLookup.multiple) {
+        // Delete used OTP
+        await OTP.deleteOne({ _id: otpRecord._id })
+        return NextResponse.json(
+          {
+            error:
+              "Multiple accounts exist for this email. Please contact support to merge your accounts.",
+          },
+          { status: 409 }
+        )
+      }
+
       if (existingUser) {
         // Delete used OTP
         await OTP.deleteOne({ _id: otpRecord._id })
+
+        // Hash password (used for linking OAuth accounts / setting password)
+        const hashedPassword = await hash(password, 12)
         
         // If registering as property owner and user exists
         if (body.isPropertyOwner) {
@@ -67,14 +82,55 @@ export async function POST(req: Request) {
           }
           
           // Upgrade regular user to property owner
-          existingUser.role = "owner"
-          existingUser.phone = phone || existingUser.phone
-          await existingUser.save()
+          const update: Record<string, any> = {
+            role: "owner",
+            phone: phone || existingUser.phone,
+            emailVerified: existingUser.emailVerified || new Date(),
+            updatedAt: new Date(),
+          }
+
+          // If the account was created via OAuth, allow setting a password after OTP verification
+          if (!existingUser.password) {
+            update.password = hashedPassword
+          }
+
+          if (!existingUser.name && name) {
+            update.name = name
+          }
+
+          await User.updateOne({ _id: existingUser._id }, { $set: update })
           
           return NextResponse.json({ 
             message: "Your account has been upgraded to property owner!",
             upgraded: true 
           }, { status: 200 })
+        }
+
+        // Regular registration: if this is an OAuth-created account, link it by setting a password
+        if (!existingUser.password) {
+          const update: Record<string, any> = {
+            password: hashedPassword,
+            emailVerified: existingUser.emailVerified || new Date(),
+            updatedAt: new Date(),
+          }
+
+          if (!existingUser.name && name) {
+            update.name = name
+          }
+          if (!existingUser.phone && phone) {
+            update.phone = phone
+          }
+
+          await User.updateOne({ _id: existingUser._id }, { $set: update })
+
+          return NextResponse.json(
+            {
+              message:
+                "Account already exists via social login. Password has been set successfully — you can now sign in with email and password.",
+              linked: true,
+            },
+            { status: 200 }
+          )
         }
         
         // Regular user registration with existing email

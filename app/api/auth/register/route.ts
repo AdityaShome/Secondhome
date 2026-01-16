@@ -3,6 +3,7 @@ import { hash } from "bcryptjs"
 import { z } from "zod"
 import { getUserModel } from "@/models/user"
 import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
+import { findUserByEmailLoose, normalizeEmail } from "@/lib/email"
 
 const userSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -23,12 +24,34 @@ export async function POST(req: Request) {
 
     const { name, email, password, phone } = body
 
+    // Property-owner registration should be OTP-protected
+    if (body.isPropertyOwner) {
+      return NextResponse.json(
+        { error: "Please use OTP registration for property owners." },
+        { status: 400 }
+      )
+    }
+
+    const normalizedEmail = normalizeEmail(email)
+
     try {
       // Get User model
       const User = await getUserModel()
 
       // Check if user already exists
-      const existingUser = await User.findOne({ email })
+      const lookup = await findUserByEmailLoose(User as any, normalizedEmail)
+
+      if (lookup.multiple) {
+        return NextResponse.json(
+          {
+            error:
+              "Multiple accounts exist for this email. Please contact support to merge your accounts.",
+          },
+          { status: 409 }
+        )
+      }
+
+      const existingUser = lookup.user
       
       if (existingUser) {
         // Check if existing user was created via OAuth (no password)
@@ -36,26 +59,6 @@ export async function POST(req: Request) {
           return NextResponse.json({ 
             error: "An account with this email already exists via Google/Facebook sign-in. Please use that method to sign in instead." 
           }, { status: 409 })
-        }
-        
-        // If registering as property owner and user exists
-        if (body.isPropertyOwner) {
-          // Check if already an owner
-          if (existingUser.role === "owner" || existingUser.role === "admin") {
-            return NextResponse.json({ 
-              error: "You are already registered as a property owner" 
-            }, { status: 409 })
-          }
-          
-          // Upgrade regular user to property owner
-          existingUser.role = "owner"
-          existingUser.phone = phone || existingUser.phone
-          await existingUser.save()
-          
-          return NextResponse.json({ 
-            message: "Your account has been upgraded to property owner!",
-            upgraded: true 
-          }, { status: 200 })
         }
         
         // Regular user registration with existing email
@@ -70,10 +73,10 @@ export async function POST(req: Request) {
       // Create new user (set role to owner if coming from property registration)
       const newUser = new User({
         name,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         phone: phone || undefined,
-        role: body.isPropertyOwner ? "owner" : "user",
+        role: "user",
         createdAt: new Date(),
       })
 

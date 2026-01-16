@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "node scripts/next-build-safe.cjs build --webpack --experimental-build-mode compile && node scripts/next-build-safe.cjs build --webpack --experimental-build-mode generate-env",
     "dev": "next dev",
-    "lint": "next lint",
+    "lint": "eslint .",
     "start": "next start"
   },
   "dependencies": {
@@ -84,6 +84,8 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.0.8",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^22",
     "@types/react": "^19",

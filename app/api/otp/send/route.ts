@@ -3,6 +3,7 @@ import nodemailer from "nodemailer"
 import { connectToDatabase } from "@/lib/mongodb"
 import { OTP } from "@/models/otp"
 import { getUserModel } from "@/models/user"
+import { findUserByEmailLoose, normalizeEmail } from "@/lib/email"
 
 // Generate random 6-digit OTP
 function generateOTP(): string {
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     // Normalize email to lowercase for consistency
-    const normalizedEmail = email.toLowerCase().trim()
+    const normalizedEmail = normalizeEmail(email)
 
     // Validate SMTP credentials (check both naming conventions)
     const emailUser = process.env.EMAIL_USER || process.env.HOST_EMAIL
@@ -38,7 +39,17 @@ export async function POST(req: Request) {
     // For password-reset type, check if user exists and verify user type
     if (type === "password-reset") {
       const User = await getUserModel()
-      const user = await User.findOne({ email: normalizedEmail })
+      const lookup = await findUserByEmailLoose(User as any, normalizedEmail)
+
+      if (lookup.multiple) {
+        // Don't reveal if email exists or not for security
+        return NextResponse.json(
+          { error: "If this email exists, an OTP will be sent." },
+          { status: 404 }
+        )
+      }
+
+      const user = lookup.user
       
       if (!user) {
         // Don't reveal if email exists or not for security

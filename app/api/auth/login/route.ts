@@ -4,6 +4,7 @@ import { getUserModel } from "@/models/user"
 import { connectToDatabase } from "@/lib/mongodb"
 import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 import { z } from "zod"
+import { findUserByEmailLoose, normalizeEmail } from "@/lib/email"
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     const { email, password } = body
 
     // Normalize email to lowercase for consistent lookup
-    const normalizedEmail = email.toLowerCase().trim()
+    const normalizedEmail = normalizeEmail(email)
 
     try {
       // Connect to database
@@ -35,10 +36,17 @@ export async function POST(req: Request) {
       // Get User model
       const User = await getUserModel()
 
-      // Find user (emails are stored normalized)
-      const user = await User.findOne({ 
-        email: normalizedEmail
-      }).lean()
+      // Find user (robust to legacy mixed-case email rows)
+      const lookup = await findUserByEmailLoose(User as any, normalizedEmail)
+
+      if (lookup.multiple) {
+        return NextResponse.json(
+          { error: "Multiple accounts detected for this email. Please contact support." },
+          { status: 409 }
+        )
+      }
+
+      const user = lookup.user
 
       if (!user) {
         return NextResponse.json(

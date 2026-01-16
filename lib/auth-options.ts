@@ -5,6 +5,7 @@ import FacebookProvider from "next-auth/providers/facebook"
 import { connectToDatabase } from "@/lib/mongodb"
 import { compare } from "bcryptjs"
 import { getUserModel } from "@/models/user"
+import { findUserByEmailLoose, normalizeEmail } from "@/lib/email"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Normalize email to lowercase for consistent lookup
-        const normalizedEmail = credentials.email.toLowerCase().trim()
+        const normalizedEmail = normalizeEmail(credentials.email)
 
         // Check for admin credentials from environment variables
         const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim()
@@ -64,9 +65,14 @@ export const authOptions: NextAuthOptions = {
 
           // Find user (emails are stored normalized)
           console.log(`🔍 Searching for user with email: ${normalizedEmail}`)
-          const user = await User.findOne({ 
-            email: normalizedEmail
-          }).lean()
+          const lookup = await findUserByEmailLoose(User as any, normalizedEmail)
+
+          if (lookup.multiple) {
+            console.error("❌ Multiple users found for email (case-insensitive match)")
+            throw new Error("Multiple accounts detected for this email. Please contact support.")
+          }
+
+          const user = lookup.user
 
           if (!user) {
             console.error(`❌ No user found with email: ${normalizedEmail}`)
@@ -147,14 +153,23 @@ export const authOptions: NextAuthOptions = {
           await connectToDatabase()
           const User = await getUserModel()
           
-          const email = user.email?.toLowerCase().trim()
+          const email = user.email ? normalizeEmail(user.email) : ""
           if (!email) {
             console.error("No email provided by OAuth provider")
             return false
           }
 
-          // Check if user exists
-          let existingUser = await User.findOne({ email }).lean()
+          // Check if user exists (robust to legacy mixed-case email rows)
+          const lookup = await findUserByEmailLoose(User as any, email)
+
+          if (lookup.multiple) {
+            console.error(`❌ Multiple users found for OAuth email ${email}`)
+            throw new Error(
+              "Multiple accounts detected for this email. Please contact support to merge your accounts."
+            )
+          }
+
+          let existingUser = lookup.user
 
           if (!existingUser) {
             // Create new user for OAuth sign-in
@@ -172,20 +187,26 @@ export const authOptions: NextAuthOptions = {
             console.log("New OAuth user created:", existingUser._id)
           } else {
             console.log("Existing user found for OAuth login:", existingUser._id)
-            
-            // Check if existing user has a password (was created via email/password)
-            if (existingUser.password) {
-              console.error(`❌ Account with email ${email} already exists with password authentication`)
-              // Prevent OAuth login - user must use their password
-              throw new Error("An account already exists with this email. Please sign in with your email and password instead.")
+
+            const update: Record<string, any> = {}
+
+            // Keep the DB image in sync if it's missing
+            if (!existingUser.image && (user.image || (profile as any)?.picture)) {
+              update.image = user.image || (profile as any)?.picture
             }
-            
-            // If no password, it's an OAuth account - allow login and update image
-            if (!existingUser.image && user.image) {
-              await User.updateOne(
-                { _id: existingUser._id },
-                { $set: { image: user.image, emailVerified: new Date() } }
-              )
+
+            // Mark email as verified on successful OAuth sign-in
+            if (!existingUser.emailVerified) {
+              update.emailVerified = new Date()
+            }
+
+            // Backfill a missing name
+            if (!existingUser.name && (user.name || profile?.name)) {
+              update.name = user.name || profile?.name
+            }
+
+            if (Object.keys(update).length > 0) {
+              await User.updateOne({ _id: existingUser._id }, { $set: update })
             }
           }
 

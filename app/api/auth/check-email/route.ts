@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getUserModel } from "@/models/user"
 import { connectToDatabase } from "@/lib/mongodb"
+import { findUserByEmailLoose, normalizeEmail } from "@/lib/email"
 
 export async function POST(req: Request) {
   try {
@@ -11,17 +12,15 @@ export async function POST(req: Request) {
     }
 
     // Normalize email to lowercase for consistent lookup
-    const normalizedEmail = email.toLowerCase().trim()
+    const normalizedEmail = normalizeEmail(email)
 
     await connectToDatabase()
     const User = await getUserModel()
     
-    // Check if user already exists (emails are stored normalized)
-    const existingUser = await User.findOne({ 
-      email: normalizedEmail
-    })
-    
-    if (existingUser) {
+    // Check if user already exists (robust to legacy mixed-case email rows)
+    const lookup = await findUserByEmailLoose(User as any, normalizedEmail)
+
+    if (lookup.multiple || lookup.user) {
       return NextResponse.json({ 
         exists: true,
         message: "An account with this email already exists. Please login instead." 

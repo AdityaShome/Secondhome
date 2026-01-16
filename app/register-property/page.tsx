@@ -335,32 +335,13 @@ export default function RegisterPropertyPage() {
 
       setIsLoading(true)
       try {
-        // Verify Email OTP
-        const verifyEmailResponse = await fetch("/api/otp/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: data.email,
-            otp: data.emailOtp,
-            type: "registration",
-          }),
-        })
-
-        if (!verifyEmailResponse.ok) {
-          const error = await verifyEmailResponse.json()
-          throw new Error(error.error || "Invalid or expired Email OTP")
-        }
-
-        setEmailVerified(true)
         toast({
-          title: "✅ Email Verified!",
-          description: "Creating your account...",
+          title: "Verifying OTP...",
+          description: "Creating/upgrading your account...",
         })
 
-        // COMMENTED OUT - Phone OTP verification
-        // await sendPhoneOTP(data.phone)
-        // Register user as property owner (directly after email verification)
-        const response = await fetch("/api/auth/register", {
+        // Register user as property owner (OTP verified server-side)
+        const response = await fetch("/api/auth/register-with-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -368,6 +349,7 @@ export default function RegisterPropertyPage() {
             email: data.email,
             password: data.password,
             phone: data.phone,
+            otp: data.emailOtp,
             isPropertyOwner: true,
           }),
         })
@@ -377,6 +359,8 @@ export default function RegisterPropertyPage() {
         if (!response.ok) {
           throw new Error(result.error || "Registration failed")
         }
+
+        setEmailVerified(true)
 
         // Auto sign in after registration or re-authenticate to refresh session
         const signInResult = await signIn("credentials", {

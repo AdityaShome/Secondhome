@@ -4,6 +4,7 @@ import { getUserModel } from "@/models/user"
 import { OTP } from "@/models/otp"
 import { hash } from "bcryptjs"
 import { z } from "zod"
+import { findUserByEmailLoose, normalizeEmail } from "@/lib/email"
 
 const resetPasswordSchema = z.object({
   email: z.string().email("Valid email is required"),
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
     await connectToDatabase()
 
     // Normalize email
-    const normalizedEmail = email.toLowerCase().trim()
+    const normalizedEmail = normalizeEmail(email)
 
     // Check if OTP was verified (OTP should be deleted after verification, so we check if it exists)
     // Actually, we need to verify that the OTP was verified. Let's check if there's a verified OTP record
@@ -38,7 +39,16 @@ export async function POST(req: Request) {
     
     // Find user
     const User = await getUserModel()
-    const user = await User.findOne({ email: normalizedEmail })
+    const lookup = await findUserByEmailLoose(User as any, normalizedEmail)
+
+    if (lookup.multiple) {
+      return NextResponse.json(
+        { error: "Multiple accounts detected for this email. Please contact support." },
+        { status: 409 }
+      )
+    }
+
+    const user = lookup.user
 
     if (!user) {
       return NextResponse.json(
