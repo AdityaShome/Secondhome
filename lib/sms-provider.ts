@@ -11,8 +11,19 @@ export interface SendSmsResult {
 }
 
 function getProvider(): SmsProviderName {
+  if (process.env.SKIP_SMS === "true") return "console"
+
   const raw = (process.env.SMS_PROVIDER || "").trim().toLowerCase()
   if (raw === "textbelt") return "textbelt"
+  if (raw === "console") return "console"
+
+  // Sensible default:
+  // - In production, if TEXTBELT_KEY exists, use Textbelt.
+  // - Otherwise, console.
+  if (process.env.NODE_ENV === "production" && (process.env.TEXTBELT_KEY || "").trim()) {
+    return "textbelt"
+  }
+
   return "console"
 }
 

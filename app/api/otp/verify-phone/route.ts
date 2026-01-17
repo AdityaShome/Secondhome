@@ -4,23 +4,7 @@ import { OTP } from "@/models/otp"
 import { getUserModel } from "@/models/user"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth-options"
-
-// Normalize phone number (same as send-phone)
-function normalizePhoneNumber(phone: string): string {
-  let normalized = phone.replace(/[^\d+]/g, "")
-  
-  if (!normalized.startsWith("+")) {
-    if (normalized.startsWith("91") && normalized.length === 12) {
-      normalized = "+" + normalized
-    } else if (normalized.length === 10) {
-      normalized = "+91" + normalized
-    } else if (normalized.length > 10) {
-      normalized = "+" + normalized
-    }
-  }
-  
-  return normalized
-}
+import { isValidE164, normalizePhoneNumber } from "@/lib/phone"
 
 export async function POST(req: Request) {
   try {
@@ -35,6 +19,13 @@ export async function POST(req: Request) {
 
     // Normalize phone number
     const normalizedPhone = normalizePhoneNumber(phone)
+
+    if (!isValidE164(normalizedPhone)) {
+      return NextResponse.json(
+        { error: "Invalid phone number format. Please include country code (e.g., +91 for India)" },
+        { status: 400 }
+      )
+    }
 
     await connectToDatabase()
 

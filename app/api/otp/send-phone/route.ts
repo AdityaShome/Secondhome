@@ -3,34 +3,11 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { OTP } from "@/models/otp"
 import { getUserModel } from "@/models/user"
 import { sendSms, shouldExposeOtpToClient } from "@/lib/sms-provider"
+import { isValidE164, normalizePhoneNumber } from "@/lib/phone"
 
 // Generate random 6-digit OTP
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
-// Normalize phone number (remove spaces, dashes, and ensure it has country code)
-function normalizePhoneNumber(phone: string): string {
-  // Remove all non-digit characters except +
-  let normalized = phone.replace(/[^\d+]/g, "")
-  
-  // If it doesn't start with +, assume it's an Indian number and add +91
-  if (!normalized.startsWith("+")) {
-    // If it starts with 91 (without +), keep it
-    if (normalized.startsWith("91") && normalized.length === 12) {
-      normalized = "+" + normalized
-    } 
-    // If it's 10 digits, assume Indian number
-    else if (normalized.length === 10) {
-      normalized = "+91" + normalized
-    }
-    // Otherwise add + if it looks like an international number
-    else if (normalized.length > 10) {
-      normalized = "+" + normalized
-    }
-  }
-  
-  return normalized
 }
 
 export async function POST(req: Request) {
@@ -45,7 +22,7 @@ export async function POST(req: Request) {
     const normalizedPhone = normalizePhoneNumber(phone)
     
     // Validate phone number format (should be +countrycode followed by digits)
-    if (!normalizedPhone.match(/^\+\d{10,15}$/)) {
+    if (!isValidE164(normalizedPhone)) {
       return NextResponse.json(
         { error: "Invalid phone number format. Please include country code (e.g., +91 for India)" },
         { status: 400 }
@@ -94,15 +71,19 @@ export async function POST(req: Request) {
     }
 
     try {
-      await sendSms({ to: normalizedPhone, message })
+      const result = await sendSms({ to: normalizedPhone, message })
       console.log(`✅ OTP dispatched to ${normalizedPhone}`)
 
       return NextResponse.json({
-        message: "OTP sent successfully",
+        message:
+          result.provider === "console"
+            ? "OTP generated (check server console in development mode)"
+            : "OTP sent successfully",
         phone: normalizedPhone,
         expiresIn: 600,
-        devMode: isDevelopment,
+        devMode: isDevelopment || result.provider === "console",
         otp: isDevelopment && shouldExposeOtpToClient() ? otp : undefined,
+        provider: result.provider,
       })
     } catch (smsError: any) {
       console.error("❌ SMS send error:", smsError)

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Phone, Loader2, CheckCircle2, Shield } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { normalizePhoneNumber } from "@/lib/phone"
 
 interface PhoneVerificationProps {
   phone: string
@@ -158,6 +159,13 @@ export function PhoneVerification({
                 onChange={(e) => {
                   setTempPhone(e.target.value)
                   if (!isEditing) onPhoneChange(e.target.value)
+                }}
+                onBlur={() => {
+                  const normalized = normalizePhoneNumber(tempPhone)
+                  if (normalized && normalized !== tempPhone) {
+                    setTempPhone(normalized)
+                    if (!isEditing) onPhoneChange(normalized)
+                  }
                 }}
                 placeholder="Enter your phone number (e.g., +91 9876543210)"
                 disabled={!isEditing || phoneVerified}
