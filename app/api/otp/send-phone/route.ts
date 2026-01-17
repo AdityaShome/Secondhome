@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import { OTP } from "@/models/otp"
 import { getUserModel } from "@/models/user"
-import twilio from "twilio"
+import { sendSms, shouldExposeOtpToClient } from "@/lib/sms-provider"
 
 // Generate random 6-digit OTP
 function generateOTP(): string {
@@ -52,19 +52,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Validate Twilio credentials
-    const accountSid = process.env.TWILIO_ACCOUNT_SID
-    const authToken = process.env.TWILIO_AUTH_TOKEN
-    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
-    const isDevelopment = process.env.NODE_ENV === "development" || process.env.SKIP_SMS === "true"
-    
-    if (!accountSid || !authToken || !twilioPhoneNumber) {
-      console.error("❌ Twilio credentials not configured")
-      return NextResponse.json(
-        { error: "SMS service not configured. Please contact support." },
-        { status: 500 }
-      )
-    }
+    const isDevelopment = process.env.NODE_ENV !== "production" || process.env.SKIP_SMS === "true"
 
     await connectToDatabase()
 
@@ -99,62 +87,31 @@ export async function POST(req: Request) {
       expiresAt,
     })
 
-    // Send SMS via Twilio or skip in development mode
+    const message = `Your SecondHome verification code is: ${otp}. Valid for 10 minutes. Never share this code with anyone.`
+
     if (isDevelopment) {
-      // Development mode: Log OTP to console instead of sending SMS
       console.log(`🔧 DEV MODE - Phone OTP for ${normalizedPhone}: ${otp}`)
-      console.log(`⚠️ Twilio trial account detected or SKIP_SMS enabled. Check console for OTP.`)
-      
-      return NextResponse.json({
-        message: "OTP generated successfully (check server console in development mode)",
-        phone: normalizedPhone,
-        expiresIn: 600,
-        devMode: true,
-        otp: isDevelopment ? otp : undefined, // Only expose OTP in dev mode
-      })
     }
 
     try {
-      const client = twilio(accountSid, authToken)
-      
-      await client.messages.create({
-        body: `Your Second Home verification code is: ${otp}. Valid for 10 minutes. Never share this code with anyone.`,
-        from: twilioPhoneNumber,
-        to: normalizedPhone,
-      })
+      await sendSms({ to: normalizedPhone, message })
+      console.log(`✅ OTP dispatched to ${normalizedPhone}`)
 
-      console.log(`✅ OTP sent successfully to ${normalizedPhone}`)
-      
       return NextResponse.json({
         message: "OTP sent successfully",
         phone: normalizedPhone,
-        expiresIn: 600, // 10 minutes in seconds
+        expiresIn: 600,
+        devMode: isDevelopment,
+        otp: isDevelopment && shouldExposeOtpToClient() ? otp : undefined,
       })
-    } catch (twilioError: any) {
-      console.error("❌ Twilio SMS Error:", twilioError)
-      
-      // If it's a trial account error, switch to dev mode
-      if (twilioError.code === 21608) {
-        console.log(`🔧 DEV MODE FALLBACK - Phone OTP for ${normalizedPhone}: ${otp}`)
-        console.log(`⚠️ Twilio trial account limitation. Use this OTP: ${otp}`)
-        
-        return NextResponse.json({
-          message: "OTP generated (Twilio trial account - check server console for OTP)",
-          phone: normalizedPhone,
-          expiresIn: 600,
-          devMode: true,
-          otp: otp, // Expose OTP due to trial limitation
-          warning: "Using development mode due to Twilio trial account"
-        })
-      }
-      
-      // Clean up OTP if SMS failed for other reasons
+    } catch (smsError: any) {
+      console.error("❌ SMS send error:", smsError)
       await OTP.deleteOne({ phone: normalizedPhone, otp })
-      
+
       return NextResponse.json(
-        { 
-          error: "Failed to send SMS. Please check your phone number and try again.",
-          details: twilioError.message 
+        {
+          error: "Failed to send SMS. Please try again later.",
+          details: smsError?.message,
         },
         { status: 500 }
       )

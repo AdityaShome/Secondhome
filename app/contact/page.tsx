@@ -13,39 +13,18 @@ import { ContactChat } from "@/components/contact-chat"
 import { WhatsAppChatButton } from "@/components/whatsapp-chat-button"
 import { useLanguage } from "@/providers/language-provider"
 
-const TWILIO_NUMBER_DISPLAY = "+1 855 500 3465"
-const TWILIO_NUMBER_TEL = "+18555003465"
-
 export default function ContactPage() {
   const { toast } = useToast()
   const [callLoading, setCallLoading] = useState(false)
   const { t } = useLanguage()
 
   const handleCallNow = async () => {
-    const raw = window.prompt(t("contact.prompt.callNumber"))
-    if (!raw) return
-    const digits = raw.replace(/\D/g, "")
-    if (digits.length < 10) {
-      toast({ title: t("contact.error.invalidNumber.title"), description: t("contact.error.invalidNumber.desc"), variant: "destructive" })
-      return
-    }
-    setCallLoading(true)
-    try {
-      const res = await fetch("/api/twilio/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: digits }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to place call")
-      const numberDisplay = data.toDisplay || raw
-      const desc = t("contact.toast.calling.desc").replace("{{number}}", numberDisplay)
-      toast({ title: t("contact.toast.calling.title"), description: desc })
-    } catch (e: any) {
-      toast({ title: t("contact.toast.failed.title"), description: e?.message || t("contact.toast.failed.desc"), variant: "destructive" })
-    } finally {
-      setCallLoading(false)
-    }
+    toast({
+      title: t("contact.toast.failed.title"),
+      description: "Calls are currently unavailable. Please use WhatsApp or Web Chat.",
+      variant: "destructive",
+    })
+    setCallLoading(false)
   }
 
   return (
@@ -122,16 +101,12 @@ export default function ContactPage() {
                     {t("contact.call.desc")}
                   </p>
                   <div className="rounded-lg border p-3 bg-muted/40">
-                    <div className="text-sm font-semibold">{TWILIO_NUMBER_DISPLAY}</div>
-                    <div className="text-xs text-muted-foreground">{t("contact.call.numberLabel")}</div>
-                        </div>
-                  <Button className="w-full" onClick={handleCallNow} disabled={callLoading}>
-                    {callLoading ? t("contact.call.calling") : (
-                      <>
-                        <Phone className="h-4 w-4 mr-2" /> {t("contact.call.button")}
-                            </>
-                          )}
-                        </Button>
+                    <div className="text-sm font-semibold">Calls temporarily unavailable</div>
+                    <div className="text-xs text-muted-foreground">Use WhatsApp or Web Chat for instant help.</div>
+                  </div>
+                  <Button className="w-full" onClick={handleCallNow} disabled>
+                    <Phone className="h-4 w-4 mr-2" /> {t("contact.call.button")}
+                  </Button>
                   <p className="text-xs text-muted-foreground">
                     {t("contact.call.note")}
                   </p>
