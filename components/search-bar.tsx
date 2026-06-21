@@ -40,16 +40,18 @@ export function SearchBar({
   return (
     <form onSubmit={handleSearch} className={`flex gap-2 ${className}`}>
       <div className="relative flex-grow">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           type="text"
           placeholder={placeholder}
-          className="pl-9"
+          className="pl-9 bg-white text-gray-900 placeholder:text-gray-500 border-gray-300 focus-visible:ring-orange-500"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <Button type="submit">Search</Button>
+      <Button type="submit" className="bg-orange-500 text-white hover:bg-orange-600">
+        Search
+      </Button>
     </form>
   )
 }

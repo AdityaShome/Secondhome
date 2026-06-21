@@ -14,6 +14,7 @@ import {
   Calendar,
   Building2,
   Heart,
+  Handshake,
   Settings,
   HelpCircle,
   Trash2,
@@ -27,6 +28,7 @@ import {
   Mail,
   ChevronDown,
   Shield,
+  Users,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
@@ -134,6 +136,7 @@ export default function Navbar() {
     { href: "/listings", label: t("nav.listings"), icon: Building2 },
     { href: "/verified", label: t("nav.verified"), icon: Shield },
     { href: "/messes", label: t("nav.messes"), icon: UtensilsCrossed },
+    { href: "/secmatch", label: "SecMatch", icon: Handshake },
     { href: "/map", label: t("nav.map"), icon: MapPin },
     { href: "/about", label: t("nav.about"), icon: Info },
     { href: "/contact", label: t("nav.contact"), icon: Mail },
