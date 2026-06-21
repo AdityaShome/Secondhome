@@ -326,7 +326,10 @@ export default function SecMatchProfilePage() {
 
               <div style={{ marginBottom: 16 }}>
                 <Input label="Phone (optional)" hint="Only shared securely after both roommates agree to connect.">
-                  <input type="tel" value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+91 98765 43210" style={inputStyle} onFocus={e => (e.target.style.borderColor = "#f97316")} onBlur={e => (e.target.style.borderColor = "#e5e7eb")} />
+                  <input type="tel" pattern="[0-9]{10}" title="Please enter a valid 10-digit phone number" value={form.phone} onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    set("phone", val)
+                  }} placeholder="9876543210" style={inputStyle} onFocus={e => (e.target.style.borderColor = "#f97316")} onBlur={e => (e.target.style.borderColor = "#e5e7eb")} />
                 </Input>
               </div>
 
@@ -386,7 +389,21 @@ export default function SecMatchProfilePage() {
                 <Input label="Preferred Location / Area" required>
                   <div style={{ position: "relative" }}>
                     <MapPin style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 16, height: 16, color: "#9ca3af" }} />
-                    <input value={form.preferredLocation} onChange={e => set("preferredLocation", e.target.value)} placeholder="e.g. Koramangala, Bangalore" style={{ ...inputStyle, paddingLeft: 40 }} onFocus={e => (e.target.style.borderColor = "#f97316")} onBlur={e => (e.target.style.borderColor = "#e5e7eb")} />
+                    <input list="locations" value={form.preferredLocation} onChange={e => set("preferredLocation", e.target.value)} placeholder="e.g. Koramangala, Bangalore" style={{ ...inputStyle, paddingLeft: 40 }} onFocus={e => (e.target.style.borderColor = "#f97316")} onBlur={e => (e.target.style.borderColor = "#e5e7eb")} />
+                    <datalist id="locations">
+                      <option value="Koramangala, Bangalore" />
+                      <option value="HSR Layout, Bangalore" />
+                      <option value="Indiranagar, Bangalore" />
+                      <option value="Whitefield, Bangalore" />
+                      <option value="BTM Layout, Bangalore" />
+                      <option value="Powai, Mumbai" />
+                      <option value="Andheri, Mumbai" />
+                      <option value="Bandra, Mumbai" />
+                      <option value="Vasant Kunj, Delhi" />
+                      <option value="Hauz Khas, Delhi" />
+                      <option value="Gachibowli, Hyderabad" />
+                      <option value="Kothrud, Pune" />
+                    </datalist>
                   </div>
                 </Input>
               </div>

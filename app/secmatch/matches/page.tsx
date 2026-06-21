@@ -402,7 +402,7 @@ export default function SecMatchMatchesPage() {
                   </div>
                   {subscribed ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <button style={{ padding: "11px", borderRadius: 12, background: "#f97316", color: "#fff", fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                      <button onClick={() => router.push("/secmatch/chat/" + m.userId)} style={{ padding: "11px", borderRadius: 12, background: "#f97316", color: "#fff", fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
                         <MessageCircle style={{ width: 15, height: 15 }} /> Message
                       </button>
                       <p style={{ textAlign: "center", fontSize: 11, color: "#9ca3af" }}>📱 {m.phone || "Phone available after approval"}</p>

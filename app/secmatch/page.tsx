@@ -89,15 +89,17 @@ function ProfileCard({ profile, idx, isAuth }: { profile: LiveProfile; idx: numb
         {/* Content — blur-locked for guests */}
         <div style={{ padding: "18px 20px", position: "relative" }}>
           {!isAuth && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(7px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10, borderRadius: "0 0 20px 20px" }}
+            <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.2)", backdropFilter: "blur(0px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 10, borderRadius: "0 0 20px 20px" }}
               onClick={() => router.push("/signup")}>
-              <Lock style={{ width: 24, height: 24, color: "#f97316", marginBottom: 8 }} />
-              <p style={{ fontWeight: 700, fontSize: 13, color: "#111827", margin: "0 0 3px" }}>Sign up to view full profile</p>
-              <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>Free forever</p>
+              <div style={{ background: "#fff", padding: "12px 24px", borderRadius: 99, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}>
+                <Lock style={{ width: 16, height: 16, color: "#f97316" }} />
+                <span style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>Sign up to view details</span>
+              </div>
             </div>
           )}
 
-          <p style={{ fontWeight: 800, fontSize: 17, color: "#111827", margin: "0 0 2px" }}>{profile.name}</p>
+          <div style={{ filter: !isAuth ? "blur(5px)" : "none", transition: "filter 0.3s", userSelect: !isAuth ? "none" : "auto" }}>
+            <p style={{ fontWeight: 800, fontSize: 17, color: "#111827", margin: "0 0 2px" }}>{profile.name}</p>
           <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 12px" }}>{profile.age} yrs • {profile.year} • {profile.course}</p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
@@ -127,6 +129,7 @@ function ProfileCard({ profile, idx, isAuth }: { profile: LiveProfile; idx: numb
             {profile.interests.map(t => (
               <span key={t} style={{ fontSize: 11, fontWeight: 600, color: "#ea580c", background: "#fff7ed", border: "1px solid #fed7aa", padding: "3px 10px", borderRadius: 99 }}>{t}</span>
             ))}
+          </div>
           </div>
         </div>
       </div>
@@ -178,7 +181,11 @@ export default function SecMatchPage() {
     setProfilesError(false)
     fetch(`/api/secmatch/preview?gender=${activeGender}`)
       .then(r => r.json())
-      .then(d => setProfiles(d.profiles || []))
+      .then(d => {
+        let p = d.profiles || []
+        if (!isAuth && p.length > 3) p = p.slice(0, 3) // limit to max 3
+        setProfiles(p)
+      })
       .catch(() => { setProfilesError(true); setProfiles([]) })
       .finally(() => setProfilesLoading(false))
   }, [activeGender])
